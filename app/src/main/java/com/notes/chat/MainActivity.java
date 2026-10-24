@@ -24,13 +24,17 @@ import android.webkit.WebViewClient;
 import org.json.JSONObject;
 
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
 
     private static final int REQ_IMAGE = 1;
     private static final int REQ_FILE = 2;
+    private static final int REQ_SAVE_FILE = 3;
     private int fileReplyId = -1;
+    private int saveFileReplyId = -1;
+    private String pendingSaveText;
     private WebView web;
     private ValueCallback<Uri[]> filePicker;
 
@@ -126,6 +130,26 @@ public class MainActivity extends Activity {
                 }).start();
             } else {
                 reply(id, false, "Koi file nahi chuni");
+            }
+        } else if (requestCode == REQ_SAVE_FILE) {
+            final int id = saveFileReplyId;
+            final String text = pendingSaveText;
+            saveFileReplyId = -1;
+            pendingSaveText = null;
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                final Uri uri = data.getData();
+                new Thread(() -> {
+                    try (OutputStream out = getContentResolver().openOutputStream(uri, "wt")) {
+                        if (out == null) throw new IllegalStateException("Backup file nahi likh paye");
+                        out.write((text == null ? "" : text).getBytes(StandardCharsets.UTF_8));
+                        out.flush();
+                        reply(id, true, "Backup file saved");
+                    } catch (Exception e) {
+                        reply(id, false, e.getMessage() == null ? "Backup save failed" : e.getMessage());
+                    }
+                }).start();
+            } else {
+                reply(id, false, "Backup save cancel hua");
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
@@ -239,11 +263,40 @@ public class MainActivity extends Activity {
                     fileReplyId = id;
                     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     i.addCategory(Intent.CATEGORY_OPENABLE);
-                    i.setType("*/*");
+                    i.setType("application/json");
                     try {
                         startActivityForResult(i, REQ_FILE);
                     } catch (Exception e) {
-                        reply(id, false, "File picker nahi khula");
+                        fileReplyId = -1;
+                        reply(id, false, "Backup file picker nahi khula");
+                    }
+                });
+                return;
+            }
+            if ("savefile".equals(op)) {
+                final String text;
+                final String filename;
+                try {
+                    JSONObject payload = new JSONObject(args);
+                    text = payload.optString("text", "");
+                    filename = payload.optString("filename", "FZ-Notes-backup.json");
+                } catch (Exception e) {
+                    reply(id, false, "Backup data invalid hai");
+                    return;
+                }
+                runOnUiThread(() -> {
+                    saveFileReplyId = id;
+                    pendingSaveText = text;
+                    Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                    i.addCategory(Intent.CATEGORY_OPENABLE);
+                    i.setType("application/json");
+                    i.putExtra(Intent.EXTRA_TITLE, filename);
+                    try {
+                        startActivityForResult(i, REQ_SAVE_FILE);
+                    } catch (Exception e) {
+                        saveFileReplyId = -1;
+                        pendingSaveText = null;
+                        reply(id, false, "Backup save dialog nahi khula");
                     }
                 });
                 return;
