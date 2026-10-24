@@ -256,19 +256,32 @@ body{min-height:100dvh}
 #sh .mi-icon{display:none}
 #sh button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
 #sh button:active{transform:none}
-@media(max-width:420px){#chat{padding-bottom:132px!important}#cmp{padding-left:9px;padding-right:9px}#chatw>#listfab{right:68px}}
+@media(max-width:420px){#chat{padding-bottom:100px!important}#cmp{padding-left:9px;padding-right:9px}#chatw>#listfab{right:68px;bottom:24px!important}}
 
 
 /* Final width/spacing correction: footer spans the device, not the chat column */
 #footer{width:100vw!important;max-width:100vw!important;min-width:0!important;align-self:stretch!important;overflow:visible}
 #footer>#tb,#footer>#taskmeta,#footer>#ctx,#footer>#lk,#footer>#cmp{width:100%!important;max-width:100%!important;min-width:0;box-sizing:border-box;align-self:stretch;margin:0!important}
-#chat{padding-bottom:132px!important;scroll-padding-bottom:132px}
-#chatw>#fab{right:12px!important;bottom:12px!important}
-#chatw>#listfab{right:70px!important;bottom:18px!important}
+#chat{padding-bottom:96px!important;scroll-padding-bottom:96px}
+#chatw>#fab{right:12px!important;bottom:18px!important}
+#chatw>#listfab{right:70px!important;bottom:24px!important}
 #chatw>#fab,#chatw>#listfab{touch-action:manipulation;transform:translateZ(0)}
 #sh button[data-k]{min-height:50px;cursor:pointer}
 #sh button .mi svg{pointer-events:none}
-@media(max-width:420px){#chat{padding-bottom:140px!important;scroll-padding-bottom:140px}#footer>#cmp{padding-left:9px;padding-right:9px}}
+@media(max-width:420px){#chat{padding-bottom:100px!important;scroll-padding-bottom:100px}#footer>#cmp{padding-left:9px;padding-right:9px}}
+
+
+/* Final requested layout: full-width footer and less empty chat space */
+#chat{padding-bottom:96px!important;scroll-padding-bottom:96px}
+#chatw>#fab{bottom:18px!important;right:12px!important}
+#chatw>#listfab{bottom:24px!important;right:70px!important}
+#footer{width:100vw!important;max-width:100vw!important;min-width:100vw!important;margin:0!important;padding:0!important;box-sizing:border-box;align-self:stretch!important}
+#footer>#cmp{width:100vw!important;max-width:100vw!important;min-width:100vw!important;margin:0!important;padding-left:10px!important;padding-right:10px!important;box-sizing:border-box}
+#footer #att{flex:0 0 34px}
+#footer #send{flex:0 0 42px}
+#sh button[data-k]{position:relative;z-index:1;pointer-events:auto;touch-action:manipulation}
+#sh button .mi,#sh button .mt,#sh button .ms{pointer-events:none}
+@media(max-width:420px){#chat{padding-bottom:100px!important;scroll-padding-bottom:100px}#chatw>#listfab{right:68px!important;bottom:24px!important}#chatw>#fab{bottom:18px!important}#footer>#cmp{padding-left:9px!important;padding-right:9px!important}}
 
 </style>
 </head>
@@ -570,7 +583,7 @@ $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
 $('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
-$('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Export backup file','Save a .json copy to device')+item('rs','Restore from file','Choose a saved backup')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
+$('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Backup to file','Save all notes to device (.json)')+item('rs','Restore backup file','Import a previous FZ Notes backup')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
@@ -597,9 +610,9 @@ $('#qkx').onclick=()=>$('#qk').classList.remove('on');
 $('#qks').onclick=()=>{const t=$('#qkt').value.trim();if(!t)return;msgs.push({id:Date.now(),t:Date.now(),h:esc(t).replace(/\n/g,'<br>'),k:'quick'});save();$('#qk').classList.remove('on');toast('⚡ Quick me save hua');render()};
 let mt;
 function mirror(){if(!window.Android)return;clearTimeout(mt);mt=setTimeout(()=>{native('mirrorsave',{text:JSON.stringify({msgs,topics})}).catch(()=>{})},1500)}
-function applyFile(t){let d;try{d=JSON.parse(t)}catch(_){throw new Error('Ye JSON backup file nahi hai')}if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics)||!d.topics.length)return false;if(!d.msgs.every(m=>m&&typeof m==='object'&&m.id!==undefined&&typeof m.h==='string'))return false;if(!d.topics.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))return false;msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();return true}
-async function pickFile(){try{if(window.Android)toast('Backup JSON file select karo',1800);const raw=await native('pickfile',{});if(applyFile(raw))toast('Backup restore ho gaya',2800);else toast('Valid FZ Notes JSON backup select karo',3000)}catch(e){toast(e.message||'Backup import nahi hua',3000)}}
-async function exportBackupFile(){const payload=JSON.stringify({version:3,exportedAt:new Date().toISOString(),msgs,topics},null,2);const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.json';try{if(window.Android){toast('Save location choose karke Save dabao',2200);const result=await native('savefile',{filename,text:payload});toast(result||'Backup file save ho gayi',3000);return true}const blob=new Blob([payload],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup download start ho gaya',3000);return true}catch(e){toast(e.message||'Backup save nahi hua',3500);return false}}
+function applyFile(t){let d;try{d=JSON.parse(t)}catch(_){throw new Error('FZ Notes ki .json backup file chuno')}if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics)||!d.topics.length)return false;if(d.format&&d.format!=='FZ-NOTES-BACKUP')return false;if(!d.msgs.every(m=>m&&typeof m==='object'&&m.id!==undefined&&typeof m.h==='string'))return false;if(!d.topics.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))return false;msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();return true}
+async function pickFile(){try{if(window.Android){toast('Pehle FZ Notes se banayi backup file select karo',2200);const raw=await native('pickfile',{});if(applyFile(raw))toast('Restore complete · '+msgs.length+' notes',3000);else toast('Ye FZ Notes backup nahi lagti; original data safe hai',3500)}else{const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=async()=>{const f=input.files&&input.files[0];if(!f)return;try{const raw=await f.text();if(applyFile(raw))toast('Restore complete · '+msgs.length+' notes',3000);else toast('Valid FZ Notes backup select karo',3500)}catch(e){toast(e.message||'Backup import nahi hua',3500)}};input.click()}}catch(e){toast(e.message||'Backup import nahi hua',3500)}}
+async function exportBackupFile(){const payload=JSON.stringify({format:'FZ-NOTES-BACKUP',version:3,exportedAt:new Date().toISOString(),msgs,topics},null,2);const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.json';try{if(window.Android){toast('Backup save karne ke liye location choose karo',2200);const result=await native('savefile',{filename,text:payload});toast(result||'Backup file save ho gayi',3000);return true}const blob=new Blob([payload],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup download start ho gaya',3000);return true}catch(e){toast(e.message||'Backup save nahi hua',3500);return false}}
 msgs.filter(m=>m.due>Date.now()&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
 render();restoreDraft();updateComposerControls();
 (async()=>{if(!window.Android||msgs.length||topics.length>1||topics[0].name!=='General')return;try{const t=await native('mirrorload',{});if(t&&applyFile(t))toast('Phone storage se data wapas aaya',3000)}catch(e){}})();
