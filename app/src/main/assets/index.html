@@ -87,7 +87,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 #pin .cx{flex:1;min-width:0;border-left:3px solid var(--acc);padding-left:8px;cursor:pointer}
 #pin b{display:block;font-size:12px;color:var(--acc)}
 #pin span{display:block;font-size:13px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.b.sel{position:relative;background:rgba(80,145,255,.15)!important;border-color:var(--acc)!important;box-shadow:inset 0 0 0 1.5px var(--acc)!important;filter:none!important;color:var(--text)!important;z-index:1}.b.sel::before{content:'✓';position:absolute;left:-29px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--acc);color:#fff;border:2px solid var(--bar);font:700 13px system-ui;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.b.sel{position:relative!important;background:#245fce!important;background:color-mix(in srgb,var(--acc) 28%,var(--bub))!important;border:2px solid var(--acc)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 28%,transparent),0 4px 14px rgba(0,0,0,.22)!important;filter:none!important;color:var(--text)!important;z-index:2!important;transform:scale(1.01);transition:background .12s,border-color .12s,box-shadow .12s,transform .12s}.b.sel::before{content:'✓';position:absolute;left:-30px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--acc);color:#fff;border:2px solid var(--bar);font:700 14px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.32);z-index:4}
 .b.lp-selected{position:relative;outline:3px solid var(--acc)!important;outline-offset:2px;background:var(--acc)!important;color:#fff!important;box-shadow:0 0 0 9999px rgba(0,0,0,.24),0 0 0 6px rgba(117,170,255,.22),0 8px 28px rgba(0,0,0,.35)!important;filter:none!important;transform:scale(1.015);z-index:4;transition:outline-color .12s,background .12s,transform .12s,box-shadow .12s}
 .im{display:block;max-width:100%;border-radius:10px;margin-bottom:4px}
 #att{flex:none;width:38px;height:42px;border:0;background:none;font-size:20px}
@@ -259,7 +259,7 @@ function openSheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;const txt=not
  sh.innerHTML='<button data-k="reply">↩️ Reply</button><button data-k="edit">✏️ Edit</button><button data-k="copy">▢ Copy text</button><button data-k="pin">'+(m.p?'📌 Unpin':'📌 Pin')+'</button><button data-k="hide">'+(m.hidden?'🔓 Unhide note':'🔒 Hide note')+'</button><button data-k="mv">📁 Move to topic</button><button data-k="sel">☑ Select</button><button data-k="del" class="del">🗑 Delete</button><button data-k="x">✕ Cancel</button>';
  sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=txt;sh.classList.add('on')}
 function openCopySheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;sh.innerHTML='<button data-k="copy">▢ Copy text</button><button data-k="x">✕ Cancel</button>';sh.dataset.id=id;sh.dataset.type='copyonly';sh.dataset.txt=noteCopyText(m);sh.classList.add('on')}
-function startNotePress(e){const b=e.target.closest('.b');if(!b||selMode||e.target.closest('.ci,.rp,.a'))return;clearTimeout(timer);pressTarget=b;pressX=e.clientX||0;pressY=e.clientY||0;const id=b.dataset.id;timer=setTimeout(()=>{if(!pressTarget)return;selectNote(id);pressTarget=null},520)}
+function startNotePress(e){const b=e.target.closest('.b');if(!b||selMode||e.target.closest('.ci,.rp,.a'))return;clearTimeout(timer);pressTarget=b;pressX=e.clientX||0;pressY=e.clientY||0;const id=b.dataset.id;timer=setTimeout(()=>{if(!pressTarget)return;selectNote(id);openSheet(id);pressTarget=null},520)}
 function cancelNotePress(){clearTimeout(timer);pressTarget=null}
 chat.addEventListener('pointerdown',startNotePress);
 chat.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;startNotePress({target:e.target,clientX:t.clientX,clientY:t.clientY})},{passive:true});
@@ -289,7 +289,7 @@ function nearestBubbleAt(x,y){
 function blankTargetAllowed(target){const el=target&&target.nodeType===1?target:target&&target.parentElement;return !!el&&!el.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab,#sh,#selbar')}
 function blankStart(target,x,y){if(!blankTargetAllowed(target))return null;const n=nearestBubbleAt(x,y);return n?{x,y,id:n.dataset.id,scrollTop:chat.scrollTop}:null}
 function selectNote(id){const num=Number(id);if(!msgs.some(m=>Number(m.id)===num))return;pressed=Date.now();try{const nativeSel=window.getSelection&&window.getSelection();if(nativeSel)nativeSel.removeAllRanges()}catch(_){};if(!selMode){sel.clear();selMode=true}sel.add(num);chat.querySelectorAll('.b.sel').forEach(b=>b.classList.toggle('sel',sel.has(Number(b.dataset.id))));renderTop()}
-function showBlankMenu(id){selectNote(id)}
+function showBlankMenu(id){selectNote(id);openSheet(id)}
 function clearBlankTouch(){if(blankTouchStart&&blankTouchStart.timer)clearTimeout(blankTouchStart.timer);blankTouchStart=null}
 const chatw=$('#chatw');
 chatw.addEventListener('touchstart',e=>{
