@@ -276,22 +276,49 @@ chat.addEventListener('click',e=>{if(Date.now()-pressed<650){e.preventDefault();
  const sp=e.target.closest('.spoiler');if(sp){sp.classList.toggle('on');return}
  const m=e.target.closest('.mono,.code');if(m)copy(m.textContent)});
 let blankTouchStart=null,blankPointerStart=null,lastBlankMenuId=null,lastBlankMenuAt=0;
-function nearestBubbleAt(x,y){const a=[...chat.querySelectorAll('.b')];if(!a.length)return null;let n=null,d=Infinity;for(const el of a){const r=el.getBoundingClientRect(),dx=x<r.left?r.left-x:x>r.right?x-r.right:0,dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0,z=dx*dx+dy*dy;if(z<d){d=z;n=el}}return n}
-function blankTargetAllowed(target){const el=target&&target.nodeType===1?target:target&&target.parentElement;return !!el&&!el.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab')}
-function blankStart(target,x,y){if(!blankTargetAllowed(target))return null;const n=nearestBubbleAt(x,y);return n?{x,y,id:n.dataset.id}:null}
-function selectNote(id){const num=Number(id);if(!msgs.some(m=>m.id==num))return;pressed=Date.now();try{const nativeSel=window.getSelection&&window.getSelection();if(nativeSel)nativeSel.removeAllRanges()}catch(_){};if(!selMode){sel.clear();selMode=true}sel.add(num);const bubble=chat.querySelector('.b[data-id="'+CSS.escape(String(num))+'"]');if(bubble)bubble.classList.add('sel');renderTop()}
+function nearestBubbleAt(x,y){
+ const a=[...chat.querySelectorAll('.b')];if(!a.length)return null;
+ const candidates=a.map(el=>{const r=el.getBoundingClientRect();return {el,r,dx:x<r.left?r.left-x:x>r.right?x-r.right:0,dy:y<r.top?r.top-y:y>r.bottom?y-r.bottom:0}});
+ // Only associate blank-space presses with a bubble on the same visual row (or very near it).
+ const row=candidates.filter(c=>y>=c.r.top-18&&y<=c.r.bottom+18);
+ if(!row.length)return null;
+ row.sort((a,b)=>(a.dx*1.6+Math.max(0,a.dy-4)*3)-(b.dx*1.6+Math.max(0,b.dy-4)*3));
+ const c=row[0];if(c.dx>Math.max(220,chat.clientWidth*.48))return null;
+ return c.el
+}
+function blankTargetAllowed(target){const el=target&&target.nodeType===1?target:target&&target.parentElement;return !!el&&!el.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab,#sh,#selbar')}
+function blankStart(target,x,y){if(!blankTargetAllowed(target))return null;const n=nearestBubbleAt(x,y);return n?{x,y,id:n.dataset.id,scrollTop:chat.scrollTop}:null}
+function selectNote(id){const num=Number(id);if(!msgs.some(m=>Number(m.id)===num))return;pressed=Date.now();try{const nativeSel=window.getSelection&&window.getSelection();if(nativeSel)nativeSel.removeAllRanges()}catch(_){};if(!selMode){sel.clear();selMode=true}sel.add(num);chat.querySelectorAll('.b.sel').forEach(b=>b.classList.toggle('sel',sel.has(Number(b.dataset.id))));renderTop()}
 function showBlankMenu(id){selectNote(id)}
 function clearBlankTouch(){if(blankTouchStart&&blankTouchStart.timer)clearTimeout(blankTouchStart.timer);blankTouchStart=null}
 const chatw=$('#chatw');
-chatw.addEventListener('touchstart',e=>{clearBlankTouch();const t=e.touches&&e.touches[0];const hit=t?blankStart(e.target,t.clientX,t.clientY):null;if(!hit)return;blankTouchStart={...hit,opened:false,timer:setTimeout(()=>{if(blankTouchStart&&blankTouchStart.id==hit.id){blankTouchStart.opened=true;showBlankMenu(hit.id)}},520)}},{capture:true,passive:true});
-chatw.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(blankTouchStart&&t&&(Math.abs(t.clientX-blankTouchStart.x)>14||Math.abs(t.clientY-blankTouchStart.y)>14))clearBlankTouch()},{capture:true,passive:true});
+chatw.addEventListener('touchstart',e=>{
+ clearBlankTouch();const t=e.touches&&e.touches[0];const hit=t?blankStart(e.target,t.clientX,t.clientY):null;if(!hit)return;
+ const rec={...hit,opened:false,timer:null};blankTouchStart=rec;
+ rec.timer=setTimeout(()=>{if(blankTouchStart===rec&&!rec.opened){rec.opened=true;showBlankMenu(rec.id)}},520)
+},{capture:true,passive:true});
+chatw.addEventListener('touchmove',e=>{
+ const t=e.touches&&e.touches[0],p=blankTouchStart;if(!p||!t)return;
+ const moved=Math.hypot(t.clientX-p.x,t.clientY-p.y)>28;
+ const scrolled=Math.abs(chat.scrollTop-p.scrollTop)>3;
+ if(moved||scrolled)clearBlankTouch()
+},{capture:true,passive:true});
 chatw.addEventListener('touchend',clearBlankTouch,{capture:true,passive:true});
 chatw.addEventListener('touchcancel',clearBlankTouch,{capture:true,passive:true});
 chatw.addEventListener('contextmenu',e=>{const hit=blankStart(e.target,e.clientX,e.clientY);if(hit){e.preventDefault();e.stopPropagation();showBlankMenu(hit.id)}},true);
-chatw.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;blankPointerStart=blankStart(e.target,e.clientX,e.clientY)?{...blankStart(e.target,e.clientX,e.clientY),time:Date.now()}:null});
-chatw.addEventListener('pointermove',e=>{if(blankPointerStart&&(Math.abs(e.clientX-blankPointerStart.x)>14||Math.abs(e.clientY-blankPointerStart.y)>14))blankPointerStart=null},{passive:true});
-chatw.addEventListener('pointerup',()=>{if(blankPointerStart&&Date.now()-blankPointerStart.time>=520)showBlankMenu(blankPointerStart.id);blankPointerStart=null});
-chatw.addEventListener('pointercancel',()=>{blankPointerStart=null});
+chatw.addEventListener('pointerdown',e=>{
+ if(e.pointerType==='touch')return;
+ if(blankPointerStart&&blankPointerStart.timer)clearTimeout(blankPointerStart.timer);
+ const hit=blankStart(e.target,e.clientX,e.clientY);if(!hit){blankPointerStart=null;return}
+ const rec={...hit,time:Date.now(),timer:null,moved:false};blankPointerStart=rec;
+ rec.timer=setTimeout(()=>{if(blankPointerStart===rec&&!rec.moved)showBlankMenu(rec.id)},520)
+});
+chatw.addEventListener('pointermove',e=>{
+ const p=blankPointerStart;if(!p)return;
+ if(Math.hypot(e.clientX-p.x,e.clientY-p.y)>28||Math.abs(chat.scrollTop-p.scrollTop)>3){p.moved=true;if(p.timer)clearTimeout(p.timer);blankPointerStart=null}
+},{passive:true});
+chatw.addEventListener('pointerup',()=>{if(blankPointerStart&&blankPointerStart.timer)clearTimeout(blankPointerStart.timer);blankPointerStart=null});
+chatw.addEventListener('pointercancel',()=>{if(blankPointerStart&&blankPointerStart.timer)clearTimeout(blankPointerStart.timer);blankPointerStart=null});
 sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
  if(sh.dataset.type==='multi-select'){if(k==='x'){sh.classList.remove('on');return}const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);sh.classList.remove('on');if(k==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\\n\\n'));return}if(k==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render()}return}
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
