@@ -123,9 +123,12 @@ public class MainActivity extends Activity {
                 final Uri u = data.getData();
                 new Thread(() -> {
                     try (InputStream in = getContentResolver().openInputStream(u)) {
-                        reply(id, true, new String(Cloud.readAll(in), StandardCharsets.UTF_8));
+                        if (in == null) throw new IllegalStateException("Backup file open nahi hui");
+                        String imported = new String(Cloud.readAll(in), StandardCharsets.UTF_8);
+                        reply(id, true, imported);
                     } catch (Exception e) {
-                        reply(id, false, "File padh nahi paye");
+                        String message = e.getMessage();
+                        reply(id, false, message == null ? "Backup file padh nahi paye" : "Backup file padh nahi paye: " + message);
                     }
                 }).start();
             } else {
