@@ -266,7 +266,6 @@ chat.addEventListener('pointermove',e=>{if(pressTarget&&(Math.abs(e.clientX-pres
 chat.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(pressTarget&&t&&(Math.abs(t.clientX-pressX)>14||Math.abs(t.clientY-pressY)>14))cancelNotePress()},{passive:true});
 chat.addEventListener('contextmenu',e=>{if(e.target.closest('.b')){e.preventDefault();e.stopPropagation()}});
 chat.addEventListener('click',e=>{if(Date.now()-pressed<650){e.preventDefault();e.stopPropagation();return}
- if(e.target===chat){const bubbles=[...chat.querySelectorAll('.b')];if(bubbles.length){const y=e.clientY;let nearest=bubbles[0],dist=Infinity;bubbles.forEach(el=>{const r=el.getBoundingClientRect();const d=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0;if(d<dist){dist=d;nearest=el}});if(nearest&&dist<Math.max(180,nearest.getBoundingClientRect().height)){openSheet(nearest.dataset.id);return}}}
  const sbx=e.target.closest('.b');if(selMode){if(sbx){const i=+sbx.dataset.id;if(sel.has(i))sel.delete(i);else sel.add(i);sbx.classList.toggle('sel');renderTop()}return}
  const ci=e.target.closest('.ci');if(ci){const bb=ci.closest('.b'),m=msgs.find(x=>x.id==bb.dataset.id);if(m&&m.c){const it=m.c[+ci.dataset.i];it.s=(it.s+1)%3;ci.className='ci s'+it.s;bb.querySelector('.cnt').textContent=cntText(m);if(m.due)scheduleReminder(m);save()}return}
  const mn=e.target.closest('.mn');if(mn){openSheet(mn.closest('.b').dataset.id);return}
