@@ -213,6 +213,29 @@ header small{display:block;font-size:12px;line-height:1.25;white-space:nowrap;ov
 #sh button .ms{line-height:1.25}
 @media(max-width:420px){.b.has-code{width:86%;max-width:86%}#cmp{gap:6px}#att{width:32px}}
 
+
+/* Full-width Telegram-like composer; keep floating actions above it */
+body{min-height:100dvh}
+.main{flex:1;min-height:0}
+.col{min-height:0}
+#chatw{flex:1;min-height:0}
+#chat{padding-bottom:100px!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#tb,#taskmeta,#ctx,#lk,#cmp{width:100%;box-sizing:border-box;flex:none}
+#cmp{position:relative;left:0;right:0;display:flex;align-items:center;gap:8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));background:#101a29;border-top:1px solid rgba(150,178,210,.12)}
+#att{flex:none;width:34px;height:42px}
+#ed{flex:1;width:0;min-width:0;max-width:none;box-sizing:border-box;min-height:42px;max-height:25vh;padding:10px 13px;border-radius:24px;background:#091321}
+#send{display:none;flex:none;width:42px;height:42px;border-radius:50%;align-items:center;justify-content:center}
+#cmp.has-text #send{display:flex}
+#cmp #listfab,#cmp #fab{display:none!important}
+#chatw>#fab{bottom:12px;right:14px}
+#chatw>#listfab{bottom:18px;right:72px}
+#sh .mi{display:grid;place-items:center;width:38px;height:38px;flex:none;border:1px solid var(--ln);border-radius:12px;background:linear-gradient(145deg,rgba(117,170,255,.16),rgba(117,170,255,.04));color:var(--acc)}
+#sh .mi-icon{display:block;font-size:22px;line-height:1;text-align:center}
+#sh button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.b{transition:none!important;will-change:auto}
+.b.sel{transition:background .12s ease,box-shadow .12s ease!important}
+@media(max-width:420px){#cmp{gap:7px;padding-left:9px;padding-right:9px}#att{width:32px}}
+
 </style>
 </head>
 <body>
@@ -221,7 +244,7 @@ header small{display:block;font-size:12px;line-height:1.25;white-space:nowrap;ov
 <div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
 <div id="selbar"><button data-s="x" aria-label="Exit selection" title="Cancel selection">✕</button><span id="selc">1 selected</span><button data-s="reply" aria-label="Reply" title="Reply">↩</button><button data-s="copy" aria-label="Copy selected" title="Copy">▢</button><button data-s="more" aria-label="More actions" title="More actions">⋮</button><button data-s="del" aria-label="Delete selected" title="Delete">🗑</button></div>
-<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Create task list">☑</button><button id="fab" aria-label="Quick note" title="Quick note">+</button></div>
+<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Create task list">☑</button><button id="fab" aria-label="Quick note" title="Quick note">+</button></div></div></div>
 <div id="tb">
 <button data-a="b" aria-label="Bold" title="Bold"><b class="fmticon">B</b></button><button data-a="i" aria-label="Italic" title="Italic"><i class="fmticon">I</i></button>
 <button data-a="mono" style="font-family:monospace" title="Monospace">&lt;/&gt;</button><button data-a="code" style="font-family:monospace" title="Code block">▤ Code</button>
@@ -233,7 +256,7 @@ header small{display:block;font-size:12px;line-height:1.25;white-space:nowrap;ov
 <div id="taskmeta"><label for="taskdue">Due / reminder</label><input id="taskdue" type="datetime-local"><span>Optional reminder</span></div>
 <div id="ctx"><div class="cx"><b id="cxt"></b><span id="cxs"></span></div><button id="cxx" aria-label="Cancel">✕</button></div>
 <div id="lk"><input id="lki" type="text" autocomplete="off"><button id="lkok">Add</button></div>
-<div id="cmp"><button id="att" aria-label="Attach image">📎</button><input id="fi" type="file" accept="image/*" hidden><div id="ed" contenteditable="true" data-ph="Message in Notes"></div><button id="send" aria-label="Send" title="Send message">➤</button></div></div></div>
+<div id="cmp"><button id="att" aria-label="Attach image">📎</button><input id="fi" type="file" accept="image/*" hidden><div id="ed" contenteditable="true" data-ph="Message in Notes"></div><button id="send" aria-label="Send" title="Send message">➤</button></div>
 <div id="cfg"><div class="cfgb"><h3>Cloud backup</h3><p class="hint">Data phone par hi password se encrypt hoke jaata hai. Password kahin save nahi hota, bhool gaye to backup khul nahi sakta.</p>
 <h4>Nextcloud / WebDAV</h4><input id="c_wdUrl" placeholder="https://host/remote.php/dav/files/USER/folder"><input id="c_wdUser" placeholder="Username"><input id="c_wdPass" type="password" placeholder="App password">
 <h4>Telegram bot</h4><input id="c_tgToken" placeholder="Bot token (@BotFather se)"><div class="row"><input id="c_tgChat" placeholder="Chat ID"><button id="c_tgDet">Detect</button></div><p class="hint">Pehle bot ko /start bhejein, phir Detect dabayein.</p>
@@ -431,8 +454,8 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(sh.dataset.type==='menu'){sh.classList.remove('on');
   if(k==='cl')openCloud();
   if(k==='srch'){$('#sq').classList.add('on');$('#sqi').focus()}
-  if(k==='bk')copy(JSON.stringify({msgs,topics}));
-  if(k==='rs')ask('restore','Paste backup JSON here','');
+  if(k==='bk'){exportBackupFile();return}
+  if(k==='rs'){pickFile();return}
   if(k==='pf')pickFile();
   if(k==='th'){const d=document.documentElement,n=(d.dataset.theme||'dark')==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('notes-theme',n)}catch(e){}}
   return}
@@ -500,7 +523,7 @@ $('#c_save').onclick=()=>{const c=cfgGet();F.forEach(f=>{c[f]=$('#c_'+f).value.t
 $('#c_tgDet').onclick=async()=>{const tk=$('#c_tgToken').value.trim();if(!tk)return toast('Pehle bot token daalein');try{$('#c_tgChat').value=await native('tgchat',{token:tk})}catch(e){toast(e.message,3000)}};
 async function doBackup(pw){if(!pw)return toast('Password chahiye');const c=cfgGet(),t=targets(c);if(!t.length)return toast('Pehle Settings me cloud bharein',2500);
  toast('Encrypt karke bhej raha hu…',5000);
- try{const r=JSON.parse(await native('backup',{pw,data:JSON.stringify({version:2,exportedAt:new Date().toISOString(),msgs,topics}),targets:t}));if(r.fid){c.tgFid=r.fid;cfgSet(c)}const stamp=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});try{localStorage.setItem('notes-last-backup',stamp)}catch(_){}toast(r.msg+' · '+msgs.length+' notes backed up',5000)}catch(e){toast(e.message,4000)}}
+ try{const r=JSON.parse(await native('backup',{pw,data:JSON.stringify({version:2,exportedAt:new Date().toISOString(),msgs,topics}),targets:t}));const successes=Number(r.successCount||0),failures=Number(r.failureCount||0);if(successes<1)throw new Error(r.msg||'Kisi bhi backup destination par upload nahi hua');if(r.fid){c.tgFid=r.fid;cfgSet(c)}const stamp=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});try{localStorage.setItem('notes-last-backup',stamp)}catch(_){}toast((failures?'Partial backup · ':'')+r.msg+' · '+msgs.length+' notes',5000)}catch(e){toast('Backup fail: '+e.message,5000)}}
 async function doRestore(pw){if(!pw)return toast('Password chahiye');const t=targets(cfgGet()).find(x=>x.type===pendSrc);if(!t)return;
  toast('Restore ho raha hai…',5000);
  try{const d=JSON.parse(await native('restore',{pw,source:t}));if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();toast('Restored')}else toast('Backup sahi nahi hai')}catch(e){toast(e.message,4000)}}
@@ -512,7 +535,7 @@ $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
 $('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
-$('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const item=(key,title,sub)=>'<button data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[({srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',x:'cancel'})[key]||key]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted cloud copy')+item('bk','Backup','Export all notes')+item('rs','Restore','Restore saved notes')+item('pf','Open backup file','Import from this device')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
+$('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const glyph={srch:"🔍",cl:"☁️",bk:"💾",rs:"📥",pf:"📁",th:"🌗",x:"✕"};const item=(key,title,sub)=>'<button data-k="'+key+'"><span class="mi"><span class="mi-icon">'+glyph[key]+'</span></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted cloud copy')+item('bk','Backup','Export all notes')+item('rs','Restore','Restore saved notes')+item('pf','Open backup file','Import from this device')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\\n\\n'));selMode=false;sel.clear();render();return}
@@ -539,8 +562,9 @@ $('#qkx').onclick=()=>$('#qk').classList.remove('on');
 $('#qks').onclick=()=>{const t=$('#qkt').value.trim();if(!t)return;msgs.push({id:Date.now(),t:Date.now(),h:esc(t).replace(/\n/g,'<br>'),k:'quick'});save();$('#qk').classList.remove('on');toast('⚡ Quick me save hua');render()};
 let mt;
 function mirror(){if(!window.Android)return;clearTimeout(mt);mt=setTimeout(()=>{native('mirrorsave',{text:JSON.stringify({msgs,topics})}).catch(()=>{})},1500)}
-function applyFile(t){const d=JSON.parse(t);if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();return true}return false}
-async function pickFile(){try{toast(applyFile(await native('pickfile',{}))?'Restored':'File sahi nahi hai',2500)}catch(e){toast(e.message,3000)}}
+function applyFile(t){let d;try{d=JSON.parse(t)}catch(_){throw new Error('Ye JSON backup file nahi hai')}if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics)||!d.topics.length)return false;if(!d.msgs.every(m=>m&&typeof m==='object'&&m.id!==undefined&&typeof m.h==='string'))return false;if(!d.topics.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))return false;msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();return true}
+async function pickFile(){try{const raw=await native('pickfile',{});if(applyFile(raw))toast('Backup restore ho gaya',2800);else toast('File format sahi nahi hai',3000)}catch(e){toast(e.message,3000)}}
+async function exportBackupFile(){const payload=JSON.stringify({version:3,exportedAt:new Date().toISOString(),msgs,topics},null,2);const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.json';try{if(window.Android){await native('savefile',{filename,text:payload});toast('Backup file save ho gayi',3000);return}const blob=new Blob([payload],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup download start ho gaya',3000)}catch(e){toast(e.message||'Backup save nahi hua',3500)}}
 msgs.filter(m=>m.due>Date.now()&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
 render();restoreDraft();updateComposerControls();
 (async()=>{if(!window.Android||msgs.length||topics.length>1||topics[0].name!=='General')return;try{const t=await native('mirrorload',{});if(t&&applyFile(t))toast('Phone storage se data wapas aaya',3000)}catch(e){}})();
