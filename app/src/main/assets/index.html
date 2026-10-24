@@ -35,6 +35,10 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 #tb button:active{transform:scale(.94)}#tb button.on{background:var(--acc);color:#fff}
 #tb button .fmticon{font-size:18px;line-height:1}
 #tb button{flex:none;border:0;background:transparent;color:var(--text);padding:6px 10px;border-radius:11px;font:inherit;font-size:14px}
+#filters{display:none;gap:6px;overflow-x:auto;padding:5px 8px;background:var(--bar);border-bottom:1px solid var(--ln);scrollbar-width:none}
+#filters.on{display:flex}#filters::-webkit-scrollbar{display:none}
+#filters button{flex:none;border:1px solid var(--ln);background:transparent;color:var(--mut);padding:6px 11px;border-radius:14px;font:inherit;font-size:12px}
+#filters button.active{background:var(--acc);border-color:var(--acc);color:#fff}
 #lk{display:none;gap:6px;padding:6px 8px;background:var(--bar)}
 #lk.on{display:flex}
 #lk input{flex:1;min-width:0;padding:8px 10px;border-radius:10px;border:1px solid var(--ln);background:var(--bg);color:var(--text);font:inherit}
@@ -113,7 +117,8 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 </head>
 <body>
 <header><div class="av" id="av">N</div><div><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search">🔍</button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
-<div id="sq"><input id="sqi" type="text" placeholder="Search notes" autocomplete="off"><button id="sqx">✕</button></div>
+<div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx">✕</button></div>
+<div id="filters"><button data-filter="all" class="active">All</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
 <div id="selbar"><span id="selc"></span><button data-s="copy">Copy</button><button data-s="del">Delete</button><button data-s="x">Cancel</button></div>
 <div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Checklist">☷</button><button id="fab" aria-label="Quick note">+</button></div>
@@ -137,7 +142,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 <div id="sh"></div><div id="toast"></div>
 <script>
 const $=s=>document.querySelector(s),ed=$('#ed'),chat=$('#chat'),sh=$('#sh'),lk=$('#lk'),lki=$('#lki');
-let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',selMode=false,listMode=false,tt,replyId=null,editId=null,saved=null,mode='',pressed=0;
+let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',searchFilter='all',selMode=false,listMode=false,tt,replyId=null,editId=null,saved=null,mode='',pressed=0;
 try{msgs=JSON.parse(localStorage.getItem('notes-chat')||'[]')}catch(e){}
 try{const t=JSON.parse(localStorage.getItem('notes-topics')||'null');if(t&&t.length)topics=t}catch(e){}
 const saveT=()=>{try{localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){}mirror()};
@@ -162,7 +167,7 @@ function clean(n){let o='';n.childNodes.forEach(c=>{
  else if(t==='SPAN'||t==='CODE'){const k=KINDS.find(k=>c.classList.contains(k));o+=k?'<span class="'+k+'">'+x+'</span>':x}
  else o+=x});return o}
 function render(){renderSide();renderTop();chat.innerHTML='';
- const list=msgs.filter(m=>inView(m)&&(!q||plain(m.h).toLowerCase().includes(q)));
+ const list=msgs.filter(m=>inView(m)&&(!q||(plain(m.h)+' '+(m.c||[]).map(i=>i.x).join(' ')).toLowerCase().includes(q))&&matchesFilter(m));
  if(!list.length){chat.innerHTML='<div class="empty">Apna pehla note likho. Ye chat ki tarah send hoga.</div>';return}
  let last='';
  list.forEach(m=>{const d=new Date(m.t),ds=d.toDateString();
@@ -326,8 +331,8 @@ function renderTop(){const pn=msgs.filter(m=>m.p&&inView(m)).pop(),pb=$('#pin');
  $('#selbar').classList.toggle('on',selMode);$('#selc').textContent=sel.size+' selected'}
 $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
-$('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();render()};
-$('#sqx').onclick=()=>{q='';$('#sqi').value='';$('#sq').classList.remove('on');render()};
+$('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
+$('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
 $('#hm').onclick=()=>{sh.innerHTML='<button data-k="srch">🔍 Search</button><button data-k="cl">☁ Cloud backup (encrypted)</button><button data-k="bk">Backup (copy all notes)</button><button data-k="rs">Restore from backup</button><button data-k="pf">📂 Open backup file from phone</button><button data-k="th">Light / Dark theme</button><button data-k="x">Cancel</button>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const a=e.target.dataset.s;if(!a)return;
  if(a==='copy'){const txt=h=>{const d=document.createElement('div');d.innerHTML=h.replace(/<br>/g,'\n');return d.textContent};copy(msgs.filter(m=>sel.has(m.id)).map(m=>txt(m.h)).join('\n\n'))}
@@ -340,8 +345,10 @@ $('#fi').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;c
 let sx=0,sy=0,sb=null,dx=0;
 chat.addEventListener('touchstart',e=>{sb=e.target.closest('.b');if(!sb)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0},{passive:true});
 chat.addEventListener('touchmove',e=>{if(!sb)return;dx=e.touches[0].clientX-sx;if(Math.abs(e.touches[0].clientY-sy)>Math.abs(dx))return;if(dx<0)sb.style.transform='translateX('+Math.max(dx,-70)+'px)'},{passive:true});
-chat.addEventListener('touchend',()=>{if(!sb)return;sb.style.transform='';if(dx<-55){replyId=+sb.dataset.id;editId=null;setCtx();ed.focus();pressed=Date.now()}sb=null;dx=0});
+chat.addEventListener('touchend',()=>{if(!sb)return;sb.style.transform='';if(dx<-55){replyId=+sb.dataset.id;editId=null;setCtx();ed.focus();pressed=Date.now()}else if(dx>55){const m=msgs.find(x=>x.id==sb.dataset.id);if(m){m.p=m.p?0:1;save();render();toast(m.p?'Pinned':'Unpinned')}}sb=null;dx=0});
 function inView(m){return cur==='all'?(m.k||'gen')!=='quick':(m.k||'gen')===cur}
+function matchesFilter(m){const task=Array.isArray(m.c),done=task&&m.c.length>0&&m.c.every(i=>i.s===1),d=new Date(m.t),n=new Date();if(searchFilter==='pinned')return !!m.p;if(searchFilter==='tasks')return task;if(searchFilter==='open')return task&&!done;if(searchFilter==='done')return task&&done;if(searchFilter==='today')return d.toDateString()===n.toDateString();return true}
+$('#filters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;searchFilter=b.dataset.filter;$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render()});
 const cntText=m=>{const n=m.c.length,d=m.c.filter(i=>i.s===1).length,r=m.c.filter(i=>i.s===2).length;return d+'/'+n+' ho gaya'+(r?' · '+r+' nahi mila':'')};
 const ckHtml=m=>m.c?'<div class="cnt">'+cntText(m)+'</div><div class="ck">'+m.c.map((it,i)=>'<div class="ci s'+it.s+'" data-i="'+i+'"><i></i><span>'+esc(it.x)+'</span></div>').join('')+'</div>':'';
 $('#fab').onclick=()=>{$('#qk').classList.add('on');$('#qkt').value='';$('#qkt').focus()};
