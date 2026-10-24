@@ -98,6 +98,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 :root[data-theme="dark"]{--ok:#5fd47a;--no:#ff7b83}
 #chatw{flex:1;position:relative;display:flex;flex-direction:column;min-height:0}
 #chat{padding-bottom:62px;min-height:0}
+#chat.sheet-open{padding-bottom:calc(62px + 70vh)!important}
 #fab{position:absolute;right:14px;bottom:12px;width:50px;height:50px;border-radius:50%;border:0;background:#e6a100;color:#fff;font-size:30px;line-height:1;box-shadow:0 3px 10px rgba(0,0,0,.35)}
 #listfab{position:absolute;right:72px;bottom:17px;width:40px;height:40px;border-radius:50%;border:1px solid var(--ln);background:var(--bar);color:var(--text);font-size:23px;line-height:1;box-shadow:0 3px 10px rgba(0,0,0,.22);display:grid;place-items:center;transition:transform .14s,background .14s}
 #listfab:active{transform:scale(.93)}#listfab.on{background:var(--acc);color:#fff}
@@ -255,7 +256,8 @@ function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListene
 /* Robust Android WebView long-press handling */
 let timer,pressTarget=null,pressX=0,pressY=0,pressMenuArea=false;
 function noteCopyText(m){const tmp=document.createElement('div');tmp.innerHTML=m.h||'';let t=(tmp.innerText||tmp.textContent||'').trim();if(m.c)t+=(t?'\n':'')+m.c.map(i=>i.x).join('\n');return t}
-function keepSelectedVisible(id){const adjust=()=>{const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b||!sh.classList.contains('on'))return;const br=b.getBoundingClientRect(),sr=sh.getBoundingClientRect(),cr=chat.getBoundingClientRect();const visibleTop=Math.max(cr.top,0)+8,visibleBottom=Math.min(cr.bottom,sr.top,window.innerHeight)-14;if(visibleBottom<=visibleTop)return;const h=br.height,available=visibleBottom-visibleTop;let delta=0;if(br.bottom>visibleBottom)delta=br.bottom-visibleBottom;else if(br.top<visibleTop)delta=br.top-visibleTop;if(delta)chat.scrollTop+=delta;if(h>available){chat.scrollTop+=Math.max(0,br.bottom-visibleBottom)}};requestAnimationFrame(()=>requestAnimationFrame(adjust));setTimeout(adjust,260)}
+function keepSelectedVisible(id){chat.classList.add('sheet-open');const adjust=()=>{if(!sh.classList.contains('on'))return;const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b)return;const br=b.getBoundingClientRect(),sr=sh.getBoundingClientRect(),cr=chat.getBoundingClientRect();const top=Math.max(cr.top,0)+8,bottom=Math.min(cr.bottom,sr.top,window.innerHeight)-12;if(bottom<=top)return;const available=bottom-top;let desiredTop=br.top;if(br.height>=available)desiredTop=top;else if(br.bottom>bottom)desiredTop=bottom-br.height;else if(br.top<top)desiredTop=top;const delta=br.top-desiredTop;if(Math.abs(delta)>1)chat.scrollTop+=delta};requestAnimationFrame(()=>requestAnimationFrame(adjust));setTimeout(adjust,280)}
+ sh.addEventListener('transitionend',e=>{if(e.target===sh&&!sh.classList.contains('on'))chat.classList.remove('sheet-open')});
  function openSheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;const txt=noteCopyText(m);
  sh.innerHTML='<button data-k="reply">↩️ Reply</button><button data-k="edit">✏️ Edit</button><button data-k="copy">▢ Copy text</button><button data-k="pin">'+(m.p?'📌 Unpin':'📌 Pin')+'</button><button data-k="hide">'+(m.hidden?'🔓 Unhide note':'🔒 Hide note')+'</button><button data-k="mv">📁 Move to topic</button><button data-k="sel">☑ Select</button><button data-k="del" class="del">🗑 Delete</button><button data-k="x">✕ Cancel</button>';
  sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=txt;sh.classList.add('on');keepSelectedVisible(id)}
