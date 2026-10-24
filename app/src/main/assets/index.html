@@ -236,6 +236,28 @@ body{min-height:100dvh}
 .b.sel{transition:background .12s ease,box-shadow .12s ease!important}
 @media(max-width:420px){#cmp{gap:7px;padding-left:9px;padding-right:9px}#att{width:32px}}
 
+
+/* Full-width footer and safe floating-action zone */
+#footer{display:flex;flex-direction:column;flex:0 0 auto;width:100%;max-width:100%;min-width:0;align-self:stretch;box-sizing:border-box;margin:0;padding:0;position:relative;z-index:2}
+.main{flex:1 1 0;width:100%;min-width:0;min-height:0;overflow:hidden}
+.col{flex:1 1 auto;width:0;min-width:0;min-height:0}
+#chatw{width:100%;min-width:0;min-height:0;flex:1 1 auto}
+#chat{padding-bottom:132px!important;scrollbar-gutter:auto}
+#chatw>#fab{position:absolute;right:14px;bottom:12px;z-index:4}
+#chatw>#listfab{position:absolute;right:72px;bottom:17px;z-index:4}
+#cmp{position:relative!important;left:auto!important;right:auto!important;inset:auto!important;display:flex;width:100%!important;max-width:100%;min-width:0;align-self:stretch;flex:0 0 auto;box-sizing:border-box;margin:0!important;transform:none!important;padding-left:10px;padding-right:10px}
+#ed{flex:1 1 auto!important;width:0!important;min-width:0!important;max-width:none!important}
+#send{display:none!important}
+#cmp.has-text #send{display:flex!important}
+#footer #listfab,#footer #fab{display:none!important}
+#sh{left:0;right:0;bottom:0;width:100%;box-sizing:border-box;z-index:20}
+#sh button .mi{width:38px;height:38px;flex:none;display:grid;place-items:center;border:1px solid var(--ln);border-radius:12px;background:linear-gradient(145deg,rgba(117,170,255,.16),rgba(117,170,255,.04));color:var(--acc)}
+#sh button .mi svg{display:block;width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+#sh .mi-icon{display:none}
+#sh button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
+#sh button:active{transform:none}
+@media(max-width:420px){#chat{padding-bottom:132px!important}#cmp{padding-left:9px;padding-right:9px}#chatw>#listfab{right:68px}}
+
 </style>
 </head>
 <body>
@@ -245,6 +267,7 @@ body{min-height:100dvh}
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
 <div id="selbar"><button data-s="x" aria-label="Exit selection" title="Cancel selection">✕</button><span id="selc">1 selected</span><button data-s="reply" aria-label="Reply" title="Reply">↩</button><button data-s="copy" aria-label="Copy selected" title="Copy">▢</button><button data-s="more" aria-label="More actions" title="More actions">⋮</button><button data-s="del" aria-label="Delete selected" title="Delete">🗑</button></div>
 <div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Create task list">☑</button><button id="fab" aria-label="Quick note" title="Quick note">+</button></div></div></div>
+<div id="footer">
 <div id="tb">
 <button data-a="b" aria-label="Bold" title="Bold"><b class="fmticon">B</b></button><button data-a="i" aria-label="Italic" title="Italic"><i class="fmticon">I</i></button>
 <button data-a="mono" style="font-family:monospace" title="Monospace">&lt;/&gt;</button><button data-a="code" style="font-family:monospace" title="Code block">▤ Code</button>
@@ -257,6 +280,7 @@ body{min-height:100dvh}
 <div id="ctx"><div class="cx"><b id="cxt"></b><span id="cxs"></span></div><button id="cxx" aria-label="Cancel">✕</button></div>
 <div id="lk"><input id="lki" type="text" autocomplete="off"><button id="lkok">Add</button></div>
 <div id="cmp"><button id="att" aria-label="Attach image">📎</button><input id="fi" type="file" accept="image/*" hidden><div id="ed" contenteditable="true" data-ph="Message in Notes"></div><button id="send" aria-label="Send" title="Send message">➤</button></div>
+</div>
 <div id="cfg"><div class="cfgb"><h3>Cloud backup</h3><p class="hint">Data phone par hi password se encrypt hoke jaata hai. Password kahin save nahi hota, bhool gaye to backup khul nahi sakta.</p>
 <h4>Nextcloud / WebDAV</h4><input id="c_wdUrl" placeholder="https://host/remote.php/dav/files/USER/folder"><input id="c_wdUser" placeholder="Username"><input id="c_wdPass" type="password" placeholder="App password">
 <h4>Telegram bot</h4><input id="c_tgToken" placeholder="Bot token (@BotFather se)"><div class="row"><input id="c_tgChat" placeholder="Chat ID"><button id="c_tgDet">Detect</button></div><p class="hint">Pehle bot ko /start bhejein, phir Detect dabayein.</p>
@@ -291,16 +315,16 @@ function clean(n){let o='';n.childNodes.forEach(c=>{
  else if(t==='A'){const h=c.getAttribute('href')||'';o+=/^(https?:|mailto:|tel:)/i.test(h)?'<a href="'+esc(h)+'" target="_blank" rel="noopener">'+x+'</a>':x}
  else if(t==='SPAN'||t==='CODE'){const k=KINDS.find(k=>c.classList.contains(k));o+=k?'<span class="'+k+'">'+x+'</span>':x}
  else o+=x});return o}
-function render(){renderSide();renderTop();chat.innerHTML='';
+function render(){renderSide();renderTop();chat.innerHTML='';const fragment=document.createDocumentFragment();
  const list=msgs.filter(m=>inView(m)&&(!q||(plain(m.h)+' '+(m.c||[]).map(i=>i.x).join(' ')).toLowerCase().includes(q))&&matchesFilter(m));if(searchFilter==='focus')list.sort((a,b)=>(a.due||Infinity)-(b.due||Infinity));
  if(!list.length){chat.innerHTML='<div class="empty">Apna pehla note likho. Ye chat ki tarah send hoga.</div>';return}
  let last='';
  list.forEach(m=>{const d=new Date(m.t),ds=d.toDateString();
-  if(ds!==last){last=ds;const c=document.createElement('div');c.className='chip';c.textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});chat.appendChild(c)}
+  if(ds!==last){last=ds;const c=document.createElement('div');c.className='chip';c.textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});fragment.appendChild(c)}
   const b=document.createElement('div');b.className='b'+(m.h&&m.h.includes('class="code"')?' has-code':'')+(selMode&&sel.has(Number(m.id))?' sel':'');b.dataset.id=m.id;
   b.innerHTML=(cur==='all'?'<span class="tg">'+esc(tn(m.k))+'</span>':'')+rq(m)+(m.i?'<img class="im" src="'+m.i+'">':'')+m.h+(m.due?'<span class="due '+(m.due<Date.now()&&!(m.c&&m.c.every(i=>i.s===1))?'late':'')+'">◷ '+esc(new Date(m.due).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}))+'</span>':'')+ckHtml(m)+'<span class="tm">'+(m.e?'edited · ':'')+d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'<button class="mn" aria-label="Options">⋮</button></span>';
-  chat.appendChild(b)});
- chat.scrollTop=chat.scrollHeight}
+  fragment.appendChild(b)});
+ chat.appendChild(fragment);chat.scrollTop=chat.scrollHeight}
 function saveDraft(){try{const value={text:ed.innerHTML,plain:ed.innerText,listMode,listTitle,due:$('#taskdue').value,topic:cur,replyId,editId,updatedAt:Date.now()};if(value.plain.trim()||listMode||value.due)localStorage.setItem('notes-chat-draft',JSON.stringify(value));else localStorage.removeItem('notes-chat-draft')}catch(e){}}
 function clearDraft(){try{localStorage.removeItem('notes-chat-draft')}catch(e){}}
 ed.addEventListener('input',()=>{updateComposerControls();clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,180);});$('#taskdue').addEventListener('change',saveDraft);
@@ -455,8 +479,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='cl')openCloud();
   if(k==='srch'){$('#sq').classList.add('on');$('#sqi').focus()}
   if(k==='bk'){exportBackupFile();return}
-  if(k==='rs'){pickFile();return}
-  if(k==='pf')pickFile();
+  if(k==='rs'||k==='pf'){pickFile();return}
   if(k==='th'){const d=document.documentElement,n=(d.dataset.theme||'dark')==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('notes-theme',n)}catch(e){}}
   return}
  if(sh.dataset.type==='topic'){const tid=sh.dataset.id;sh.classList.remove('on');
@@ -535,7 +558,7 @@ $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
 $('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
-$('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const glyph={srch:"🔍",cl:"☁️",bk:"💾",rs:"📥",pf:"📁",th:"🌗",x:"✕"};const item=(key,title,sub)=>'<button data-k="'+key+'"><span class="mi"><span class="mi-icon">'+glyph[key]+'</span></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted cloud copy')+item('bk','Backup','Export all notes')+item('rs','Restore','Restore saved notes')+item('pf','Open backup file','Import from this device')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
+$('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted cloud copy')+item('bk','Backup','Export all notes')+item('rs','Restore','Restore saved notes')+item('pf','Open backup file','Import from this device')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
@@ -563,8 +586,8 @@ $('#qks').onclick=()=>{const t=$('#qkt').value.trim();if(!t)return;msgs.push({id
 let mt;
 function mirror(){if(!window.Android)return;clearTimeout(mt);mt=setTimeout(()=>{native('mirrorsave',{text:JSON.stringify({msgs,topics})}).catch(()=>{})},1500)}
 function applyFile(t){let d;try{d=JSON.parse(t)}catch(_){throw new Error('Ye JSON backup file nahi hai')}if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics)||!d.topics.length)return false;if(!d.msgs.every(m=>m&&typeof m==='object'&&m.id!==undefined&&typeof m.h==='string'))return false;if(!d.topics.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))return false;msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();return true}
-async function pickFile(){try{const raw=await native('pickfile',{});if(applyFile(raw))toast('Backup restore ho gaya',2800);else toast('File format sahi nahi hai',3000)}catch(e){toast(e.message,3000)}}
-async function exportBackupFile(){const payload=JSON.stringify({version:3,exportedAt:new Date().toISOString(),msgs,topics},null,2);const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.json';try{if(window.Android){await native('savefile',{filename,text:payload});toast('Backup file save ho gayi',3000);return}const blob=new Blob([payload],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup download start ho gaya',3000)}catch(e){toast(e.message||'Backup save nahi hua',3500)}}
+async function pickFile(){try{if(window.Android)toast('Backup JSON file select karo',1800);const raw=await native('pickfile',{});if(applyFile(raw))toast('Backup restore ho gaya',2800);else toast('Valid FZ Notes JSON backup select karo',3000)}catch(e){toast(e.message||'Backup import nahi hua',3000)}}
+async function exportBackupFile(){const payload=JSON.stringify({version:3,exportedAt:new Date().toISOString(),msgs,topics},null,2);const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.json';try{if(window.Android){toast('Save location choose karke Save dabao',2200);const result=await native('savefile',{filename,text:payload});toast(result||'Backup file save ho gayi',3000);return true}const blob=new Blob([payload],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup download start ho gaya',3000);return true}catch(e){toast(e.message||'Backup save nahi hua',3500);return false}}
 msgs.filter(m=>m.due>Date.now()&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
 render();restoreDraft();updateComposerControls();
 (async()=>{if(!window.Android||msgs.length||topics.length>1||topics[0].name!=='General')return;try{const t=await native('mirrorload',{});if(t&&applyFile(t))toast('Phone storage se data wapas aaya',3000)}catch(e){}})();
