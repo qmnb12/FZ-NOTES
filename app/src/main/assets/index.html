@@ -28,7 +28,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 .b a{text-decoration:underline}
 .spoiler{background:var(--mono);border-bottom:1px dashed var(--mut)}
 #chat .spoiler:not(.on){color:transparent;background:var(--mut);border-radius:4px;cursor:pointer;user-select:none}
-#tb{display:none;position:absolute;left:8px;right:8px;bottom:58px;z-index:4;gap:5px;overflow-x:auto;padding:7px;background:var(--bar);border:1px solid var(--ln);border-radius:18px;box-shadow:0 5px 22px rgba(0,0,0,.28);scrollbar-width:none;overscroll-behavior-x:contain;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#tb{display:none;position:absolute;left:8px;right:8px;top:8px;z-index:4;gap:5px;overflow-x:auto;padding:7px;background:var(--bar);border:1px solid var(--ln);border-radius:18px;box-shadow:0 5px 22px rgba(0,0,0,.28);scrollbar-width:none;overscroll-behavior-x:contain;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 #tb::-webkit-scrollbar{display:none}#tb.on{display:flex;animation:tbIn .16s ease-out}
 @keyframes tbIn{from{opacity:0;transform:translateY(5px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 #tb button{flex:none;min-width:40px;height:38px;border:0;background:transparent;color:var(--text);padding:6px 10px;border-radius:12px;font:inherit;font-size:14px;display:flex;align-items:center;justify-content:center;gap:5px;transition:background .14s,transform .14s}
@@ -89,6 +89,8 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 #chatw{flex:1;position:relative;display:flex;flex-direction:column;min-height:0}
 #chat{padding-bottom:62px;min-height:0}
 #fab{position:absolute;right:14px;bottom:12px;width:50px;height:50px;border-radius:50%;border:0;background:#e6a100;color:#fff;font-size:30px;line-height:1;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+#listfab{position:absolute;right:72px;bottom:17px;width:40px;height:40px;border-radius:50%;border:1px solid var(--ln);background:var(--bar);color:var(--text);font-size:23px;line-height:1;box-shadow:0 3px 10px rgba(0,0,0,.22);display:grid;place-items:center;transition:transform .14s,background .14s}
+#listfab:active{transform:scale(.93)}#listfab.on{background:var(--acc);color:#fff}
 .ov{position:fixed;inset:0;display:none;background:rgba(0,0,0,.5);z-index:8;align-items:flex-end}.ov.on{display:flex}
 .cfgb textarea{display:block;width:100%;box-sizing:border-box;margin-bottom:8px;padding:9px 12px;border-radius:10px;border:1px solid var(--ln);background:var(--bg);color:var(--text);font:inherit;resize:vertical}
 #tb button.on{background:var(--acc);color:#fff}
@@ -114,9 +116,9 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes" autocomplete="off"><button id="sqx">✕</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
 <div id="selbar"><span id="selc"></span><button data-s="copy">Copy</button><button data-s="del">Delete</button><button data-s="x">Cancel</button></div>
-<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="fab" aria-label="Quick note">+</button></div>
+<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Checklist">☷</button><button id="fab" aria-label="Quick note">+</button></div>
 <div id="tb">
-<button data-a="list" aria-label="Checklist" title="Checklist"><span class="fmticon">☷</span><span>List</span></button><button data-a="b" aria-label="Bold" title="Bold"><b class="fmticon">B</b></button><button data-a="i" aria-label="Italic" title="Italic"><i class="fmticon">I</i></button>
+<button data-a="b" aria-label="Bold" title="Bold"><b class="fmticon">B</b></button><button data-a="i" aria-label="Italic" title="Italic"><i class="fmticon">I</i></button>
 <button data-a="mono" style="font-family:monospace" title="Monospace">&lt;/&gt;</button><button data-a="code" style="font-family:monospace" title="Code block">▤ Code</button>
 <button data-a="s" title="Strikethrough"><s>S</s></button><button data-a="u" title="Underline"><u>U</u></button>
 <button data-a="quote" title="Quote">❝ Quote</button><button data-a="spoiler" title="Spoiler">▧ Spoiler</button>
@@ -175,11 +177,12 @@ function send(){const h=clean(ed);if(!ed.textContent.trim())return;
   const items=L.slice(1).map(x=>{const o=em&&em.c&&em.c.find(i=>i.x===x);return{x,s:o?o.s:0}});
   if(em){em.h='<b>'+esc(L[0])+'</b>';em.c=items;em.e=1;editId=null}
   else{const rm=replyId&&msgs.find(m=>m.id===replyId);msgs.push({id:Date.now(),t:Date.now(),h:'<b>'+esc(L[0])+'</b>',c:items,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});replyId=null}
-  listMode=false;document.querySelector('[data-a="list"]').classList.remove('on');ed.innerHTML='';setCtx();save();render();return}
+  listMode=false;$('#listfab').classList.remove('on');ed.innerHTML='';setCtx();save();render();return}
  if(editId){const m=msgs.find(m=>m.id===editId);if(m){m.h=h;m.e=1}editId=null}
  else{const rm=replyId&&msgs.find(m=>m.id===replyId);msgs.push({id:Date.now(),t:Date.now(),h,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});replyId=null}
  ed.innerHTML='';setCtx();save();render()}
 $('#send').onclick=send;
+$('#listfab').onclick=()=>{listMode=!listMode;$('#listfab').classList.toggle('on',listMode);toast(listMode?'Checklist mode: first line title, next lines items':'Checklist mode off',2200);ed.focus()};
 ed.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'))});
 document.addEventListener('selectionchange',()=>{const s=getSelection();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;$('#tb').classList.toggle('on',selected);if(selected){const active=s.toString();$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',b.dataset.a==='mono'&&!!s.anchorNode.parentElement.closest('.mono')))}}else $('#tb').classList.remove('on')});
 function restore(){ed.focus();if(saved){const s=getSelection();s.removeAllRanges();s.addRange(saved)}}
@@ -193,7 +196,7 @@ function act(a){restore();
  if(ex[a])document.execCommand(ex[a]);
  else if(['mono','code','quote','spoiler'].includes(a)){if(!wrap(a))toast('Pehle text select karo')}
  else if(a==='reg'){if(hasSel())document.execCommand('insertText',false,getSelection().toString());else toast('Pehle text select karo')}
- else if(a==='list'){listMode=!listMode;document.querySelector('[data-a="list"]').classList.toggle('on',listMode);toast(listMode?'List mode: pehli line title, baaki items':'List mode off',2200)}
+ 
  else if(a==='date')document.execCommand('insertHTML',false,'<span class="date">'+esc(new Date().toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}))+'</span>&nbsp;');
  else if(a==='link')ask('link','Paste link');
  else if(a==='mention'){if(hasSel()){wrap('mention')}else ask('mention','@name')}
