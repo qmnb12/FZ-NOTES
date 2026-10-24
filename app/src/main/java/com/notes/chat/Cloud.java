@@ -63,6 +63,8 @@ public class Cloud {
                 JSONArray ts = a.getJSONArray("targets");
                 StringBuilder sb = new StringBuilder();
                 String fid = "";
+                int successCount = 0;
+                int failureCount = 0;
                 for (int i = 0; i < ts.length(); i++) {
                     JSONObject t = ts.getJSONObject(i);
                     String type = t.getString("type");
@@ -70,14 +72,20 @@ public class Cloud {
                     try {
                         String r = upload(t, enc);
                         if ("tg".equals(type)) fid = r;
+                        successCount++;
                         sb.append(name).append(" \u2713   ");
                     } catch (Exception e) {
-                        sb.append(name).append(" \u2717 (").append(e.getMessage()).append(")   ");
+                        failureCount++;
+                        String reason = e.getMessage() == null ? "upload failed" : e.getMessage();
+                        if (reason.length() > 120) reason = reason.substring(0, 120);
+                        sb.append(name).append(" \u2717 (").append(reason).append(")   ");
                     }
                 }
                 JSONObject o = new JSONObject();
                 o.put("msg", sb.toString().trim());
                 o.put("fid", fid);
+                o.put("successCount", successCount);
+                o.put("failureCount", failureCount);
                 return o.toString();
             }
             case "restore": {
@@ -329,28 +337,35 @@ public class Cloud {
 
     static byte[] http(String method, String url, Map<String, String> headers, byte[] body, String ctype) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setRequestMethod(method);
-        c.setConnectTimeout(20000);
-        c.setReadTimeout(60000);
-        if (headers != null)
-            for (Map.Entry<String, String> e : headers.entrySet()) c.setRequestProperty(e.getKey(), e.getValue());
-        if (body != null) {
-            c.setDoOutput(true);
-            if (ctype != null) c.setRequestProperty("Content-Type", ctype);
-            c.setFixedLengthStreamingMode(body.length);
-            try (OutputStream o = c.getOutputStream()) {
-                o.write(body);
+        try {
+            c.setRequestMethod(method);
+            c.setConnectTimeout(20000);
+            c.setReadTimeout(60000);
+            if (headers != null)
+                for (Map.Entry<String, String> e : headers.entrySet()) c.setRequestProperty(e.getKey(), e.getValue());
+            if (body != null) {
+                c.setDoOutput(true);
+                if (ctype != null) c.setRequestProperty("Content-Type", ctype);
+                c.setFixedLengthStreamingMode(body.length);
+                try (OutputStream o = c.getOutputStream()) {
+                    o.write(body);
+                }
             }
+            int code = c.getResponseCode();
+            InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
+            byte[] data;
+            try (InputStream stream = in) {
+                data = readAll(stream);
+            }
+            if (code >= 400) {
+                String msg = new String(data, StandardCharsets.UTF_8);
+                if (msg.length() > 100) msg = msg.substring(0, 100);
+                throw new Exception("HTTP " + code + ": " + msg);
+            }
+            return data;
+        } finally {
+            c.disconnect();
         }
-        int code = c.getResponseCode();
-        InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
-        byte[] data = readAll(in);
-        if (code >= 400) {
-            String msg = new String(data, StandardCharsets.UTF_8);
-            if (msg.length() > 100) msg = msg.substring(0, 100);
-            throw new Exception("HTTP " + code + ": " + msg);
-        }
-        return data;
     }
 
     static byte[] readAll(InputStream in) throws Exception {
