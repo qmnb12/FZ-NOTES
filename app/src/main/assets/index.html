@@ -149,6 +149,50 @@ header small{display:block;font-size:12px;line-height:1.2;white-space:nowrap;ove
 .tp span{max-width:56px;font-size:10px}
 @media(max-width:420px){header{padding:8px 10px}#side{width:56px}.tp i{width:36px;height:36px}.b{max-width:94%}.code{font-size:.74em}}
 
+
+/* Reference-matched Telegram-style chat surface */
+header{padding:8px 12px;gap:10px;min-height:54px;align-items:center;background:#101a29;border-bottom:1px solid rgba(150,178,210,.12);box-shadow:none}
+header>div:nth-child(2){flex:1;min-width:0}
+header b{font-size:16px;line-height:1.18;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header small{display:block;font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{width:36px;height:36px;flex:none;background:#287bd4;color:#fff}
+.header-chat-icon{display:block;width:28px;height:28px}
+#pin{padding:5px 9px;gap:7px;background:#111d2c;border-bottom:1px solid rgba(150,178,210,.1)}
+#pin .cx{border-left-width:3px;padding-left:7px}
+#pin b{font-size:12px}
+#pin span{font-size:13px}
+#side{width:64px!important;background:#111b2a;border-right:1px solid rgba(150,178,210,.12);padding:7px 0;gap:3px}
+.tp{min-height:63px;padding:5px 2px;border-radius:10px;margin:0 4px;transition:background .18s ease,color .18s ease,transform .16s ease}
+.tp:active{transform:scale(.96)}
+.tp i{width:38px;height:38px;flex:none}
+.tp span{max-width:60px;font-size:10px;line-height:1.15}
+.tp[data-topic="all"] i{background:transparent!important;color:#8998ad!important}
+.tp[data-topic="all"].on{background:rgba(91,160,255,.08);color:#69a8ff}
+.tp[data-topic="all"].on i{color:#69a8ff!important}
+.chat-folder-icon{width:35px;height:35px;display:block}
+#chat{padding:10px 12px 6px;gap:6px;scroll-behavior:auto}
+.b{box-sizing:border-box;max-width:82%;padding:9px 10px 5px;border-radius:19px 19px 5px 19px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(155deg,#8b3fc4 0%,#6256d8 48%,#2d80df 100%);color:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);line-height:1.34;transition:transform .18s ease,box-shadow .18s ease,outline-color .18s ease}
+.tg{font-size:12px;color:#d5dfff;margin-bottom:3px}
+.tm{font-size:11px;color:rgba(255,255,255,.78);margin-top:4px}
+.code{display:block;font-size:.72em!important;line-height:1.36;background:transparent!important;padding:0!important;border:0!important;border-radius:0!important;margin:0!important;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;color:inherit}
+#chat .code::after{display:none!important;content:none!important}
+.mono{background:rgba(16,29,50,.16);padding:0 3px}
+.quote{background:rgba(255,255,255,.14);border-left:3px solid rgba(255,255,255,.9);padding:4px 8px;border-radius:0 6px 6px 0}
+.rp{background:rgba(255,255,255,.12)}
+#cmp{align-items:center;gap:5px;padding:7px 8px calc(7px + env(safe-area-inset-bottom,0px));background:#101a29;border-top:1px solid rgba(150,178,210,.1)}
+#ed{min-width:0;min-height:22px;max-height:28vh;padding:9px 12px;border-radius:22px;background:#091321;font-size:16px;line-height:1.35}
+#att{width:32px;height:38px;flex:none;color:#98a9be;font-size:21px}
+#send{width:40px;height:40px;flex:none;background:linear-gradient(145deg,#7baeff,#4089f5);transition:transform .16s ease,filter .16s ease}
+#send:active{transform:scale(.94);filter:brightness(1.08)}
+#cmp #listfab,#cmp #fab{position:static!important;inset:auto!important;right:auto!important;bottom:auto!important;display:grid;place-items:center;flex:none;width:30px;height:34px;min-width:30px;border:0;border-radius:50%;box-shadow:none;padding:0;margin:0;background:transparent;color:#91a4bb;font-size:22px;line-height:1;transition:transform .16s ease,background .16s ease,color .16s ease}
+#cmp #listfab:active,#cmp #fab:active{transform:scale(.92)}
+#cmp #listfab.on{background:rgba(91,160,255,.18);color:#74adff}
+#cmp #fab{color:#e4ad18;font-size:26px}
+.main,.col,#chatw{min-height:0}
+#chatw{position:relative}
+#chat .b.sel{background:linear-gradient(155deg,#245fce,#1f76d8)!important;border-color:#d0e2ff!important;box-shadow:0 0 0 2px rgba(119,177,255,.7),0 5px 18px rgba(0,0,0,.38)!important}
+@media(max-width:420px){#side{width:64px!important}.tp{min-height:61px}.b{max-width:82%;padding:8px 9px 5px}.code{font-size:.70em!important}#cmp{gap:4px}}
+
 </style>
 </head>
 <body>
@@ -157,7 +201,7 @@ header small{display:block;font-size:12px;line-height:1.2;white-space:nowrap;ove
 <div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
 <div id="selbar"><button data-s="x" aria-label="Exit selection" title="Cancel selection">✕</button><span id="selc">1 selected</span><button data-s="reply" aria-label="Reply" title="Reply">↩</button><button data-s="copy" aria-label="Copy selected" title="Copy">▢</button><button data-s="more" aria-label="More actions" title="More actions">⋮</button><button data-s="del" aria-label="Delete selected" title="Delete">🗑</button></div>
-<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Create task list">☑</button><button id="fab" aria-label="Quick note">+</button></div>
+<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div></div>
 <div id="tb">
 <button data-a="b" aria-label="Bold" title="Bold"><b class="fmticon">B</b></button><button data-a="i" aria-label="Italic" title="Italic"><i class="fmticon">I</i></button>
 <button data-a="mono" style="font-family:monospace" title="Monospace">&lt;/&gt;</button><button data-a="code" style="font-family:monospace" title="Code block">▤ Code</button>
@@ -169,7 +213,7 @@ header small{display:block;font-size:12px;line-height:1.2;white-space:nowrap;ove
 <div id="taskmeta"><label for="taskdue">Due / reminder</label><input id="taskdue" type="datetime-local"><span>Optional reminder</span></div>
 <div id="ctx"><div class="cx"><b id="cxt"></b><span id="cxs"></span></div><button id="cxx" aria-label="Cancel">✕</button></div>
 <div id="lk"><input id="lki" type="text" autocomplete="off"><button id="lkok">Add</button></div>
-<div id="cmp"><button id="att" aria-label="Attach image">📎</button><input id="fi" type="file" accept="image/*" hidden><div id="ed" contenteditable="true" data-ph="Message in Notes"></div><button id="send" aria-label="Send">➤</button></div></div></div>
+<div id="cmp"><button id="att" aria-label="Attach image">📎</button><input id="fi" type="file" accept="image/*" hidden><div id="ed" contenteditable="true" data-ph="Message in Notes"></div><button id="listfab" aria-label="Create checklist" title="Create task list">☑</button><button id="fab" aria-label="Quick note" title="Quick note">+</button><button id="send" aria-label="Send">➤</button></div></div></div>
 <div id="cfg"><div class="cfgb"><h3>Cloud backup</h3><p class="hint">Data phone par hi password se encrypt hoke jaata hai. Password kahin save nahi hota, bhool gaye to backup khul nahi sakta.</p>
 <h4>Nextcloud / WebDAV</h4><input id="c_wdUrl" placeholder="https://host/remote.php/dav/files/USER/folder"><input id="c_wdUser" placeholder="Username"><input id="c_wdPass" type="password" placeholder="App password">
 <h4>Telegram bot</h4><input id="c_tgToken" placeholder="Bot token (@BotFather se)"><div class="row"><input id="c_tgChat" placeholder="Chat ID"><button id="c_tgDet">Detect</button></div><p class="hint">Pehle bot ko /start bhejein, phir Detect dabayein.</p>
@@ -391,8 +435,9 @@ const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return 'hsl(
 const first=s=>[...s][0].toUpperCase();
 function renderSide(){const side=$('#side');side.innerHTML='';
  [{id:'quick',name:'Quick'},{id:'all',name:'All'},{id:'hidden',name:'Hidden 🔒'}].concat(topics).forEach(t=>{const b=document.createElement('button'),all=t.id==='all'||t.id==='quick';
-  b.className='tp'+(t.id===cur?' on':'');
-  b.innerHTML='<i style="background:'+(t.id==='quick'?'#e6a100':all?'var(--acc)':hue(t.name))+'">'+(t.id==='quick'?'⚡':all?'💬':esc(first(t.name)))+'</i><span>'+esc(t.name)+'</span>';
+  b.className='tp'+(t.id===cur?' on':'');b.dataset.topic=t.id;
+  const chatIcon='<svg class="chat-folder-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M22 7h14a8 8 0 0 1 8 8v7a8 8 0 0 1-8 8h-3l-6 5v-7a8 8 0 0 1-5-7v-6" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 13h16a8 8 0 0 1 8 8v6a8 8 0 0 1-8 8h-8l-7 5v-8a8 8 0 0 1-8-8v-3a8 8 0 0 1 7-8Z" fill="currentColor"/><circle cx="12" cy="24" r="1.8" fill="#132033"/><circle cx="18" cy="24" r="1.8" fill="#132033"/><circle cx="24" cy="24" r="1.8" fill="#132033"/></svg>';
+  b.innerHTML='<i style="background:'+(t.id==='quick'?'#e6a100':t.id==='all'?'transparent':hue(t.name))+';color:'+(t.id==='all'?'var(--mut)':'#fff')+'">'+(t.id==='quick'?'⚡':t.id==='all'?chatIcon:t.id==='hidden'?'🔒':esc(first(t.name)))+'</i><span>'+esc(t.name)+'</span>';
   b.onclick=()=>{if(Date.now()-pressed<400)return;if(t.id==='hidden'&&!hiddenUnlocked){ask('hidepwunlock','Hidden notes password');return}cur=t.id;clearCtx();lk.classList.remove('on');render()};
   if(!all){b.addEventListener('pointerdown',()=>{clearTimeout(tt);tt=setTimeout(()=>{pressed=Date.now();openTopicSheet(t)},550)});
    ['pointerup','pointercancel','pointerleave'].forEach(x=>b.addEventListener(x,()=>clearTimeout(tt)))}
@@ -400,8 +445,8 @@ function renderSide(){const side=$('#side');side.innerHTML='';
  const a=document.createElement('button');a.className='tp add';a.innerHTML='<i>+</i><span>New</span>';
  a.onclick=()=>ask('topic','New topic name','');side.appendChild(a);
  $('#ttl').textContent=cur==='all'?'All notes':cur==='quick'?'⚡ Quick notes':cur==='hidden'?'🔒 Hidden notes':tn(cur);
- $('#av').textContent=cur==='all'?'N':cur==='quick'?'⚡':cur==='hidden'?'🔒':first(tn(cur));
- $('#sub').textContent=msgs.filter(inView).length+' notes · saved on this device'}
+ if(cur==='all'){$('#av').innerHTML='<svg class="header-chat-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M9 9h25a8 8 0 0 1 8 8v10a8 8 0 0 1-8 8H22l-10 6v-7a8 8 0 0 1-8-8V17a8 8 0 0 1 5-8Z" fill="currentColor"/><circle cx="16" cy="22" r="2.4" fill="#287bd4"/><circle cx="24" cy="22" r="2.4" fill="#287bd4"/><circle cx="32" cy="22" r="2.4" fill="#287bd4"/></svg>'}else $('#av').textContent=cur==='quick'?'⚡':cur==='hidden'?'🔒':first(tn(cur));
+ $('#sub').textContent=msgs.filter(inView).length+' notes'}
 function openTopicSheet(t){sh.innerHTML='<button data-k="ren">Rename topic</button><button data-k="up">Move up</button><button data-k="dn">Move down</button>'+(t.id==='gen'?'':'<button data-k="tdel" class="del">Delete topic and its notes</button>')+'<button data-k="x">Cancel</button>';
  sh.dataset.id=t.id;sh.dataset.type='topic';sh.classList.add('on')}
 $('#side').addEventListener('contextmenu',e=>e.preventDefault());
