@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>My Notes Chat</title>
+<title>FZ NOTES</title>
 <style>
 :root{--bg:#0b111b;--bar:#111b29;--bub:#1b2b40;--text:#edf4ff;--mut:#93a4b8;--acc:#75aaff;--mono:rgba(255,255,255,.075);--ln:rgba(255,255,255,.09);
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -54,7 +54,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 #send{flex:none;width:42px;height:42px;border:0;border-radius:50%;background:var(--acc);color:#fff;font-size:20px}
 #sh{position:fixed;left:0;right:0;bottom:0;display:none;background:var(--bar);border-radius:16px 16px 0 0;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:5}
 #sh.on{display:block}
-#sh button{display:block;width:100%;text-align:left;border:0;background:none;color:var(--text);padding:13px 14px;font:inherit}
+#sh button{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:14px 16px;font:inherit;font-size:16px;border-radius:14px;min-height:54px;transition:background .16s,transform .16s}#sh button:active{background:rgba(117,170,255,.13);transform:scale(.99)}#sh button .mi{width:38px;height:38px;flex:none;display:grid;place-items:center;border:1px solid var(--ln);border-radius:12px;background:linear-gradient(145deg,rgba(117,170,255,.16),rgba(117,170,255,.04));color:var(--acc)}#sh button .mi svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#sh button .mt{flex:1}#sh button .ms{display:block;color:var(--mut);font-size:12px;margin-top:2px}#sh button[data-k="x"]{color:var(--mut)}
 #sh .del{color:#e5484d}
 #toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#222;color:#fff;padding:6px 14px;border-radius:14px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 #toast.on{opacity:1}
@@ -358,7 +358,7 @@ $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
 $('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
-$('#hm').onclick=()=>{sh.innerHTML='<button data-k="srch">🔍 Search</button><button data-k="cl">☁ Cloud backup (encrypted)</button><button data-k="bk">Backup (copy all notes)</button><button data-k="rs">Restore from backup</button><button data-k="pf">📂 Open backup file from phone</button><button data-k="th">Light / Dark theme</button><button data-k="x">Cancel</button>';sh.dataset.type='menu';sh.classList.add('on')};
+$('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const item=(key,title,sub)=>'<button data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[key]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted cloud copy')+item('bk','Backup','Export all notes')+item('rs','Restore','Restore saved notes')+item('pf','Open backup file','Import from this device')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const a=e.target.dataset.s;if(!a)return;
  if(a==='copy'){const txt=h=>{const d=document.createElement('div');d.innerHTML=h.replace(/<br>/g,'\n');return d.textContent};copy(msgs.filter(m=>sel.has(m.id)).map(m=>txt(m.h)).join('\n\n'))}
  if(a==='del'){msgs=msgs.filter(m=>!sel.has(m.id));save()}
