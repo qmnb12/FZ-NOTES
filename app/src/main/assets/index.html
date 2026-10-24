@@ -250,13 +250,14 @@ $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
   else document.execCommand('insertHTML',false,'<a href="'+esc(u)+'">'+esc(v)+'</a>&nbsp;')}
  else document.execCommand('insertHTML',false,'<span class="mention">'+esc(v.startsWith('@')?v:'@'+v)+'</span>&nbsp;')};
 lki.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#lkok').click()}});
-/* Bubble long-press copies only note content; the three-dot button opens actions. */
+/* Long-press on message text shows only Copy text; long-press on timestamp/options area opens full menu. */
 let timer,pressTarget=null,pressX=0,pressY=0;
 function noteCopyText(m){const tmp=document.createElement('div');tmp.innerHTML=m.h||'';let t=(tmp.innerText||tmp.textContent||'').trim();if(m.c)t+=(t?'\n':'')+m.c.map(i=>i.x).join('\n');return t}
 function openSheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;const txt=noteCopyText(m);
  sh.innerHTML='<button data-k="reply">↩️ Reply</button><button data-k="edit">✏️ Edit</button><button data-k="copy">▢ Copy text</button><button data-k="pin">'+(m.p?'📌 Unpin':'📌 Pin')+'</button><button data-k="hide">'+(m.hidden?'🔓 Unhide note':'🔒 Hide note')+'</button><button data-k="mv">📁 Move to topic</button><button data-k="sel">☑ Select</button><button data-k="del" class="del">🗑 Delete</button><button data-k="x">✕ Cancel</button>';
  sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=txt;sh.classList.add('on')}
-chat.addEventListener('pointerdown',e=>{const b=e.target.closest('.b');if(!b||selMode||e.target.closest('.mn,.ci,.rp,.a'))return;clearTimeout(timer);pressTarget=b;pressX=e.clientX;pressY=e.clientY;timer=setTimeout(()=>{if(!pressTarget)return;const m=msgs.find(m=>m.id==pressTarget.dataset.id);if(m){pressed=Date.now();copy(noteCopyText(m));toast('Message text copied',1400)}pressTarget=null},550)});
+function openCopySheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;sh.innerHTML='<button data-k="copy">▢ Copy text</button>';sh.dataset.id=id;sh.dataset.type='copyonly';sh.dataset.txt=noteCopyText(m);sh.classList.add('on')}
+chat.addEventListener('pointerdown',e=>{const b=e.target.closest('.b');if(!b||selMode||e.target.closest('.ci,.rp,.a'))return;clearTimeout(timer);pressTarget=b;pressX=e.clientX;pressY=e.clientY;const id=b.dataset.id;const menuArea=!!e.target.closest('.tm,.mn');timer=setTimeout(()=>{if(!pressTarget)return;pressed=Date.now();if(menuArea)openSheet(id);else openCopySheet(id);pressTarget=null},550)});
 ['pointerup','pointercancel','pointerleave'].forEach(t=>chat.addEventListener(t,()=>{clearTimeout(timer);pressTarget=null}));
 chat.addEventListener('pointermove',e=>{if(pressTarget&&(Math.abs(e.clientX-pressX)>12||Math.abs(e.clientY-pressY)>12)){clearTimeout(timer);pressTarget=null}},{passive:true});
 chat.addEventListener('contextmenu',e=>{if(e.target.closest('.b'))e.preventDefault()});
@@ -268,6 +269,7 @@ chat.addEventListener('click',e=>{if(Date.now()-pressed<650){e.preventDefault();
  const sp=e.target.closest('.spoiler');if(sp){sp.classList.toggle('on');return}
  const m=e.target.closest('.mono,.code');if(m)copy(m.textContent)});
 sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
+ if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='cloud'){sh.classList.remove('on');
   if(k==='status'){toast(lastBackup()?'Last backup: '+lastBackup():'No successful backup recorded',2600)}
   if(k==='cset')openCfg();
