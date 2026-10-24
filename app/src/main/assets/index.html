@@ -255,9 +255,10 @@ function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListene
 /* Robust Android WebView long-press handling */
 let timer,pressTarget=null,pressX=0,pressY=0,pressMenuArea=false;
 function noteCopyText(m){const tmp=document.createElement('div');tmp.innerHTML=m.h||'';let t=(tmp.innerText||tmp.textContent||'').trim();if(m.c)t+=(t?'\n':'')+m.c.map(i=>i.x).join('\n');return t}
-function openSheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;const txt=noteCopyText(m);
+function keepSelectedVisible(id){requestAnimationFrame(()=>requestAnimationFrame(()=>{const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b||!sh.classList.contains('on'))return;const br=b.getBoundingClientRect(),sr=sh.getBoundingClientRect(),cr=chat.getBoundingClientRect();const top=cr.top+8,bottom=Math.min(cr.bottom,sr.top)-12;if(bottom<=top)return;const target=(top+bottom)/2,current=(br.top+br.bottom)/2;chat.scrollTop+=current-target}))}
+ function openSheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;const txt=noteCopyText(m);
  sh.innerHTML='<button data-k="reply">↩️ Reply</button><button data-k="edit">✏️ Edit</button><button data-k="copy">▢ Copy text</button><button data-k="pin">'+(m.p?'📌 Unpin':'📌 Pin')+'</button><button data-k="hide">'+(m.hidden?'🔓 Unhide note':'🔒 Hide note')+'</button><button data-k="mv">📁 Move to topic</button><button data-k="sel">☑ Select</button><button data-k="del" class="del">🗑 Delete</button><button data-k="x">✕ Cancel</button>';
- sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=txt;sh.classList.add('on')}
+ sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=txt;sh.classList.add('on');keepSelectedVisible(id)}
 function openCopySheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;sh.innerHTML='<button data-k="copy">▢ Copy text</button><button data-k="x">✕ Cancel</button>';sh.dataset.id=id;sh.dataset.type='copyonly';sh.dataset.txt=noteCopyText(m);sh.classList.add('on')}
 function startNotePress(e){const b=e.target.closest('.b');if(!b||selMode||e.target.closest('.ci,.rp,.a'))return;clearTimeout(timer);pressTarget=b;pressX=e.clientX||0;pressY=e.clientY||0;const id=b.dataset.id;timer=setTimeout(()=>{if(!pressTarget)return;selectNote(id);openSheet(id);pressTarget=null},520)}
 function cancelNotePress(){clearTimeout(timer);pressTarget=null}
