@@ -120,6 +120,35 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 .cfgb .row{display:flex;gap:6px}.cfgb .row input{flex:1}
 .cfgb button{border:0;border-radius:10px;padding:9px 14px;background:var(--acc);color:#fff;font:inherit;margin-bottom:6px}
 .cfgb button.alt{background:var(--mono);color:var(--text)}
+
+/* Telegram-inspired compact mobile layout */
+html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+header{gap:9px;padding:9px 12px;min-height:54px;box-sizing:border-box}
+header>div:nth-child(2){min-width:0;flex:1}
+header b{font-size:16px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header small{display:block;font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.av{width:36px;height:36px;flex:none}
+#sub{max-width:100%}
+#pin{padding:5px 9px;gap:7px}
+#pin .cx{border-left-width:3px;padding-left:7px}
+#pin b{font-size:12px}
+#pin span{font-size:13px}
+#chat{padding:10px 8px 6px;gap:6px}
+.b{max-width:92%;padding:8px 10px 5px;border-radius:16px 16px 5px 16px;background:linear-gradient(145deg,#243d58,#1b2b40);border-color:rgba(145,180,220,.15);box-shadow:0 1px 2px rgba(0,0,0,.16);font-size:16px;line-height:1.35}
+.tg{font-size:12px;margin-bottom:3px}
+.tm{font-size:11px;margin-top:4px}
+.code{font-size:.78em;line-height:1.35;padding:6px 8px;margin:4px 0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;word-break:break-word;white-space:pre-wrap;border-left-width:3px;background:rgba(10,20,35,.38)}
+#chat .code::after{font-size:9px}
+.mono{overflow-wrap:anywhere;word-break:break-word}
+#cmp{align-items:center;gap:6px;padding:7px 8px calc(7px + env(safe-area-inset-bottom,0px))}
+#ed{font-size:16px;line-height:1.35;max-height:25vh;padding:9px 12px;border-radius:22px}
+#send{width:42px;height:42px;flex:none}
+#att{width:34px;flex:none}
+#side{width:60px}
+.tp i{width:38px;height:38px;font-size:17px}
+.tp span{max-width:56px;font-size:10px}
+@media(max-width:420px){header{padding:8px 10px}#side{width:56px}.tp i{width:36px;height:36px}.b{max-width:94%}.code{font-size:.74em}}
+
 </style>
 </head>
 <body>
