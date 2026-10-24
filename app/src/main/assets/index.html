@@ -19,7 +19,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 .chip{align-self:center;background:var(--mono);color:var(--mut);font-size:13px;padding:2px 10px;border-radius:12px;margin:6px 0}
 .empty{margin:auto;text-align:center;color:var(--mut);max-width:260px}
 .b{align-self:flex-end;max-width:88%;background:var(--bub);border:1px solid var(--ln);border-radius:16px 16px 5px 16px;padding:9px 11px 5px;box-shadow:0 2px 8px rgba(0,0,0,.08);word-break:break-word;-webkit-user-select:text;user-select:text}
-.tm{display:block;text-align:right;font-size:11px;color:var(--mut);margin-top:2px}
+.tm{display:block;text-align:right;font-size:11px;color:var(--mut);margin-top:2px;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}
 .mono,#ed .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;background:var(--mono);padding:0 4px;border-radius:4px}
 #chat .mono,#chat .code{cursor:pointer}
 .code{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:var(--mono);padding:6px 8px;border-radius:6px;margin:4px 0;white-space:pre-wrap;border-left:3px solid var(--acc)}
@@ -250,6 +250,7 @@ $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
   else document.execCommand('insertHTML',false,'<a href="'+esc(u)+'">'+esc(v)+'</a>&nbsp;')}
  else document.execCommand('insertHTML',false,'<span class="mention">'+esc(v.startsWith('@')?v:'@'+v)+'</span>&nbsp;')};
 lki.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#lkok').click()}});
+function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('.tm'))e.preventDefault()},true)}
 /* Robust Android WebView long-press handling */
 let timer,pressTarget=null,pressX=0,pressY=0,pressMenuArea=false;
 function noteCopyText(m){const tmp=document.createElement('div');tmp.innerHTML=m.h||'';let t=(tmp.innerText||tmp.textContent||'').trim();if(m.c)t+=(t?'\n':'')+m.c.map(i=>i.x).join('\n');return t}
@@ -265,6 +266,7 @@ chat.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)ret
 chat.addEventListener('pointermove',e=>{if(pressTarget&&(Math.abs(e.clientX-pressX)>14||Math.abs(e.clientY-pressY)>14))cancelNotePress()},{passive:true});
 chat.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(pressTarget&&t&&(Math.abs(t.clientX-pressX)>14||Math.abs(t.clientY-pressY)>14))cancelNotePress()},{passive:true});
 chat.addEventListener('contextmenu',e=>{if(e.target.closest('.b')){e.preventDefault();e.stopPropagation()}});
+chatwSelectTimestampGuard();
 chat.addEventListener('click',e=>{if(Date.now()-pressed<650){e.preventDefault();e.stopPropagation();return}
  const sbx=e.target.closest('.b');if(selMode){if(sbx){const i=+sbx.dataset.id;if(sel.has(i))sel.delete(i);else sel.add(i);sbx.classList.toggle('sel');renderTop()}return}
  const ci=e.target.closest('.ci');if(ci){const bb=ci.closest('.b'),m=msgs.find(x=>x.id==bb.dataset.id);if(m&&m.c){const it=m.c[+ci.dataset.i];it.s=(it.s+1)%3;ci.className='ci s'+it.s;bb.querySelector('.cnt').textContent=cntText(m);if(m.due)scheduleReminder(m);save()}return}
@@ -272,18 +274,21 @@ chat.addEventListener('click',e=>{if(Date.now()-pressed<650){e.preventDefault();
  const rp=e.target.closest('.rp');if(rp){jump(+rp.dataset.r);return}
  const sp=e.target.closest('.spoiler');if(sp){sp.classList.toggle('on');return}
  const m=e.target.closest('.mono,.code');if(m)copy(m.textContent)});
-let blankTouchStart=null,blankPointerStart=null;
+let blankTouchStart=null,blankPointerStart=null,lastBlankMenuId=null,lastBlankMenuAt=0;
 function nearestBubbleAt(x,y){const a=[...chat.querySelectorAll('.b')];if(!a.length)return null;let n=null,d=Infinity;for(const el of a){const r=el.getBoundingClientRect(),dx=x<r.left?r.left-x:x>r.right?x-r.right:0,dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0,z=dx*dx+dy*dy;if(z<d){d=z;n=el}}return n}
-function blankTargetAllowed(target){return !target.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab')}
-function blankStart(target,x,y){if(!blankTargetAllowed(target))return null;const n=nearestBubbleAt(x,y);return n?{x,y,id:n.dataset.id,time:Date.now()}:null}
+function blankTargetAllowed(target){const el=target&&target.nodeType===1?target:target&&target.parentElement;return !!el&&!el.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab')}
+function blankStart(target,x,y){if(!blankTargetAllowed(target))return null;const n=nearestBubbleAt(x,y);return n?{x,y,id:n.dataset.id}:null}
+function showBlankMenu(id){const now=Date.now();if(lastBlankMenuId==id&&now-lastBlankMenuAt<900)return;lastBlankMenuId=id;lastBlankMenuAt=now;pressed=now;openSheet(id)}
+function clearBlankTouch(){if(blankTouchStart&&blankTouchStart.timer)clearTimeout(blankTouchStart.timer);blankTouchStart=null}
 const chatw=$('#chatw');
-chatw.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];blankTouchStart=t?blankStart(e.target,t.clientX,t.clientY):null},{capture:true,passive:true});
-chatw.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(blankTouchStart&&t&&(Math.abs(t.clientX-blankTouchStart.x)>18||Math.abs(t.clientY-blankTouchStart.y)>18))blankTouchStart=null},{capture:true,passive:true});
-chatw.addEventListener('touchend',()=>{if(blankTouchStart&&Date.now()-blankTouchStart.time>=500){pressed=Date.now();openSheet(blankTouchStart.id)}blankTouchStart=null},{capture:true,passive:true});
-chatw.addEventListener('touchcancel',()=>{blankTouchStart=null},{capture:true,passive:true});
-chatw.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;blankPointerStart=blankStart(e.target,e.clientX,e.clientY)});
-chatw.addEventListener('pointermove',e=>{if(blankPointerStart&&(Math.abs(e.clientX-blankPointerStart.x)>18||Math.abs(e.clientY-blankPointerStart.y)>18))blankPointerStart=null},{passive:true});
-chatw.addEventListener('pointerup',()=>{if(blankPointerStart&&Date.now()-blankPointerStart.time>=500){pressed=Date.now();openSheet(blankPointerStart.id)}blankPointerStart=null});
+chatw.addEventListener('touchstart',e=>{clearBlankTouch();const t=e.touches&&e.touches[0];const hit=t?blankStart(e.target,t.clientX,t.clientY):null;if(!hit)return;blankTouchStart={...hit,opened:false,timer:setTimeout(()=>{if(blankTouchStart&&blankTouchStart.id==hit.id){blankTouchStart.opened=true;showBlankMenu(hit.id)}},520)}},{capture:true,passive:true});
+chatw.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(blankTouchStart&&t&&(Math.abs(t.clientX-blankTouchStart.x)>14||Math.abs(t.clientY-blankTouchStart.y)>14))clearBlankTouch()},{capture:true,passive:true});
+chatw.addEventListener('touchend',clearBlankTouch,{capture:true,passive:true});
+chatw.addEventListener('touchcancel',clearBlankTouch,{capture:true,passive:true});
+chatw.addEventListener('contextmenu',e=>{const hit=blankStart(e.target,e.clientX,e.clientY);if(hit){e.preventDefault();e.stopPropagation();showBlankMenu(hit.id)}},true);
+chatw.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;blankPointerStart=blankStart(e.target,e.clientX,e.clientY)?{...blankStart(e.target,e.clientX,e.clientY),time:Date.now()}:null});
+chatw.addEventListener('pointermove',e=>{if(blankPointerStart&&(Math.abs(e.clientX-blankPointerStart.x)>14||Math.abs(e.clientY-blankPointerStart.y)>14))blankPointerStart=null},{passive:true});
+chatw.addEventListener('pointerup',()=>{if(blankPointerStart&&Date.now()-blankPointerStart.time>=520)showBlankMenu(blankPointerStart.id);blankPointerStart=null});
 chatw.addEventListener('pointercancel',()=>{blankPointerStart=null});
 sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
