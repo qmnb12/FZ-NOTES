@@ -34,36 +34,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        web = new WebView(this);
+        web = new SelectionWebView(this);
         setContentView(web);
-
-        // Add Mono to Android's native text-selection action bar (Cut / Copy / Select all).
-        web.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
-            private static final int MENU_MONO = 0x4D4F;
-
-            @Override
-            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                MenuItem item = menu.add(Menu.NONE, MENU_MONO, 100, "Mono");
-                item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
-                return true;
-            }
-
-            @Override
-            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                return false;
-            }
-
-            @Override
-            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                if (item.getItemId() != MENU_MONO) return false;
-                web.evaluateJavascript("window.applyMonoFromNative && window.applyMonoFromNative()", null);
-                mode.finish();
-                return true;
-            }
-
-            @Override
-            public void onDestroyActionMode(ActionMode mode) { }
-        });
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -132,6 +104,60 @@ public class MainActivity extends Activity {
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
+        }
+    }
+
+    /**
+     * Wrap WebView's contextual selection action mode and add a Mono action.
+     * This avoids relying on a nonexistent WebView setter API.
+     */
+    private class SelectionWebView extends WebView {
+        SelectionWebView(Activity context) { super(context); }
+
+        @Override
+        public ActionMode startActionMode(ActionMode.Callback callback) {
+            return super.startActionMode(wrapSelectionCallback(callback));
+        }
+
+        @Override
+        public ActionMode startActionMode(ActionMode.Callback callback, int type) {
+            return super.startActionMode(wrapSelectionCallback(callback), type);
+        }
+
+        private ActionMode.Callback wrapSelectionCallback(ActionMode.Callback original) {
+            return new ActionMode.Callback() {
+                private static final int MENU_MONO = 0x4D4F;
+
+                @Override
+                public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                    boolean created = original.onCreateActionMode(mode, menu);
+                    if (created) {
+                        MenuItem item = menu.add(Menu.NONE, MENU_MONO, 100, "Mono");
+                        item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+                    }
+                    return created;
+                }
+
+                @Override
+                public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                    return original.onPrepareActionMode(mode, menu);
+                }
+
+                @Override
+                public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                    if (item.getItemId() == MENU_MONO) {
+                        evaluateJavascript("window.applyMonoFromNative && window.applyMonoFromNative()", null);
+                        mode.finish();
+                        return true;
+                    }
+                    return original.onActionItemClicked(mode, item);
+                }
+
+                @Override
+                public void onDestroyActionMode(ActionMode mode) {
+                    original.onDestroyActionMode(mode);
+                }
+            };
         }
     }
 
