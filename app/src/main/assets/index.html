@@ -19,7 +19,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 .chip{align-self:center;background:var(--mono);color:var(--mut);font-size:13px;padding:2px 10px;border-radius:12px;margin:6px 0}
 .empty{margin:auto;text-align:center;color:var(--mut);max-width:260px}
 .b{align-self:flex-end;max-width:88%;background:var(--bub);border:1px solid var(--ln);border-radius:16px 16px 5px 16px;padding:9px 11px 5px;box-shadow:0 2px 8px rgba(0,0,0,.08);word-break:break-word;-webkit-user-select:text;user-select:text}
-.tm{display:block;text-align:right;font-size:11px;color:var(--mut);margin-top:2px;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}
+.tm{display:block;text-align:right;font-size:11px;color:var(--mut);margin-top:2px;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none;pointer-events:none}
 .mono,#ed .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;background:var(--mono);padding:0 4px;border-radius:4px}
 #chat .mono,#chat .code{cursor:pointer}
 .code{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:var(--mono);padding:6px 8px;border-radius:6px;margin:4px 0;white-space:pre-wrap;border-left:3px solid var(--acc)}
@@ -52,9 +52,9 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 #ed{flex:1;min-height:22px;max-height:40vh;overflow-y:auto;padding:9px 12px;border-radius:18px;background:var(--bg);outline:0;word-break:break-word}
 #ed:empty:before{content:attr(data-ph);color:var(--mut)}
 #send{flex:none;width:42px;height:42px;border:0;border-radius:50%;background:var(--acc);color:#fff;font-size:20px}
-#sh{position:fixed;left:0;right:0;bottom:0;display:none;background:var(--bar);border-radius:16px 16px 0 0;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:5}
-#sh.on{display:block}
-#sh button{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:14px 16px;font:inherit;font-size:16px;border-radius:14px;min-height:54px;transition:background .16s,transform .16s}#sh button:active{background:rgba(117,170,255,.13);transform:scale(.99)}#sh button .mi{width:38px;height:38px;flex:none;display:grid;place-items:center;border:1px solid var(--ln);border-radius:12px;background:linear-gradient(145deg,rgba(117,170,255,.16),rgba(117,170,255,.04));color:var(--acc)}#sh button .mi svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#sh button .mt{flex:1}#sh button .ms{display:block;color:var(--mut);font-size:12px;margin-top:2px}#sh button[data-k="x"]{color:var(--mut)}
+#sh{position:fixed;left:0;right:0;bottom:0;display:block;visibility:hidden;opacity:0;pointer-events:none;transform:translateY(14px);background:var(--bar);border:1px solid var(--ln);border-bottom:0;border-radius:22px 22px 0 0;padding:7px 9px calc(7px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 28px rgba(0,0,0,.28);z-index:5;max-height:82dvh;overflow-y:auto;overscroll-behavior:contain;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .18s ease,visibility .22s}
+#sh.on{visibility:visible;opacity:1;pointer-events:auto;transform:translateY(0)}
+#sh button{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:8px 14px;font:inherit;font-size:16px;border-radius:12px;min-height:44px;transition:background .14s ease,transform .14s ease;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#sh button:active{background:rgba(117,170,255,.13);transform:scale(.985)}#sh button .mi{width:38px;height:38px;flex:none;display:grid;place-items:center;border:1px solid var(--ln);border-radius:12px;background:linear-gradient(145deg,rgba(117,170,255,.16),rgba(117,170,255,.04));color:var(--acc)}#sh button .mi svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#sh button .mt{flex:1}#sh button .ms{display:block;color:var(--mut);font-size:12px;margin-top:2px}#sh button[data-k="x"]{color:var(--mut)}
 #sh .del{color:#e5484d}
 #toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#222;color:#fff;padding:6px 14px;border-radius:14px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 #toast.on{opacity:1}
@@ -250,7 +250,7 @@ $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
   else document.execCommand('insertHTML',false,'<a href="'+esc(u)+'">'+esc(v)+'</a>&nbsp;')}
  else document.execCommand('insertHTML',false,'<span class="mention">'+esc(v.startsWith('@')?v:'@'+v)+'</span>&nbsp;')};
 lki.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#lkok').click()}});
-function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('.tm'))e.preventDefault()},true)}
+function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('.tm'))e.preventDefault()},true);root.addEventListener('contextmenu',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('#chat .b')){e.preventDefault();e.stopPropagation()}},true)}
 /* Robust Android WebView long-press handling */
 let timer,pressTarget=null,pressX=0,pressY=0,pressMenuArea=false;
 function noteCopyText(m){const tmp=document.createElement('div');tmp.innerHTML=m.h||'';let t=(tmp.innerText||tmp.textContent||'').trim();if(m.c)t+=(t?'\n':'')+m.c.map(i=>i.x).join('\n');return t}
@@ -278,7 +278,7 @@ let blankTouchStart=null,blankPointerStart=null,lastBlankMenuId=null,lastBlankMe
 function nearestBubbleAt(x,y){const a=[...chat.querySelectorAll('.b')];if(!a.length)return null;let n=null,d=Infinity;for(const el of a){const r=el.getBoundingClientRect(),dx=x<r.left?r.left-x:x>r.right?x-r.right:0,dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0,z=dx*dx+dy*dy;if(z<d){d=z;n=el}}return n}
 function blankTargetAllowed(target){const el=target&&target.nodeType===1?target:target&&target.parentElement;return !!el&&!el.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab')}
 function blankStart(target,x,y){if(!blankTargetAllowed(target))return null;const n=nearestBubbleAt(x,y);return n?{x,y,id:n.dataset.id}:null}
-function showBlankMenu(id){if(sh.classList.contains('on')&&sh.dataset.id==id)return;const now=Date.now();lastBlankMenuId=id;lastBlankMenuAt=now;pressed=now;openSheet(id)}
+function showBlankMenu(id){if(sh.classList.contains('on')&&sh.dataset.id==id)return;const now=Date.now();lastBlankMenuId=id;lastBlankMenuAt=now;pressed=now;try{const sel=window.getSelection&&window.getSelection();if(sel)sel.removeAllRanges()}catch(_){};openSheet(id)}
 function clearBlankTouch(){if(blankTouchStart&&blankTouchStart.timer)clearTimeout(blankTouchStart.timer);blankTouchStart=null}
 const chatw=$('#chatw');
 chatw.addEventListener('touchstart',e=>{clearBlankTouch();const t=e.touches&&e.touches[0];const hit=t?blankStart(e.target,t.clientX,t.clientY):null;if(!hit)return;blankTouchStart={...hit,opened:false,timer:setTimeout(()=>{if(blankTouchStart&&blankTouchStart.id==hit.id){blankTouchStart.opened=true;showBlankMenu(hit.id)}},520)}},{capture:true,passive:true});
