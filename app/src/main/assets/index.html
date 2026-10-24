@@ -190,6 +190,13 @@ function wrap(cls){const s=getSelection();if(!s.rangeCount||s.isCollapsed)return
  const r=s.getRangeAt(0),sp=document.createElement('span');sp.className=cls;sp.appendChild(r.extractContents());r.insertNode(sp);
  s.removeAllRanges();const n=document.createRange();n.selectNodeContents(sp);s.addRange(n);return true}
 function hasSel(){const s=getSelection();return s.rangeCount&&!s.isCollapsed}
+window.applyMonoFromNative=function(){
+ const s=getSelection();
+ if(!s.rangeCount||s.isCollapsed){toast('Pehle text select karo');return false}
+ const ok=wrap('mono');
+ if(ok){saved=null;const n=getSelection();if(n.rangeCount&&ed.contains(n.anchorNode))saved=n.getRangeAt(0).cloneRange();$('#tb').classList.remove('on')}
+ return ok
+};
 function ask(m,ph,v){mode=m;lki.type=/pw$/.test(m)?'password':'text';lki.placeholder=ph;lki.value=v!==undefined?v:(m==='link'?'https://':'@');lk.classList.add('on');lki.focus()}
 function act(a){restore();
  const ex={b:'bold',i:'italic',u:'underline',s:'strikeThrough'};
