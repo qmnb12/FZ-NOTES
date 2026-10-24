@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>My Notes Chat</title>
 <style>
-:root{--bg:#d9e2ea;--bar:#f4f7f9;--bub:#cfe6ff;--text:#101820;--mut:#5b6b7a;--acc:#2a7de1;--mono:rgba(0,0,0,.08);--ln:rgba(0,0,0,.1);
+:root{--bg:#0b111b;--bar:#111b29;--bub:#1b2b40;--text:#edf4ff;--mut:#93a4b8;--acc:#75aaff;--mono:rgba(255,255,255,.075);--ln:rgba(255,255,255,.09);
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1621;--bar:#17212b;--bub:#2b5278;--text:#fff;--mut:#8da2b5;--acc:#6ab3f3;--mono:rgba(255,255,255,.12);--ln:rgba(255,255,255,.1)}}
-:root[data-theme="dark"]{--bg:#0e1621;--bar:#17212b;--bub:#2b5278;--text:#fff;--mut:#8da2b5;--acc:#6ab3f3;--mono:rgba(255,255,255,.12);--ln:rgba(255,255,255,.1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b111b;--bar:#111b29;--bub:#1b2b40;--text:#edf4ff;--mut:#93a4b8;--acc:#75aaff;--mono:rgba(255,255,255,.075);--ln:rgba(255,255,255,.09)}}
+:root[data-theme="dark"]{--bg:#0b111b;--bar:#111b29;--bub:#1b2b40;--text:#edf4ff;--mut:#93a4b8;--acc:#75aaff;--mono:rgba(255,255,255,.075);--ln:rgba(255,255,255,.09)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 html,body{height:100%;margin:0}
 body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
-header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bar);border-bottom:1px solid var(--ln)}
+header{display:flex;align-items:center;gap:12px;padding:12px 14px;background:linear-gradient(135deg,var(--bar),var(--bg));border-bottom:1px solid var(--ln);box-shadow:0 4px 18px rgba(0,0,0,.12)}
 .av{width:40px;height:40px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:700}
 header b{display:block;font-size:17px}header small{color:var(--mut)}
-#chat{flex:1;overflow-y:auto;padding:10px 10px 6px;display:flex;flex-direction:column;gap:4px}
+#chat{flex:1;overflow-y:auto;padding:14px 12px 6px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:var(--ln) transparent}
 .chip{align-self:center;background:var(--mono);color:var(--mut);font-size:13px;padding:2px 10px;border-radius:12px;margin:6px 0}
 .empty{margin:auto;text-align:center;color:var(--mut);max-width:260px}
-.b{align-self:flex-end;max-width:88%;background:var(--bub);border-radius:14px 14px 4px 14px;padding:7px 10px 4px;word-break:break-word;-webkit-user-select:text;user-select:text}
+.b{align-self:flex-end;max-width:88%;background:var(--bub);border:1px solid var(--ln);border-radius:16px 16px 5px 16px;padding:9px 11px 5px;box-shadow:0 2px 8px rgba(0,0,0,.08);word-break:break-word;-webkit-user-select:text;user-select:text}
 .tm{display:block;text-align:right;font-size:11px;color:var(--mut);margin-top:2px}
 .mono,#ed .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;background:var(--mono);padding:0 4px;border-radius:4px}
 #chat .mono,#chat .code{cursor:pointer}
@@ -148,7 +148,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 <div id="sh"></div><div id="toast"></div>
 <script>
 const $=s=>document.querySelector(s),ed=$('#ed'),chat=$('#chat'),sh=$('#sh'),lk=$('#lk'),lki=$('#lki');
-let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',searchFilter='all',selMode=false,listMode=false,tt,replyId=null,editId=null,saved=null,mode='',pressed=0;
+let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',searchFilter='all',selMode=false,listMode=false,tt,replyId=null,editId=null,saved=null,mode='',pressed=0,hiddenUnlocked=false;
 try{msgs=JSON.parse(localStorage.getItem('notes-chat')||'[]')}catch(e){}
 try{const t=JSON.parse(localStorage.getItem('notes-topics')||'null');if(t&&t.length)topics=t}catch(e){}
 const saveT=()=>{try{localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){}mirror()};
@@ -194,7 +194,7 @@ function send(){const h=clean(ed);if(!ed.textContent.trim())return;
  else{const rm=replyId&&msgs.find(m=>m.id===replyId);msgs.push({id:Date.now(),t:Date.now(),h,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});replyId=null}
  ed.innerHTML='';setCtx();save();render()}
 $('#send').onclick=send;
-$('#listfab').onclick=()=>{listMode=!listMode;$('#listfab').classList.toggle('on',listMode);$('#taskmeta').classList.toggle('on',listMode);toast(listMode?'Checklist mode: first line title, next lines items':'Checklist mode off',2200);ed.focus()};
+$('#listfab').onclick=()=>{if(listMode){listMode=false;$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');toast('Checklist mode off');return}ask('listtitle','List ka naam likhein');};
 ed.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'))});
 document.addEventListener('selectionchange',()=>{const s=getSelection();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;$('#tb').classList.toggle('on',selected);if(selected){const active=s.toString();$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',b.dataset.a==='mono'&&!!s.anchorNode.parentElement.closest('.mono')))}}else $('#tb').classList.remove('on')});
 function restore(){ed.focus();if(saved){const s=getSelection();s.removeAllRanges();s.addRange(saved)}}
@@ -235,6 +235,10 @@ $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
  if(mode==='rspw'){doRestore(v);return}
  if(mode==='restore'){try{const d=JSON.parse(v);if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();toast('Restored')}else toast('Invalid backup')}catch(e){toast('Invalid backup')}return}
  if(mode==='topic'){if(v){const id='t'+Date.now();topics.push({id,name:v});cur=id;saveT();render()}return}
+ if(mode==='listtitle'){if(v){listMode=true;$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.innerText=v+'\\n';ed.focus();toast('List ka naam set ho gaya — ab items likho',2200)}return}
+ if(mode==='hidepwset'){if(v.length<4){toast('Password kam se kam 4 characters ka rakhein');return}hashPw(v).then(h=>{localStorage.setItem('notes-hide-hash',h);toast('Hidden notes password set ho gaya');hideSelected()});return}
+ if(mode==='hidepwcheck'){hashPw(v).then(h=>{if(h!==localStorage.getItem('notes-hide-hash')){toast('Wrong password');return}hiddenUnlocked=true;cur='hidden';render();toast('Hidden notes unlocked',1800)});return}
+ if(mode==='hidepwunlock'){hashPw(v).then(h=>{if(h!==localStorage.getItem('notes-hide-hash')){toast('Wrong password');return}hiddenUnlocked=true;cur='hidden';render();toast('Hidden notes unlocked',1800)});return}
  if(mode==='rename'){const t=topics.find(t=>t.id===ren);if(t&&v){t.name=v;saveT();render()}return}
  restore();if(!v)return;
  if(mode==='link'){const u=/^[a-z]+:/i.test(v)?v:'https://'+v;
@@ -245,7 +249,7 @@ lki.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#lk
 /* bubble taps and long press */
 let timer;
 function openSheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;const tmp=document.createElement('div');tmp.innerHTML=m.h;
- sh.innerHTML='<button data-k="reply">Reply</button><button data-k="edit">✎ Edit</button><button data-k="copy">Copy text</button><button data-k="pin">'+(m.p?'Unpin':'Pin')+'</button><button data-k="mv">Move to topic</button><button data-k="sel">Select</button><button data-k="del" class="del">Delete</button><button data-k="x">Cancel</button>';
+ sh.innerHTML='<button data-k="reply">Reply</button><button data-k="edit">✎ Edit</button><button data-k="copy">Copy text</button><button data-k="pin">'+(m.p?'Unpin':'Pin')+'</button><button data-k="hide">'+(m.hidden?'Unhide note':'🔒 Hide note')+'</button><button data-k="mv">Move to topic</button><button data-k="sel">Select</button><button data-k="del" class="del">Delete</button><button data-k="x">Cancel</button>';
  sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=(tmp.innerText||tmp.textContent)+(m.c?'\n'+m.c.map(i=>i.x).join('\n'):'');sh.classList.add('on')}
 chat.addEventListener('pointerdown',e=>{const b=e.target.closest('.b');if(!b||selMode)return;clearTimeout(timer);timer=setTimeout(()=>{pressed=Date.now();openSheet(b.dataset.id)},550)});
 ['pointerup','pointermove','pointercancel'].forEach(t=>chat.addEventListener(t,()=>clearTimeout(timer)));
@@ -273,7 +277,7 @@ sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
   if(k==='bk')copy(JSON.stringify({msgs,topics}));
   if(k==='rs')ask('restore','Paste backup JSON here','');
   if(k==='pf')pickFile();
-  if(k==='th'){const d=document.documentElement,n=(d.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'))==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('notes-theme',n)}catch(e){}}
+  if(k==='th'){const d=document.documentElement,n=(d.dataset.theme||'dark')==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('notes-theme',n)}catch(e){}}
   return}
  if(sh.dataset.type==='topic'){const tid=sh.dataset.id;sh.classList.remove('on');
   if(k==='up'||k==='dn'){const i=topics.findIndex(t=>t.id===tid),j=i+(k==='up'?-1:1);if(j>=0&&j<topics.length){[topics[i],topics[j]]=[topics[j],topics[i]];saveT();render()}}
@@ -282,6 +286,7 @@ sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
   return}
  const id=+sh.dataset.id;sh.classList.remove('on');
  if(k==='pin'){const m=msgs.find(m=>m.id===id);if(m){const was=m.p;msgs.forEach(x=>{if((x.k||'gen')===(m.k||'gen'))x.p=0});m.p=was?0:1;save();render()}}
+ if(k==='hide'){const m=msgs.find(m=>m.id===id);if(m){sh.classList.remove('on');if(m.hidden){if(!hiddenUnlocked){ask('hidepwunlock','Hidden notes password');return}m.hidden=false;save();render();toast('Note unhidden')}else if(localStorage.getItem('notes-hide-hash')){hideTarget=id;ask('hidepwcheck','Confirm password')}else{hideTarget=id;ask('hidepwset','Create hidden notes password (4+ chars)')}}}
  if(k==='sel'){selMode=true;sel.clear();sel.add(id);render()}
  if(k==='mv'){sh.innerHTML=[{id:'quick',name:'⚡ Quick'}].concat(topics).map(t=>'<button data-k="to:'+t.id+'">'+esc(t.name)+'</button>').join('')+'<button data-k="x">Cancel</button>';sh.dataset.id=id;sh.dataset.type='msg';sh.classList.add('on');return}
  if(k.startsWith('to:')){const m=msgs.find(m=>m.id===id);if(m){m.k=k.slice(3);m.p=0;save();render()}}
@@ -293,18 +298,18 @@ const tn=k=>{const t=topics.find(t=>t.id===(k||'gen'));return t?t.name:'General'
 const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return 'hsl('+h+' 55% 45%)'};
 const first=s=>[...s][0].toUpperCase();
 function renderSide(){const side=$('#side');side.innerHTML='';
- [{id:'quick',name:'Quick'},{id:'all',name:'All'}].concat(topics).forEach(t=>{const b=document.createElement('button'),all=t.id==='all'||t.id==='quick';
+ [{id:'quick',name:'Quick'},{id:'all',name:'All'},{id:'hidden',name:'Hidden 🔒'}].concat(topics).forEach(t=>{const b=document.createElement('button'),all=t.id==='all'||t.id==='quick';
   b.className='tp'+(t.id===cur?' on':'');
   b.innerHTML='<i style="background:'+(t.id==='quick'?'#e6a100':all?'var(--acc)':hue(t.name))+'">'+(t.id==='quick'?'⚡':all?'💬':esc(first(t.name)))+'</i><span>'+esc(t.name)+'</span>';
-  b.onclick=()=>{if(Date.now()-pressed<400)return;cur=t.id;clearCtx();lk.classList.remove('on');render()};
+  b.onclick=()=>{if(Date.now()-pressed<400)return;if(t.id==='hidden'&&!hiddenUnlocked){ask('hidepwunlock','Hidden notes password');return}cur=t.id;clearCtx();lk.classList.remove('on');render()};
   if(!all){b.addEventListener('pointerdown',()=>{clearTimeout(tt);tt=setTimeout(()=>{pressed=Date.now();openTopicSheet(t)},550)});
    ['pointerup','pointercancel','pointerleave'].forEach(x=>b.addEventListener(x,()=>clearTimeout(tt)))}
   side.appendChild(b)});
  const a=document.createElement('button');a.className='tp add';a.innerHTML='<i>+</i><span>New</span>';
  a.onclick=()=>ask('topic','New topic name','');side.appendChild(a);
- $('#ttl').textContent=cur==='all'?'All notes':cur==='quick'?'⚡ Quick notes':tn(cur);
- $('#av').textContent=cur==='all'?'N':cur==='quick'?'⚡':first(tn(cur));
- $('#sub').textContent=msgs.filter(inView).length+' notes'}
+ $('#ttl').textContent=cur==='all'?'All notes':cur==='quick'?'⚡ Quick notes':cur==='hidden'?'🔒 Hidden notes':tn(cur);
+ $('#av').textContent=cur==='all'?'N':cur==='quick'?'⚡':cur==='hidden'?'🔒':first(tn(cur));
+ $('#sub').textContent=msgs.filter(inView).length+' notes · saved on this device'}
 function openTopicSheet(t){sh.innerHTML='<button data-k="ren">Rename topic</button><button data-k="up">Move up</button><button data-k="dn">Move down</button>'+(t.id==='gen'?'':'<button data-k="tdel" class="del">Delete topic and its notes</button>')+'<button data-k="x">Cancel</button>';
  sh.dataset.id=t.id;sh.dataset.type='topic';sh.classList.add('on')}
 $('#side').addEventListener('contextmenu',e=>e.preventDefault());
@@ -341,7 +346,7 @@ async function doBackup(pw){if(!pw)return toast('Password chahiye');const c=cfgG
 async function doRestore(pw){if(!pw)return toast('Password chahiye');const t=targets(cfgGet()).find(x=>x.type===pendSrc);if(!t)return;
  toast('Restore ho raha hai…',5000);
  try{const d=JSON.parse(await native('restore',{pw,source:t}));if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();toast('Restored')}else toast('Backup sahi nahi hai')}catch(e){toast(e.message,4000)}}
-try{const th=localStorage.getItem('notes-theme');if(th)document.documentElement.dataset.theme=th}catch(e){}
+try{const th=localStorage.getItem('notes-theme');document.documentElement.dataset.theme=th||'dark'}catch(e){}
 function renderTop(){const pn=msgs.filter(m=>m.p&&inView(m)).pop(),pb=$('#pin');pb.classList.toggle('on',!!pn);
  if(pn){pb.dataset.id=pn.id;pb.querySelector('span').textContent=plain(pn.h)||'Photo'}
  $('#selbar').classList.toggle('on',selMode);$('#selc').textContent=sel.size+' selected'}
@@ -362,7 +367,7 @@ let sx=0,sy=0,sb=null,dx=0;
 chat.addEventListener('touchstart',e=>{sb=e.target.closest('.b');if(!sb)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0},{passive:true});
 chat.addEventListener('touchmove',e=>{if(!sb)return;dx=e.touches[0].clientX-sx;if(Math.abs(e.touches[0].clientY-sy)>Math.abs(dx))return;if(Math.abs(dx)>0)sb.style.transform='translateX('+Math.max(-70,Math.min(70,dx))+'px)'},{passive:true});
 chat.addEventListener('touchend',()=>{if(!sb)return;sb.style.transform='';if(dx<-55){replyId=+sb.dataset.id;editId=null;setCtx();ed.focus();pressed=Date.now()}else if(dx>55){const m=msgs.find(x=>x.id==sb.dataset.id);if(m){m.p=m.p?0:1;save();render();toast(m.p?'Pinned':'Unpinned')}}sb=null;dx=0});
-function inView(m){return cur==='all'?(m.k||'gen')!=='quick':(m.k||'gen')===cur}
+let hideTarget=null;function hashPw(v){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)).then(b=>Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join(''))}function hideSelected(){const m=msgs.find(x=>x.id===hideTarget);if(m){m.hidden=true;m.p=0;save();render();toast('Note password-protected hidden')}hideTarget=null}function inView(m){if(m.hidden)return cur==='hidden'&&hiddenUnlocked;if(cur==='hidden')return false;return cur==='all'?(m.k||'gen')!=='quick':(m.k||'gen')===cur}
 function matchesFilter(m){const task=Array.isArray(m.c),done=task&&m.c.length>0&&m.c.every(i=>i.s===1),d=new Date(m.t),n=new Date();if(searchFilter==='focus')return task&&!done;if(searchFilter==='pinned')return !!m.p;if(searchFilter==='tasks')return task;if(searchFilter==='open')return task&&!done;if(searchFilter==='done')return task&&done;if(searchFilter==='overdue')return task&&m.due&&m.due<Date.now()&&!done;if(searchFilter==='today')return d.toDateString()===n.toDateString();return true}
 $('#filters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;searchFilter=b.dataset.filter;$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render()});
 const cntText=m=>{const n=m.c.length,d=m.c.filter(i=>i.s===1).length,r=m.c.filter(i=>i.s===2).length;return d+'/'+n+' ho gaya'+(r?' · '+r+' nahi mila':'')};
