@@ -123,7 +123,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 <body>
 <header><div class="av" id="av">N</div><div><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search">🔍</button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx">✕</button></div>
-<div id="filters"><button data-filter="all" class="active">All</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
+<div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
 <div id="selbar"><span id="selc"></span><button data-s="copy">Copy</button><button data-s="del">Delete</button><button data-s="x">Cancel</button></div>
 <div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Checklist">☷</button><button id="fab" aria-label="Quick note">+</button></div>
@@ -173,7 +173,7 @@ function clean(n){let o='';n.childNodes.forEach(c=>{
  else if(t==='SPAN'||t==='CODE'){const k=KINDS.find(k=>c.classList.contains(k));o+=k?'<span class="'+k+'">'+x+'</span>':x}
  else o+=x});return o}
 function render(){renderSide();renderTop();chat.innerHTML='';
- const list=msgs.filter(m=>inView(m)&&(!q||(plain(m.h)+' '+(m.c||[]).map(i=>i.x).join(' ')).toLowerCase().includes(q))&&matchesFilter(m));
+ const list=msgs.filter(m=>inView(m)&&(!q||(plain(m.h)+' '+(m.c||[]).map(i=>i.x).join(' ')).toLowerCase().includes(q))&&matchesFilter(m));if(searchFilter==='focus')list.sort((a,b)=>(a.due||Infinity)-(b.due||Infinity));
  if(!list.length){chat.innerHTML='<div class="empty">Apna pehla note likho. Ye chat ki tarah send hoga.</div>';return}
  let last='';
  list.forEach(m=>{const d=new Date(m.t),ds=d.toDateString();
@@ -363,10 +363,10 @@ chat.addEventListener('touchstart',e=>{sb=e.target.closest('.b');if(!sb)return;s
 chat.addEventListener('touchmove',e=>{if(!sb)return;dx=e.touches[0].clientX-sx;if(Math.abs(e.touches[0].clientY-sy)>Math.abs(dx))return;if(Math.abs(dx)>0)sb.style.transform='translateX('+Math.max(-70,Math.min(70,dx))+'px)'},{passive:true});
 chat.addEventListener('touchend',()=>{if(!sb)return;sb.style.transform='';if(dx<-55){replyId=+sb.dataset.id;editId=null;setCtx();ed.focus();pressed=Date.now()}else if(dx>55){const m=msgs.find(x=>x.id==sb.dataset.id);if(m){m.p=m.p?0:1;save();render();toast(m.p?'Pinned':'Unpinned')}}sb=null;dx=0});
 function inView(m){return cur==='all'?(m.k||'gen')!=='quick':(m.k||'gen')===cur}
-function matchesFilter(m){const task=Array.isArray(m.c),done=task&&m.c.length>0&&m.c.every(i=>i.s===1),d=new Date(m.t),n=new Date();if(searchFilter==='pinned')return !!m.p;if(searchFilter==='tasks')return task;if(searchFilter==='open')return task&&!done;if(searchFilter==='done')return task&&done;if(searchFilter==='overdue')return task&&m.due&&m.due<Date.now()&&!done;if(searchFilter==='today')return d.toDateString()===n.toDateString();return true}
+function matchesFilter(m){const task=Array.isArray(m.c),done=task&&m.c.length>0&&m.c.every(i=>i.s===1),d=new Date(m.t),n=new Date();if(searchFilter==='focus')return task&&!done;if(searchFilter==='pinned')return !!m.p;if(searchFilter==='tasks')return task;if(searchFilter==='open')return task&&!done;if(searchFilter==='done')return task&&done;if(searchFilter==='overdue')return task&&m.due&&m.due<Date.now()&&!done;if(searchFilter==='today')return d.toDateString()===n.toDateString();return true}
 $('#filters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;searchFilter=b.dataset.filter;$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render()});
 const cntText=m=>{const n=m.c.length,d=m.c.filter(i=>i.s===1).length,r=m.c.filter(i=>i.s===2).length;return d+'/'+n+' ho gaya'+(r?' · '+r+' nahi mila':'')};
-function scheduleReminder(m){if(!m||!m.due||!window.Android)return;native('reminder',{id:String(m.id),title:plain(m.h)||'NotesChat task',due:Number(m.due),done:!!(m.c&&m.c.every(i=>i.s===1))}).then(()=>toast('Reminder scheduled')).catch(e=>toast('Reminder error: '+e.message,3000))}
+function scheduleReminder(m){if(!m||!m.due||!window.Android)return;native('reminder',{id:String(m.id),title:plain(m.h)||'NotesChat task',due:Number(m.due),done:!!(m.c&&m.c.every(i=>i.s===1))}).catch(e=>toast('Reminder error: '+e.message,3000))}
 const ckHtml=m=>m.c?'<div class="cnt">'+cntText(m)+'</div><div class="ck">'+m.c.map((it,i)=>'<div class="ci s'+it.s+'" data-i="'+i+'"><i></i><span>'+esc(it.x)+'</span></div>').join('')+'</div>':'';
 $('#fab').onclick=()=>{$('#qk').classList.add('on');$('#qkt').value='';$('#qkt').focus()};
 $('#qkx').onclick=()=>$('#qk').classList.remove('on');
@@ -375,6 +375,7 @@ let mt;
 function mirror(){if(!window.Android)return;clearTimeout(mt);mt=setTimeout(()=>{native('mirrorsave',{text:JSON.stringify({msgs,topics})}).catch(()=>{})},1500)}
 function applyFile(t){const d=JSON.parse(t);if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();return true}return false}
 async function pickFile(){try{toast(applyFile(await native('pickfile',{}))?'Restored':'File sahi nahi hai',2500)}catch(e){toast(e.message,3000)}}
+msgs.filter(m=>m.due>Date.now()&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
 render();
 (async()=>{if(!window.Android||msgs.length||topics.length>1||topics[0].name!=='General')return;try{const t=await native('mirrorload',{});if(t&&applyFile(t))toast('Phone storage se data wapas aaya',3000)}catch(e){}})();
 </script>
