@@ -263,7 +263,9 @@ public class MainActivity extends Activity {
                     fileReplyId = id;
                     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     i.addCategory(Intent.CATEGORY_OPENABLE);
-                    i.setType("application/json");
+                    i.setType("*/*");
+                    i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/json", "text/json", "text/plain", "application/octet-stream"});
+                    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     try {
                         startActivityForResult(i, REQ_FILE);
                     } catch (Exception e) {
