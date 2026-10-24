@@ -252,6 +252,7 @@ chat.addEventListener('click',e=>{if(Date.now()-pressed<400){e.preventDefault();
  const m=e.target.closest('.mono,.code');if(m)copy(m.textContent)});
 sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
  if(sh.dataset.type==='cloud'){sh.classList.remove('on');
+  if(k==='status'){toast(lastBackup()?'Last backup: '+lastBackup():'No successful backup recorded',2600)}
   if(k==='cset')openCfg();
   if(k==='cbk')needPw('bkpw');
   if(k==='cpw')ask('savepw','Password jo save karna hai','');
@@ -316,10 +317,11 @@ function targets(c){const t=[];if(c.wdUrl&&c.wdUser)t.push({type:'webdav',url:c.
 const pend={};let nid=0;
 function native(op,args){return new Promise((res,rej)=>{if(!window.Android){rej(new Error('Cloud backup sirf Android app me chalta hai'));return}const id=++nid;pend[id]={res,rej};window.Android.run(id,op,JSON.stringify(args))})}
 window.onNative=(id,ok,d)=>{const p=pend[id];delete pend[id];if(p)ok?p.res(d):p.rej(new Error(d))};
-function openCloud(){sh.innerHTML='<button data-k="cbk">☁ Backup now</button><button data-k="crs">⬇ Restore</button><button data-k="cset">⚙ Settings (Nextcloud / Telegram / GitHub)</button><button data-k="'+(pwSaved()?'cpd':'cpw')+'">🔑 '+(pwSaved()?'Remove saved password':'Save password on phone')+'</button><button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
+function openCloud(){const lb=lastBackup();sh.innerHTML='<button data-k="cbk">☁ Backup now</button><button data-k="status">ⓘ Last backup: '+esc(lb||'Not yet')+'</button><button data-k="crs">⬇ Restore</button><button data-k="cset">⚙ Settings (Nextcloud / Telegram / GitHub)</button><button data-k="'+(pwSaved()?'cpd':'cpw')+'">🔑 '+(pwSaved()?'Remove saved password':'Save password on phone')+'</button><button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
 function openSrc(){const t=targets(cfgGet());if(!t.length){toast('Pehle Settings me cloud bharein',2500);return}sh.innerHTML=t.map(x=>'<button data-k="src:'+x.type+'">Restore from '+NM[x.type]+'</button>').join('')+'<button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
 function openCfg(){const c=cfgGet();F.forEach(f=>{$('#c_'+f).value=c[f]||''});$('#cfg').classList.add('on')}
 const pwSaved=()=>{try{return localStorage.getItem('notes-pwsaved')==='1'}catch(e){return false}};
+const lastBackup=()=>{try{return localStorage.getItem('notes-last-backup')||''}catch(e){return ''}};
 async function needPw(m){if(pwSaved()){try{const p=await native('pwget',{});if(p){if(m==='bkpw')doBackup(p);else doRestore(p);return}}catch(e){}}ask(m,'Encryption password','')}
 async function savePw(v){if(!v)return toast('Password chahiye');try{await native('pwset',{pw:v});localStorage.setItem('notes-pwsaved','1');toast('Password phone ke secure storage me save ho gaya',3000)}catch(e){toast(e.message,3000)}}
 async function delPw(){try{await native('pwdel',{});localStorage.removeItem('notes-pwsaved');toast('Saved password hata diya',2500)}catch(e){toast(e.message,3000)}}
@@ -328,7 +330,7 @@ $('#c_save').onclick=()=>{const c=cfgGet();F.forEach(f=>{c[f]=$('#c_'+f).value.t
 $('#c_tgDet').onclick=async()=>{const tk=$('#c_tgToken').value.trim();if(!tk)return toast('Pehle bot token daalein');try{$('#c_tgChat').value=await native('tgchat',{token:tk})}catch(e){toast(e.message,3000)}};
 async function doBackup(pw){if(!pw)return toast('Password chahiye');const c=cfgGet(),t=targets(c);if(!t.length)return toast('Pehle Settings me cloud bharein',2500);
  toast('Encrypt karke bhej raha hu…',5000);
- try{const r=JSON.parse(await native('backup',{pw,data:JSON.stringify({msgs,topics}),targets:t}));if(r.fid){c.tgFid=r.fid;cfgSet(c)}toast(r.msg,5000)}catch(e){toast(e.message,4000)}}
+ try{const r=JSON.parse(await native('backup',{pw,data:JSON.stringify({version:2,exportedAt:new Date().toISOString(),msgs,topics}),targets:t}));if(r.fid){c.tgFid=r.fid;cfgSet(c)}const stamp=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});try{localStorage.setItem('notes-last-backup',stamp)}catch(_){}toast(r.msg+' · '+msgs.length+' notes backed up',5000)}catch(e){toast(e.message,4000)}}
 async function doRestore(pw){if(!pw)return toast('Password chahiye');const t=targets(cfgGet()).find(x=>x.type===pendSrc);if(!t)return;
  toast('Restore ho raha hai…',5000);
  try{const d=JSON.parse(await native('restore',{pw,source:t}));if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();toast('Restored')}else toast('Backup sahi nahi hai')}catch(e){toast(e.message,4000)}}
