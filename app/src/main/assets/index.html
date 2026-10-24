@@ -278,7 +278,7 @@ let blankTouchStart=null,blankPointerStart=null,lastBlankMenuId=null,lastBlankMe
 function nearestBubbleAt(x,y){const a=[...chat.querySelectorAll('.b')];if(!a.length)return null;let n=null,d=Infinity;for(const el of a){const r=el.getBoundingClientRect(),dx=x<r.left?r.left-x:x>r.right?x-r.right:0,dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0,z=dx*dx+dy*dy;if(z<d){d=z;n=el}}return n}
 function blankTargetAllowed(target){const el=target&&target.nodeType===1?target:target&&target.parentElement;return !!el&&!el.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab')}
 function blankStart(target,x,y){if(!blankTargetAllowed(target))return null;const n=nearestBubbleAt(x,y);return n?{x,y,id:n.dataset.id}:null}
-function showBlankMenu(id){const now=Date.now();if(lastBlankMenuId==id&&now-lastBlankMenuAt<900)return;lastBlankMenuId=id;lastBlankMenuAt=now;pressed=now;openSheet(id)}
+function showBlankMenu(id){if(sh.classList.contains('on')&&sh.dataset.id==id)return;const now=Date.now();lastBlankMenuId=id;lastBlankMenuAt=now;pressed=now;openSheet(id)}
 function clearBlankTouch(){if(blankTouchStart&&blankTouchStart.timer)clearTimeout(blankTouchStart.timer);blankTouchStart=null}
 const chatw=$('#chatw');
 chatw.addEventListener('touchstart',e=>{clearBlankTouch();const t=e.touches&&e.touches[0];const hit=t?blankStart(e.target,t.clientX,t.clientY):null;if(!hit)return;blankTouchStart={...hit,opened:false,timer:setTimeout(()=>{if(blankTouchStart&&blankTouchStart.id==hit.id){blankTouchStart.opened=true;showBlankMenu(hit.id)}},520)}},{capture:true,passive:true});
