@@ -28,7 +28,12 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 .b a{text-decoration:underline}
 .spoiler{background:var(--mono);border-bottom:1px dashed var(--mut)}
 #chat .spoiler:not(.on){color:transparent;background:var(--mut);border-radius:4px;cursor:pointer;user-select:none}
-#tb{display:flex;gap:6px;overflow-x:auto;padding:6px 8px;background:var(--bar);border-top:1px solid var(--ln)}
+#tb{display:none;position:absolute;left:8px;right:8px;bottom:58px;z-index:4;gap:5px;overflow-x:auto;padding:7px;background:var(--bar);border:1px solid var(--ln);border-radius:18px;box-shadow:0 5px 22px rgba(0,0,0,.28);scrollbar-width:none;overscroll-behavior-x:contain;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#tb::-webkit-scrollbar{display:none}#tb.on{display:flex;animation:tbIn .16s ease-out}
+@keyframes tbIn{from{opacity:0;transform:translateY(5px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+#tb button{flex:none;min-width:40px;height:38px;border:0;background:transparent;color:var(--text);padding:6px 10px;border-radius:12px;font:inherit;font-size:14px;display:flex;align-items:center;justify-content:center;gap:5px;transition:background .14s,transform .14s}
+#tb button:active{transform:scale(.94)}#tb button.on{background:var(--acc);color:#fff}
+#tb button .fmticon{font-size:18px;line-height:1}
 #tb button{flex:none;border:0;background:var(--mono);color:var(--text);padding:7px 11px;border-radius:16px;font:inherit;font-size:14px}
 #lk{display:none;gap:6px;padding:6px 8px;background:var(--bar)}
 #lk.on{display:flex}
@@ -109,12 +114,12 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes" autocomplete="off"><button id="sqx">✕</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
 <div id="selbar"><span id="selc"></span><button data-s="copy">Copy</button><button data-s="del">Delete</button><button data-s="x">Cancel</button></div>
-<div class="main"><div id="side"></div><div class="col"><div id="chatw"><div id="chat"></div><button id="fab" aria-label="Quick note">+</button></div>
+<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="fab" aria-label="Quick note">+</button></div>
 <div id="tb">
-<button data-a="list">☑ List</button><button data-a="b"><b>Bold</b></button><button data-a="i"><i>Italic</i></button>
-<button data-a="mono" style="font-family:monospace">Mono</button><button data-a="code" style="font-family:monospace">Code</button>
-<button data-a="s"><s>Strike</s></button><button data-a="u"><u>Underline</u></button>
-<button data-a="quote">Quote</button><button data-a="spoiler">Spoiler</button>
+<button data-a="list" aria-label="Checklist" title="Checklist"><span class="fmticon">☷</span><span>List</span></button><button data-a="b" aria-label="Bold" title="Bold"><b class="fmticon">B</b></button><button data-a="i" aria-label="Italic" title="Italic"><i class="fmticon">I</i></button>
+<button data-a="mono" style="font-family:monospace" title="Monospace">{"</button><button data-a="code" style="font-family:monospace" title="Code block">▤ Code</button>
+<button data-a="s" title="Strikethrough"><s>S</s></button><button data-a="u" title="Underline"><u>U</u></button>
+<button data-a="quote" title="Quote">❝ Quote</button><button data-a="spoiler" title="Spoiler">▧ Spoiler</button>
 <button data-a="link">Create Link</button><button data-a="mention">Create Mention</button>
 <button data-a="date">Date</button><button data-a="reg">Regular</button>
 </div>
@@ -176,7 +181,7 @@ function send(){const h=clean(ed);if(!ed.textContent.trim())return;
  ed.innerHTML='';setCtx();save();render()}
 $('#send').onclick=send;
 ed.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'))});
-document.addEventListener('selectionchange',()=>{const s=getSelection();if(s.rangeCount&&ed.contains(s.anchorNode))saved=s.getRangeAt(0).cloneRange()});
+document.addEventListener('selectionchange',()=>{const s=getSelection();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;$('#tb').classList.toggle('on',selected);if(selected){const active=s.toString();$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',b.dataset.a==='mono'&&!!s.anchorNode.parentElement.closest('.mono')))}}else $('#tb').classList.remove('on')});
 function restore(){ed.focus();if(saved){const s=getSelection();s.removeAllRanges();s.addRange(saved)}}
 function wrap(cls){const s=getSelection();if(!s.rangeCount||s.isCollapsed)return false;
  const r=s.getRangeAt(0),sp=document.createElement('span');sp.className=cls;sp.appendChild(r.extractContents());r.insertNode(sp);
@@ -194,7 +199,7 @@ function act(a){restore();
  else if(a==='mention'){if(hasSel()){wrap('mention')}else ask('mention','@name')}
  saved=null;const s=getSelection();if(s.rangeCount&&ed.contains(s.anchorNode))saved=s.getRangeAt(0).cloneRange()}
 $('#tb').addEventListener('mousedown',e=>e.preventDefault());
-$('#tb').addEventListener('click',e=>{const b=e.target.closest('button');if(b)act(b.dataset.a)});
+$('#tb').addEventListener('click',e=>{const b=e.target.closest('button');if(b){act(b.dataset.a);if(!hasSel())$('#tb').classList.remove('on')}});
 $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
  if(mode==='savepw'){savePw(v);return}
  if(mode==='bkpw'){doBackup(v);return}
