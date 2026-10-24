@@ -8,7 +8,7 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="true"
-        android:label="Notes Chat"
+        android:label="FZ NOTES"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 
         <receiver android:name=".ReminderReceiver" android:exported="false" />
