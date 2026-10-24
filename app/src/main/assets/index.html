@@ -272,18 +272,19 @@ chat.addEventListener('click',e=>{if(Date.now()-pressed<650){e.preventDefault();
  const rp=e.target.closest('.rp');if(rp){jump(+rp.dataset.r);return}
  const sp=e.target.closest('.spoiler');if(sp){sp.classList.toggle('on');return}
  const m=e.target.closest('.mono,.code');if(m)copy(m.textContent)});
-let blankPressTimer=null,blankPressStart=null,blankPressFired=false;
-function cancelBlankPress(){if(blankPressTimer)clearTimeout(blankPressTimer);blankPressTimer=null;blankPressStart=null}
-function nearestBubbleAt(x,y){const a=[...chat.querySelectorAll('.b')];if(!a.length)return null;let n=null,d=Infinity;for(const b of a){const r=b.getBoundingClientRect(),dx=x<r.left?r.left-x:x>r.right?x-r.right:0,dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0,z=dx*dx+dy*dy;if(z<d){d=z;n=b}}return n}
-function startBlankLongPress(e,x,y){if(e.target.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab'))return;const n=nearestBubbleAt(x,y);if(!n)return;cancelBlankPress();blankPressStart={x,y,id:n.dataset.id};blankPressFired=false;blankPressTimer=setTimeout(()=>{if(!blankPressStart)return;const id=blankPressStart.id;blankPressFired=true;blankPressTimer=null;blankPressStart=null;pressed=Date.now();openSheet(id)},650)}
+let blankTouchStart=null,blankPointerStart=null;
+function nearestBubbleAt(x,y){const a=[...chat.querySelectorAll('.b')];if(!a.length)return null;let n=null,d=Infinity;for(const el of a){const r=el.getBoundingClientRect(),dx=x<r.left?r.left-x:x>r.right?x-r.right:0,dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0,z=dx*dx+dy*dy;if(z<d){d=z;n=el}}return n}
+function blankTargetAllowed(target){return !target.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab')}
+function blankStart(target,x,y){if(!blankTargetAllowed(target))return null;const n=nearestBubbleAt(x,y);return n?{x,y,id:n.dataset.id,time:Date.now()}:null}
 const chatw=$('#chatw');
-chatw.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(t)startBlankLongPress(e,t.clientX,t.clientY)}, {passive:true,capture:true});
-chatw.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(blankPressStart&&t&&(Math.abs(t.clientX-blankPressStart.x)>14||Math.abs(t.clientY-blankPressStart.y)>14))cancelBlankPress()}, {passive:true,capture:true});
-chatw.addEventListener('touchend',()=>{if(blankPressTimer)clearTimeout(blankPressTimer);blankPressTimer=null;blankPressStart=null}, {passive:true,capture:true});
-chatw.addEventListener('touchcancel',cancelBlankPress,{passive:true,capture:true});
-chatw.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;startBlankLongPress(e,e.clientX,e.clientY)});
-chatw.addEventListener('pointermove',e=>{if(blankPressStart&&(Math.abs(e.clientX-blankPressStart.x)>14||Math.abs(e.clientY-blankPressStart.y)>14))cancelBlankPress()},{passive:true});
-['pointerup','pointercancel'].forEach(t=>chatw.addEventListener(t,cancelBlankPress));
+chatw.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];blankTouchStart=t?blankStart(e.target,t.clientX,t.clientY):null},{capture:true,passive:true});
+chatw.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(blankTouchStart&&t&&(Math.abs(t.clientX-blankTouchStart.x)>18||Math.abs(t.clientY-blankTouchStart.y)>18))blankTouchStart=null},{capture:true,passive:true});
+chatw.addEventListener('touchend',()=>{if(blankTouchStart&&Date.now()-blankTouchStart.time>=500){pressed=Date.now();openSheet(blankTouchStart.id)}blankTouchStart=null},{capture:true,passive:true});
+chatw.addEventListener('touchcancel',()=>{blankTouchStart=null},{capture:true,passive:true});
+chatw.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;blankPointerStart=blankStart(e.target,e.clientX,e.clientY)});
+chatw.addEventListener('pointermove',e=>{if(blankPointerStart&&(Math.abs(e.clientX-blankPointerStart.x)>18||Math.abs(e.clientY-blankPointerStart.y)>18))blankPointerStart=null},{passive:true});
+chatw.addEventListener('pointerup',()=>{if(blankPointerStart&&Date.now()-blankPointerStart.time>=500){pressed=Date.now();openSheet(blankPointerStart.id)}blankPointerStart=null});
+chatw.addEventListener('pointercancel',()=>{blankPointerStart=null});
 sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='cloud'){sh.classList.remove('on');
