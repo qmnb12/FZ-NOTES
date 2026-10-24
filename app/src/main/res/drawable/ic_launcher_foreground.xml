@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Electric-blue outline frame -->
+    <path android:fillColor="#00000000" android:strokeColor="#176BFF" android:strokeWidth="2.4"
+        android:pathData="M27,10 L81,10 Q98,10 98,27 L98,81 Q98,98 81,98 L27,98 Q10,98 10,81 L10,27 Q10,10 27,10 Z"/>
+    <!-- Rear note sheet -->
+    <path android:fillColor="#0B2B66" android:strokeColor="#168BFF" android:strokeWidth="1.3"
+        android:pathData="M28,28 L65,19 Q70,18 73,23 L89,75 Q91,81 85,83 L43,94 Q37,95 35,89 L22,37 Q21,31 28,28 Z"/>
+    <!-- Main sheet -->
+    <path android:fillColor="#071B3D" android:strokeColor="#36B9FF" android:strokeWidth="1.8"
+        android:pathData="M30,18 L62,18 Q65,18 68,21 L84,38 L84,83 Q84,89 78,89 L30,89 Q24,89 24,83 L24,24 Q24,18 30,18 Z"/>
+    <!-- Folded corner -->
+    <path android:fillColor="#0D4FC2" android:strokeColor="#62D9FF" android:strokeWidth="1.2"
+        android:pathData="M62,18 L62,33 Q62,38 67,38 L84,38 Z"/>
+    <!-- Glowing-style note lines -->
+    <path android:fillColor="#53D9FF" android:pathData="M35,48 L69,48 Q72,48 72,51 Q72,54 69,54 L35,54 Q32,54 32,51 Q32,48 35,48 Z"/>
+    <path android:fillColor="#238BFF" android:pathData="M35,60 L74,60 Q77,60 77,63 Q77,66 74,66 L35,66 Q32,66 32,63 Q32,60 35,60 Z"/>
+    <path android:fillColor="#238BFF" android:pathData="M35,72 L62,72 Q65,72 65,75 Q65,78 62,78 L35,78 Q32,78 32,75 Q32,72 35,72 Z"/>
+</vector>
