@@ -196,7 +196,7 @@ header small{display:block;font-size:12px;line-height:1.25;white-space:nowrap;ov
 
 /* Final mobile layout corrections */
 #chat{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-.b{transition:none!important;will-change:auto}
+.b{transition:transform .12s ease,outline-color .12s ease!important;will-change:auto}
 .b.sel{transition:background .12s ease,box-shadow .12s ease!important}
 .b.has-code{width:86%;max-width:86%;min-width:0}
 .tg{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none;pointer-events:none}
@@ -440,7 +440,7 @@ chatw.addEventListener('pointermove',e=>{
 chatw.addEventListener('pointerup',()=>{if(blankPointerStart&&blankPointerStart.timer)clearTimeout(blankPointerStart.timer);blankPointerStart=null});
 chatw.addEventListener('pointercancel',()=>{if(blankPointerStart&&blankPointerStart.timer)clearTimeout(blankPointerStart.timer);blankPointerStart=null});
 sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');if(!button)return;const k=button.dataset.k;
- if(sh.dataset.type==='multi-select'){if(k==='x'){sh.classList.remove('on');return}const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);sh.classList.remove('on');if(k==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\\n\\n'));return}if(k==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render()}return}
+ if(sh.dataset.type==='multi-select'){if(k==='x'){sh.classList.remove('on');return}const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);sh.classList.remove('on');if(k==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));return}if(k==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render()}return}
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='cloud'){sh.classList.remove('on');
   if(k==='status'){toast(lastBackup()?'Last backup: '+lastBackup():'No successful backup recorded',2600)}
@@ -473,7 +473,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(k==='reply'){replyId=id;editId=null;setCtx();ed.focus()}
  if(k==='copy')copy(sh.dataset.txt);
  if(k==='del'){if(replyId===id||editId===id)clearCtx();msgs=msgs.filter(m=>m.id!==id);save();render()}
- if(k==='edit'){const m=msgs.find(m=>m.id===id);if(m){if(m.c){ed.innerText=m.c.map(i=>i.x).join('\\n');listTitle=plain(m.h);listMode=true;ed.dataset.ph='Add list items, one per line';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');$('#taskdue').value=m.due?new Date(m.due-new Date(m.due).getTimezoneOffset()*60000).toISOString().slice(0,16):''}else ed.innerHTML=m.h;editId=id;replyId=null;setCtx();placeCaretAtEnd(ed)}}});
+ if(k==='edit'){const m=msgs.find(m=>m.id===id);if(m){if(m.c){ed.innerText=m.c.map(i=>i.x).join('\n');listTitle=plain(m.h);listMode=true;ed.dataset.ph='Add list items, one per line';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');$('#taskdue').value=m.due?new Date(m.due-new Date(m.due).getTimezoneOffset()*60000).toISOString().slice(0,16):''}else ed.innerHTML=m.h;editId=id;replyId=null;setCtx();placeCaretAtEnd(ed)}}});
 const tn=k=>{const t=topics.find(t=>t.id===(k||'gen'));return t?t.name:'General'};
 const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return 'hsl('+h+' 55% 45%)'};
 const first=s=>[...s][0].toUpperCase();
@@ -538,7 +538,7 @@ $('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').
 $('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const glyph={srch:"🔍",cl:"☁️",bk:"💾",rs:"📥",pf:"📁",th:"🌗",x:"✕"};const item=(key,title,sub)=>'<button data-k="'+key+'"><span class="mi"><span class="mi-icon">'+glyph[key]+'</span></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted cloud copy')+item('bk','Backup','Export all notes')+item('rs','Restore','Restore saved notes')+item('pf','Open backup file','Import from this device')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
- if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\\n\\n'));selMode=false;sel.clear();render();return}
+ if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
  if(a==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render();return}
  if(a==='reply'){if(ids.length!==1){toast('Reply ke liye ek note select karo');return}replyId=ids[0];editId=null;setCtx();selMode=false;sel.clear();render();ed.focus();return}
  if(a==='more'){if(ids.length===1){openSheet(ids[0]);return}sh.innerHTML='<button data-k="copy">▢ Copy '+ids.length+' selected notes</button><button data-k="del" class="del">🗑 Delete '+ids.length+' selected notes</button><button data-k="x">✕ Close</button>';sh.dataset.type='multi-select';sh.dataset.ids=JSON.stringify(ids);sh.classList.add('on')}
