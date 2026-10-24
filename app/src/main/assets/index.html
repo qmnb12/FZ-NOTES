@@ -273,7 +273,11 @@ chat.addEventListener('click',e=>{if(Date.now()-pressed<650){e.preventDefault();
  const rp=e.target.closest('.rp');if(rp){jump(+rp.dataset.r);return}
  const sp=e.target.closest('.spoiler');if(sp){sp.classList.toggle('on');return}
  const m=e.target.closest('.mono,.code');if(m)copy(m.textContent)});
-$('#chatw').addEventListener('click',function(e){if(e.target.closest('.b,button,#ed,.ci,.rp,.mn'))return;const a=[...chat.querySelectorAll('.b')];if(!a.length)return;let n=a[0],d=Infinity;for(const b of a){const r=b.getBoundingClientRect(),x=e.clientX<r.left?r.left-e.clientX:e.clientX>r.right?e.clientX-r.right:0,y=e.clientY<r.top?r.top-e.clientY:e.clientY>r.bottom?e.clientY-r.bottom:0,z=x*x+y*y;if(z<d){d=z;n=b}}openSheet(n.dataset.id)});
+let blankPressTimer=null,blankPressStart=null,blankPressFired=false;
+function cancelBlankPress(){if(blankPressTimer)clearTimeout(blankPressTimer);blankPressTimer=null;blankPressStart=null}
+$('#chatw').addEventListener('pointerdown',function(e){if(e.target.closest('.b,button,#ed,.ci,.rp,.mn'))return;const a=[...chat.querySelectorAll('.b')];if(!a.length)return;let n=a[0],d=Infinity;for(const b of a){const r=b.getBoundingClientRect(),x=e.clientX<r.left?r.left-e.clientX:e.clientX>r.right?e.clientX-r.right:0,y=e.clientY<r.top?r.top-e.clientY:e.clientY>r.bottom?e.clientY-r.bottom:0,z=x*x+y*y;if(z<d){d=z;n=b}}blankPressStart={x:e.clientX,y:e.clientY,id:n.dataset.id};blankPressFired=false;blankPressTimer=setTimeout(()=>{if(blankPressStart){blankPressFired=true;pressed=Date.now();openSheet(blankPressStart.id);blankPressStart=null}},550)});
+$('#chatw').addEventListener('pointermove',function(e){if(blankPressStart&&(Math.abs(e.clientX-blankPressStart.x)>12||Math.abs(e.clientY-blankPressStart.y)>12))cancelBlankPress()},{passive:true});
+['pointerup','pointercancel','pointerleave'].forEach(t=>$('#chatw').addEventListener(t,cancelBlankPress));
 sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='cloud'){sh.classList.remove('on');
