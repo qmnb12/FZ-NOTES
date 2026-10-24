@@ -132,6 +132,7 @@ public class MainActivity extends Activity {
         private ActionMode.Callback wrapSelectionCallback(ActionMode.Callback original) {
             return new ActionMode.Callback() {
                 private static final int MENU_MONO = 0x4D4F;
+                private static final int MENU_CODE = 0x434F;
 
                 @Override
                 public boolean onCreateActionMode(ActionMode mode, Menu menu) {
@@ -139,6 +140,8 @@ public class MainActivity extends Activity {
                     if (created) {
                         MenuItem item = menu.add(Menu.NONE, MENU_MONO, 100, "Mono");
                         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+                        MenuItem code = menu.add(Menu.NONE, MENU_CODE, 101, "Code");
+                        code.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
                     }
                     return created;
                 }
@@ -152,6 +155,11 @@ public class MainActivity extends Activity {
                 public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
                     if (item.getItemId() == MENU_MONO) {
                         evaluateJavascript("window.applyMonoFromNative && window.applyMonoFromNative()", null);
+                        mode.finish();
+                        return true;
+                    }
+                    if (item.getItemId() == MENU_CODE) {
+                        evaluateJavascript("window.applyCodeFromNative && window.applyCodeFromNative()", null);
                         mode.finish();
                         return true;
                     }
