@@ -273,6 +273,7 @@ chat.addEventListener('click',e=>{if(Date.now()-pressed<650){e.preventDefault();
  const rp=e.target.closest('.rp');if(rp){jump(+rp.dataset.r);return}
  const sp=e.target.closest('.spoiler');if(sp){sp.classList.toggle('on');return}
  const m=e.target.closest('.mono,.code');if(m)copy(m.textContent)});
+$('#chatw').addEventListener('click',function(e){if(e.target.closest('.b,button,#ed,.ci,.rp,.mn'))return;const a=[...chat.querySelectorAll('.b')];if(!a.length)return;let n=a[0],d=Infinity;for(const b of a){const r=b.getBoundingClientRect(),x=e.clientX<r.left?r.left-e.clientX:e.clientX>r.right?e.clientX-r.right:0,y=e.clientY<r.top?r.top-e.clientY:e.clientY>r.bottom?e.clientY-r.bottom:0,z=x*x+y*y;if(z<d){d=z;n=b}}openSheet(n.dataset.id)});
 sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='cloud'){sh.classList.remove('on');
