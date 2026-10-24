@@ -258,6 +258,18 @@ body{min-height:100dvh}
 #sh button:active{transform:none}
 @media(max-width:420px){#chat{padding-bottom:132px!important}#cmp{padding-left:9px;padding-right:9px}#chatw>#listfab{right:68px}}
 
+
+/* Final width/spacing correction: footer spans the device, not the chat column */
+#footer{width:100vw!important;max-width:100vw!important;min-width:0!important;align-self:stretch!important;overflow:visible}
+#footer>#tb,#footer>#taskmeta,#footer>#ctx,#footer>#lk,#footer>#cmp{width:100%!important;max-width:100%!important;min-width:0;box-sizing:border-box;align-self:stretch;margin:0!important}
+#chat{padding-bottom:168px!important;scroll-padding-bottom:168px}
+#chatw>#fab{right:12px!important;bottom:12px!important}
+#chatw>#listfab{right:70px!important;bottom:18px!important}
+#chatw>#fab,#chatw>#listfab{touch-action:manipulation;transform:translateZ(0)}
+#sh button[data-k]{min-height:50px;cursor:pointer}
+#sh button .mi svg{pointer-events:none}
+@media(max-width:420px){#chat{padding-bottom:174px!important;scroll-padding-bottom:174px}#footer>#cmp{padding-left:9px;padding-right:9px}}
+
 </style>
 </head>
 <body>
@@ -380,7 +392,7 @@ $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
  if(mode==='savepw'){savePw(v);return}
  if(mode==='bkpw'){doBackup(v);return}
  if(mode==='rspw'){doRestore(v);return}
- if(mode==='restore'){try{const d=JSON.parse(v);if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();toast('Restored')}else toast('Invalid backup')}catch(e){toast('Invalid backup')}return}
+ if(mode==='restore'){pickFile();return}
  if(mode==='topic'){if(v){const id='t'+Date.now();topics.push({id,name:v});cur=id;saveT();render()}return}
  if(mode==='listtitle'){if(v){listTitle=v;listMode=true;$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.innerHTML='';updateComposerControls();ed.dataset.ph='Add list items, one per line';ed.focus();saveDraft();toast('Ab list ke items likho — naam alag rahega',2200)}return}
  if(mode==='hidepwset'){if(v.length<4){toast('Password kam se kam 4 characters ka rakhein');return}hashPw(v).then(h=>{localStorage.setItem('notes-hide-hash',h);toast('Hidden notes password set ho gaya');hideSelected()});return}
@@ -469,7 +481,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(sh.dataset.type==='cloud'){sh.classList.remove('on');
   if(k==='status'){toast(lastBackup()?'Last backup: '+lastBackup():'No successful backup recorded',2600)}
   if(k==='cset')openCfg();
-  if(k==='cbk')needPw('bkpw');
+  if(k==='cbk'){if(!targets(cfgGet()).length){openCfg();toast('Pehle backup destination set karo',2500);return}needPw('bkpw')}
   if(k==='cpw')ask('savepw','Password jo save karna hai','');
   if(k==='cpd')delPw();
   if(k==='crs')openSrc();
@@ -531,7 +543,7 @@ const cfgGet=()=>{try{return JSON.parse(localStorage.getItem('notes-sync')||'{}'
 const cfgSet=c=>{try{localStorage.setItem('notes-sync',JSON.stringify(c))}catch(e){}};
 function targets(c){const t=[];if(c.wdUrl&&c.wdUser)t.push({type:'webdav',url:c.wdUrl,user:c.wdUser,pass:c.wdPass||''});if(c.tgToken&&c.tgChat)t.push({type:'tg',token:c.tgToken,chat:c.tgChat,fid:c.tgFid||''});if(c.ghToken&&c.ghRepo)t.push({type:'gh',token:c.ghToken,repo:c.ghRepo,path:c.ghPath||'notes-backup.ncb'});return t}
 const pend={};let nid=0;
-function native(op,args){return new Promise((res,rej)=>{if(!window.Android){rej(new Error('Cloud backup sirf Android app me chalta hai'));return}const id=++nid;pend[id]={res,rej};window.Android.run(id,op,JSON.stringify(args))})}
+function native(op,args){return new Promise((res,rej)=>{if(!window.Android||typeof window.Android.run!=='function'){rej(new Error('Android bridge available nahi hai'));return}const id=++nid;pend[id]={res,rej};try{window.Android.run(id,op,JSON.stringify(args))}catch(e){delete pend[id];rej(e)}})}
 window.onNative=(id,ok,d)=>{const p=pend[id];delete pend[id];if(p)ok?p.res(d):p.rej(new Error(d))};
 function openCloud(){const lb=lastBackup();sh.innerHTML='<button data-k="cbk">☁ Backup now</button><button data-k="status">ⓘ Last backup: '+esc(lb||'Not yet')+'</button><button data-k="crs">⬇ Restore</button><button data-k="cset">⚙ Settings (Nextcloud / Telegram / GitHub)</button><button data-k="'+(pwSaved()?'cpd':'cpw')+'">🔑 '+(pwSaved()?'Remove saved password':'Save password on phone')+'</button><button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
 function openSrc(){const t=targets(cfgGet());if(!t.length){toast('Pehle Settings me cloud bharein',2500);return}sh.innerHTML=t.map(x=>'<button data-k="src:'+x.type+'">Restore from '+NM[x.type]+'</button>').join('')+'<button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
@@ -558,7 +570,7 @@ $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
 $('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
-$('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted cloud copy')+item('bk','Backup','Export all notes')+item('rs','Restore','Restore saved notes')+item('pf','Open backup file','Import from this device')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
+$('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Export backup file','Save a .json copy to device')+item('rs','Restore from file','Choose a saved backup')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
