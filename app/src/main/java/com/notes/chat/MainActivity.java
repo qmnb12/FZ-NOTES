@@ -84,6 +84,26 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
+    public void onBackPressed() {
+        if (web != null) {
+            web.evaluateJavascript(
+                "(function(){return window.handleAppBack ? window.handleAppBack() : false})()",
+                value -> {
+                    if (!"true".equals(value)) {
+                        if (Build.VERSION.SDK_INT >= 33) {
+                            MainActivity.super.onBackPressed();
+                        } else {
+                            MainActivity.super.onBackPressed();
+                        }
+                    }
+                });
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQ_IMAGE && filePicker != null) {
             Uri[] result = null;
