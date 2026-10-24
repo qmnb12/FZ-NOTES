@@ -290,10 +290,10 @@ function send(){const h=clean(ed);if(!ed.textContent.trim())return;
   const dueText=$('#taskdue').value;const due=dueText?new Date(dueText).getTime():(em&&em.due||0);
   if(em){em.h='<b>'+esc(title)+'</b>';em.c=items;em.due=due||undefined;em.e=1;editId=null;if(due)scheduleReminder(em)}
   else{const rm=replyId&&msgs.find(m=>m.id===replyId);const task={id:Date.now(),t:Date.now(),h:'<b>'+esc(title)+'</b>',c:items,due:due||undefined,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined};msgs.push(task);if(due)scheduleReminder(task);replyId=null}
-  listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');$('#taskdue').value='';ed.innerHTML='';ed.dataset.ph='Message in Notes';clearDraft();setCtx();save();render();return}
+  listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');$('#taskdue').value='';ed.innerHTML='';updateComposerControls();ed.dataset.ph='Message in Notes';clearDraft();setCtx();save();render();return}
  if(editId){const m=msgs.find(m=>m.id===editId);if(m){m.h=h;m.e=1}editId=null}
  else{const rm=replyId&&msgs.find(m=>m.id===replyId);msgs.push({id:Date.now(),t:Date.now(),h,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});replyId=null}
- ed.innerHTML='';clearDraft();setCtx();save();render()}$('#send').onclick=send;
+ ed.innerHTML='';updateComposerControls();clearDraft();setCtx();save();render()}$('#send').onclick=send;
 $('#listfab').onclick=()=>{if(listMode){listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';toast('Checklist mode off');return}ask('listtitle','List ka naam likhein');};
 ed.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'))});
 document.addEventListener('selectionchange',()=>{const s=getSelection();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;$('#tb').classList.toggle('on',selected);if(selected){const active=s.toString();$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',b.dataset.a==='mono'&&!!s.anchorNode.parentElement.closest('.mono')))}}else $('#tb').classList.remove('on')});
