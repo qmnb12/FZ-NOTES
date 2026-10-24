@@ -358,7 +358,7 @@ $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
  if(mode==='rspw'){doRestore(v);return}
  if(mode==='restore'){try{const d=JSON.parse(v);if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();toast('Restored')}else toast('Invalid backup')}catch(e){toast('Invalid backup')}return}
  if(mode==='topic'){if(v){const id='t'+Date.now();topics.push({id,name:v});cur=id;saveT();render()}return}
- if(mode==='listtitle'){if(v){listTitle=v;listMode=true;$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.innerHTML='';ed.dataset.ph='Add list items, one per line';ed.focus();saveDraft();toast('Ab list ke items likho — naam alag rahega',2200)}return}
+ if(mode==='listtitle'){if(v){listTitle=v;listMode=true;$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.innerHTML='';updateComposerControls();ed.dataset.ph='Add list items, one per line';ed.focus();saveDraft();toast('Ab list ke items likho — naam alag rahega',2200)}return}
  if(mode==='hidepwset'){if(v.length<4){toast('Password kam se kam 4 characters ka rakhein');return}hashPw(v).then(h=>{localStorage.setItem('notes-hide-hash',h);toast('Hidden notes password set ho gaya');hideSelected()});return}
  if(mode==='hidepwcheck'){hashPw(v).then(h=>{if(h!==localStorage.getItem('notes-hide-hash')){toast('Wrong password');return}if(hideTarget){hideSelected();return}hiddenUnlocked=true;cur='hidden';render();toast('Hidden notes unlocked',1800)});return}
  if(mode==='hidepwunlock'){hashPw(v).then(h=>{if(h!==localStorage.getItem('notes-hide-hash')){toast('Wrong password');return}hiddenUnlocked=true;cur='hidden';render();toast('Hidden notes unlocked',1800)});return}
@@ -499,7 +499,7 @@ const rq=m=>{if(!m.r)return '';const o=msgs.find(x=>x.id===m.r);return '<span cl
 function jump(id){const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b){toast('Note nahi mila');return}b.scrollIntoView({block:'center',behavior:'smooth'});b.classList.add('hl');setTimeout(()=>b.classList.remove('hl'),1200)}
 function setCtx(){const c=$('#ctx'),id=editId||replyId,m=id&&msgs.find(m=>m.id===id);
  if(m){$('#cxt').textContent=editId?'Edit message':'Reply to note';$('#cxs').textContent=plain(m.h);c.classList.add('on')}else c.classList.remove('on')}
-function clearCtx(){if(editId)ed.innerHTML='';editId=null;replyId=null;setCtx()}
+function clearCtx(){if(editId){ed.innerHTML='';updateComposerControls()}editId=null;replyId=null;setCtx()}
 $('#cxx').onclick=clearCtx;
 const sel=new Set();
 let pendSrc='';
@@ -546,7 +546,7 @@ $('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;c
 $('#att').onclick=()=>$('#fi').click();
 $('#fi').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const r=new FileReader();
  r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-  const rm=replyId&&msgs.find(m=>m.id===replyId);msgs.push({id:Date.now(),t:Date.now(),h:clean(ed),i:c.toDataURL('image/jpeg',.7),k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});replyId=null;editId=null;ed.innerHTML='';setCtx();save();render()};im.src=r.result};r.readAsDataURL(f)};
+  const rm=replyId&&msgs.find(m=>m.id===replyId);msgs.push({id:Date.now(),t:Date.now(),h:clean(ed),i:c.toDataURL('image/jpeg',.7),k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});replyId=null;editId=null;ed.innerHTML='';updateComposerControls();setCtx();save();render()};im.src=r.result};r.readAsDataURL(f)};
 let sx=0,sy=0,sb=null,dx=0;
 chat.addEventListener('touchstart',e=>{sb=e.target.closest('.b');if(!sb)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0},{passive:true});
 chat.addEventListener('touchmove',e=>{if(!sb)return;dx=e.touches[0].clientX-sx;if(Math.abs(e.touches[0].clientY-sy)>Math.abs(dx))return;if(Math.abs(dx)>0)sb.style.transform='translateX('+Math.max(-70,Math.min(70,dx))+'px)'},{passive:true});
