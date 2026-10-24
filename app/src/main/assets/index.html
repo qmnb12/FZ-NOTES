@@ -83,11 +83,11 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 #sq.on,#selbar.on,#pin.on{display:flex}
 #sq input{flex:1;min-width:0;padding:8px 12px;border-radius:16px;border:1px solid var(--ln);background:var(--bg);color:var(--text);font:inherit}
 #sq button,#selbar button{border:0;background:var(--mono);color:var(--text);border-radius:14px;padding:6px 12px;font:inherit;font-size:14px}
-#selbar span{flex:1}
+#selbar span{flex:1;min-width:0;font-size:17px;font-weight:600;white-space:nowrap}#selbar{min-height:54px;padding:6px 10px;gap:8px;background:var(--bar);box-shadow:0 2px 8px rgba(0,0,0,.14)}#selbar button{width:38px;height:38px;min-width:38px;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:transparent;color:var(--text);font-size:21px;line-height:1;-webkit-tap-highlight-color:transparent}#selbar button:active{background:var(--mono)}
 #pin .cx{flex:1;min-width:0;border-left:3px solid var(--acc);padding-left:8px;cursor:pointer}
 #pin b{display:block;font-size:12px;color:var(--acc)}
 #pin span{display:block;font-size:13px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.b.sel{outline:2px solid var(--acc)!important;outline-offset:2px;background:var(--acc)!important;color:#fff!important;box-shadow:0 0 0 9999px rgba(0,0,0,.18)!important;filter:none!important;position:relative;z-index:2}.b.sel::before{content:'✓';position:absolute;left:-12px;top:50%;transform:translate(-100%,-50%);width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--acc);color:#fff;border:2px solid var(--bar);font:700 14px system-ui;box-shadow:0 2px 7px rgba(0,0,0,.25)}
+.b.sel{position:relative;background:rgba(80,145,255,.15)!important;border-color:var(--acc)!important;box-shadow:inset 0 0 0 1.5px var(--acc)!important;filter:none!important;color:var(--text)!important;z-index:1}.b.sel::before{content:'✓';position:absolute;left:-29px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--acc);color:#fff;border:2px solid var(--bar);font:700 13px system-ui;box-shadow:0 1px 4px rgba(0,0,0,.2)}
 .b.lp-selected{position:relative;outline:3px solid var(--acc)!important;outline-offset:2px;background:var(--acc)!important;color:#fff!important;box-shadow:0 0 0 9999px rgba(0,0,0,.24),0 0 0 6px rgba(117,170,255,.22),0 8px 28px rgba(0,0,0,.35)!important;filter:none!important;transform:scale(1.015);z-index:4;transition:outline-color .12s,background .12s,transform .12s,box-shadow .12s}
 .im{display:block;max-width:100%;border-radius:10px;margin-bottom:4px}
 #att{flex:none;width:38px;height:42px;border:0;background:none;font-size:20px}
@@ -126,7 +126,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx">✕</button></div>
 <div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
-<div id="selbar"><span id="selc"></span><button data-s="copy">Copy</button><button data-s="del">Delete</button><button data-s="x">Cancel</button></div>
+<div id="selbar"><button data-s="x" aria-label="Exit selection" title="Cancel selection">✕</button><span id="selc">1 selected</span><button data-s="reply" aria-label="Reply" title="Reply">↩</button><button data-s="copy" aria-label="Copy selected" title="Copy">▢</button><button data-s="more" aria-label="More actions" title="More actions">⋮</button><button data-s="del" aria-label="Delete selected" title="Delete">🗑</button></div>
 <div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Create task list">☑</button><button id="fab" aria-label="Quick note">+</button></div>
 <div id="tb">
 <button data-a="b" aria-label="Bold" title="Bold"><b class="fmticon">B</b></button><button data-a="i" aria-label="Italic" title="Italic"><i class="fmticon">I</i></button>
@@ -259,7 +259,7 @@ function openSheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;const txt=not
  sh.innerHTML='<button data-k="reply">↩️ Reply</button><button data-k="edit">✏️ Edit</button><button data-k="copy">▢ Copy text</button><button data-k="pin">'+(m.p?'📌 Unpin':'📌 Pin')+'</button><button data-k="hide">'+(m.hidden?'🔓 Unhide note':'🔒 Hide note')+'</button><button data-k="mv">📁 Move to topic</button><button data-k="sel">☑ Select</button><button data-k="del" class="del">🗑 Delete</button><button data-k="x">✕ Cancel</button>';
  sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=txt;sh.classList.add('on')}
 function openCopySheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;sh.innerHTML='<button data-k="copy">▢ Copy text</button><button data-k="x">✕ Cancel</button>';sh.dataset.id=id;sh.dataset.type='copyonly';sh.dataset.txt=noteCopyText(m);sh.classList.add('on')}
-function startNotePress(e){const b=e.target.closest('.b');if(!b||selMode||e.target.closest('.ci,.rp,.a'))return;clearTimeout(timer);pressTarget=b;pressX=e.clientX||0;pressY=e.clientY||0;pressMenuArea=!!e.target.closest('.tm,.mn');const id=b.dataset.id;timer=setTimeout(()=>{if(!pressTarget)return;pressed=Date.now();if(pressMenuArea)openSheet(id);else openCopySheet(id);pressTarget=null},520)}
+function startNotePress(e){const b=e.target.closest('.b');if(!b||selMode||e.target.closest('.ci,.rp,.a'))return;clearTimeout(timer);pressTarget=b;pressX=e.clientX||0;pressY=e.clientY||0;const id=b.dataset.id;timer=setTimeout(()=>{if(!pressTarget)return;selectNote(id);pressTarget=null},520)}
 function cancelNotePress(){clearTimeout(timer);pressTarget=null}
 chat.addEventListener('pointerdown',startNotePress);
 chat.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;startNotePress({target:e.target,clientX:t.clientX,clientY:t.clientY})},{passive:true});
@@ -269,7 +269,7 @@ chat.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(pressTa
 chat.addEventListener('contextmenu',e=>{if(e.target.closest('.b')){e.preventDefault();e.stopPropagation()}});
 chatwSelectTimestampGuard();
 chat.addEventListener('click',e=>{if(Date.now()-pressed<650){e.preventDefault();e.stopPropagation();return}
- const sbx=e.target.closest('.b');if(selMode){if(sbx){const i=+sbx.dataset.id;if(sel.has(i))sel.delete(i);else sel.add(i);sbx.classList.toggle('sel');renderTop()}return}
+ const sbx=e.target.closest('.b');if(selMode){if(sbx){const i=+sbx.dataset.id;if(sel.has(i))sel.delete(i);else sel.add(i);sbx.classList.toggle('sel',sel.has(i));if(!sel.size)selMode=false;renderTop()}return}
  const ci=e.target.closest('.ci');if(ci){const bb=ci.closest('.b'),m=msgs.find(x=>x.id==bb.dataset.id);if(m&&m.c){const it=m.c[+ci.dataset.i];it.s=(it.s+1)%3;ci.className='ci s'+it.s;bb.querySelector('.cnt').textContent=cntText(m);if(m.due)scheduleReminder(m);save()}return}
  const mn=e.target.closest('.mn');if(mn){openSheet(mn.closest('.b').dataset.id);return}
  const rp=e.target.closest('.rp');if(rp){jump(+rp.dataset.r);return}
@@ -279,7 +279,8 @@ let blankTouchStart=null,blankPointerStart=null,lastBlankMenuId=null,lastBlankMe
 function nearestBubbleAt(x,y){const a=[...chat.querySelectorAll('.b')];if(!a.length)return null;let n=null,d=Infinity;for(const el of a){const r=el.getBoundingClientRect(),dx=x<r.left?r.left-x:x>r.right?x-r.right:0,dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0,z=dx*dx+dy*dy;if(z<d){d=z;n=el}}return n}
 function blankTargetAllowed(target){const el=target&&target.nodeType===1?target:target&&target.parentElement;return !!el&&!el.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab')}
 function blankStart(target,x,y){if(!blankTargetAllowed(target))return null;const n=nearestBubbleAt(x,y);return n?{x,y,id:n.dataset.id}:null}
-function showBlankMenu(id){if(sh.classList.contains('on')&&sh.dataset.id==id)return;const now=Date.now();lastBlankMenuId=id;lastBlankMenuAt=now;pressed=now;try{const nativeSel=window.getSelection&&window.getSelection();if(nativeSel)nativeSel.removeAllRanges()}catch(_){};selMode=true;sel.clear();sel.add(+id);render();const bubble=chat.querySelector('.b[data-id="'+CSS.escape(String(id))+'"]');if(bubble){bubble.scrollIntoView({block:'center',behavior:'smooth'});bubble.classList.add('sel')}openSheet(id)}
+function selectNote(id){const num=Number(id);if(!msgs.some(m=>m.id==num))return;pressed=Date.now();try{const nativeSel=window.getSelection&&window.getSelection();if(nativeSel)nativeSel.removeAllRanges()}catch(_){};if(!selMode){sel.clear();selMode=true}sel.add(num);const bubble=chat.querySelector('.b[data-id="'+CSS.escape(String(num))+'"]');if(bubble)bubble.classList.add('sel');renderTop()}
+function showBlankMenu(id){selectNote(id)}
 function clearBlankTouch(){if(blankTouchStart&&blankTouchStart.timer)clearTimeout(blankTouchStart.timer);blankTouchStart=null}
 const chatw=$('#chatw');
 chatw.addEventListener('touchstart',e=>{clearBlankTouch();const t=e.touches&&e.touches[0];const hit=t?blankStart(e.target,t.clientX,t.clientY):null;if(!hit)return;blankTouchStart={...hit,opened:false,timer:setTimeout(()=>{if(blankTouchStart&&blankTouchStart.id==hit.id){blankTouchStart.opened=true;showBlankMenu(hit.id)}},520)}},{capture:true,passive:true});
@@ -292,6 +293,7 @@ chatw.addEventListener('pointermove',e=>{if(blankPointerStart&&(Math.abs(e.clien
 chatw.addEventListener('pointerup',()=>{if(blankPointerStart&&Date.now()-blankPointerStart.time>=520)showBlankMenu(blankPointerStart.id);blankPointerStart=null});
 chatw.addEventListener('pointercancel',()=>{blankPointerStart=null});
 sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
+ if(sh.dataset.type==='multi-select'){if(k==='x'){sh.classList.remove('on');return}const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);sh.classList.remove('on');if(k==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\\n\\n'));return}if(k==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render()}return}
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='cloud'){sh.classList.remove('on');
   if(k==='status'){toast(lastBackup()?'Last backup: '+lastBackup():'No successful backup recorded',2600)}
@@ -386,10 +388,13 @@ $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.c
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
 $('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
 $('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const item=(key,title,sub)=>'<button data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[key]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted cloud copy')+item('bk','Backup','Export all notes')+item('rs','Restore','Restore saved notes')+item('pf','Open backup file','Import from this device')+item('th','Appearance','Light / dark theme')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
-$('#selbar').onclick=e=>{const a=e.target.dataset.s;if(!a)return;
- if(a==='copy'){const txt=h=>{const d=document.createElement('div');d.innerHTML=h.replace(/<br>/g,'\n');return d.textContent};copy(msgs.filter(m=>sel.has(m.id)).map(m=>txt(m.h)).join('\n\n'))}
- if(a==='del'){msgs=msgs.filter(m=>!sel.has(m.id));save()}
- selMode=false;sel.clear();render()};
+$('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
+ if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
+ if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\\n\\n'));selMode=false;sel.clear();render();return}
+ if(a==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render();return}
+ if(a==='reply'){if(ids.length!==1){toast('Reply ke liye ek note select karo');return}replyId=ids[0];editId=null;setCtx();selMode=false;sel.clear();render();ed.focus();return}
+ if(a==='more'){if(ids.length===1){openSheet(ids[0]);return}sh.innerHTML='<button data-k="copy">▢ Copy '+ids.length+' selected notes</button><button data-k="del" class="del">🗑 Delete '+ids.length+' selected notes</button><button data-k="x">✕ Close</button>';sh.dataset.type='multi-select';sh.dataset.ids=JSON.stringify(ids);sh.classList.add('on')}
+};
 $('#att').onclick=()=>$('#fi').click();
 $('#fi').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const r=new FileReader();
  r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
