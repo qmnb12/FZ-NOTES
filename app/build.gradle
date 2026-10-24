@@ -3,15 +3,21 @@ plugins {
 }
 
 android {
-    namespace 'com.notes.chat'
+    namespace 'com.fz.notes.chat'
     compileSdk 34
 
     defaultConfig {
         applicationId "com.fz.notes.chat"
         minSdk 29
         targetSdk 34
-        versionCode 3
-        versionName "1.0.2"
+        versionCode 4
+        versionName "1.0.3"
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "com.fz.notes.chat-${variant.versionName}.apk"
+        }
     }
 
     buildTypes {
