@@ -357,7 +357,7 @@ public class Cloud {
             try (InputStream stream = in) {
                 data = readAll(stream);
             }
-            if (code >= 400) {
+            if (code < 200 || code >= 300) {
                 String msg = new String(data, StandardCharsets.UTF_8);
                 if (msg.length() > 100) msg = msg.substring(0, 100);
                 throw new Exception("HTTP " + code + ": " + msg);
