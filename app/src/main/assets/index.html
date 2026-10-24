@@ -202,7 +202,7 @@ function send(){const h=clean(ed);if(!ed.textContent.trim())return;
 $('#listfab').onclick=()=>{if(listMode){listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';toast('Checklist mode off');return}ask('listtitle','List ka naam likhein');};
 ed.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'))});
 document.addEventListener('selectionchange',()=>{const s=getSelection();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;$('#tb').classList.toggle('on',selected);if(selected){const active=s.toString();$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',b.dataset.a==='mono'&&!!s.anchorNode.parentElement.closest('.mono')))}}else $('#tb').classList.remove('on')});
-function restore(){ed.focus();if(saved){const s=getSelection();s.removeAllRanges();s.addRange(saved)}}
+function restore(){ed.focus();if(saved){const s=getSelection();s.removeAllRanges();s.addRange(saved)}}function placeCaretAtEnd(el){try{el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();s.removeAllRanges();s.addRange(r)}catch(_){}}
 function wrap(cls){const s=getSelection();if(!s.rangeCount||s.isCollapsed)return false;
  const r=s.getRangeAt(0),sp=document.createElement('span');sp.className=cls;sp.appendChild(r.extractContents());r.insertNode(sp);
  s.removeAllRanges();const n=document.createRange();n.selectNodeContents(sp);s.addRange(n);return true}
@@ -353,7 +353,7 @@ sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
  if(k==='reply'){replyId=id;editId=null;setCtx();ed.focus()}
  if(k==='copy')copy(sh.dataset.txt);
  if(k==='del'){if(replyId===id||editId===id)clearCtx();msgs=msgs.filter(m=>m.id!==id);save();render()}
- if(k==='edit'){const m=msgs.find(m=>m.id===id);if(m){if(m.c){ed.innerText=m.c.map(i=>i.x).join('\\n');listTitle=plain(m.h);listMode=true;ed.dataset.ph='Add list items, one per line';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');$('#taskdue').value=m.due?new Date(m.due-new Date(m.due).getTimezoneOffset()*60000).toISOString().slice(0,16):''}else ed.innerHTML=m.h;editId=id;replyId=null;setCtx();ed.focus()}}});
+ if(k==='edit'){const m=msgs.find(m=>m.id===id);if(m){if(m.c){ed.innerText=m.c.map(i=>i.x).join('\\n');listTitle=plain(m.h);listMode=true;ed.dataset.ph='Add list items, one per line';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');$('#taskdue').value=m.due?new Date(m.due-new Date(m.due).getTimezoneOffset()*60000).toISOString().slice(0,16):''}else ed.innerHTML=m.h;editId=id;replyId=null;setCtx();placeCaretAtEnd(ed)}}});
 const tn=k=>{const t=topics.find(t=>t.id===(k||'gen'));return t?t.name:'General'};
 const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return 'hsl('+h+' 55% 45%)'};
 const first=s=>[...s][0].toUpperCase();
