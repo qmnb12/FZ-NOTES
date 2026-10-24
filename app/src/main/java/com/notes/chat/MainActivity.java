@@ -1,6 +1,11 @@
 package com.notes.chat;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.app.Activity;
 import android.view.ActionMode;
 import android.view.Menu;
@@ -161,10 +166,46 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void handleReminder(int callbackId, String rawArgs) {
+        try {
+            JSONObject data = new JSONObject(rawArgs);
+            String taskId = data.optString("id", "task");
+            String title = data.optString("title", "NotesChat task");
+            long due = data.optLong("due", 0L);
+            boolean done = data.optBoolean("done", false);
+            Intent intent = new Intent(this, ReminderReceiver.class);
+            intent.putExtra("taskId", taskId);
+            intent.putExtra("title", title);
+            int requestCode = taskId.hashCode();
+            PendingIntent pending = PendingIntent.getBroadcast(
+                    this, requestCode, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            AlarmManager alarms = (AlarmManager) getSystemService(ALARM_SERVICE);
+            if (done || due <= System.currentTimeMillis()) {
+                if (alarms != null) alarms.cancel(pending);
+                reply(callbackId, true, "Reminder cancelled or due time passed");
+                return;
+            }
+            if (alarms == null) throw new IllegalStateException("Alarm service unavailable");
+            alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pending);
+            if (Build.VERSION.SDK_INT >= 33
+                    && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 501);
+            }
+            reply(callbackId, true, "Reminder scheduled");
+        } catch (Exception e) {
+            reply(callbackId, false, e.getMessage() == null ? "Reminder failed" : e.getMessage());
+        }
+    }
+
     /** JS -> Java bridge for encrypted cloud backup (runs on a background thread). */
     class Bridge {
         @JavascriptInterface
         public void run(final int id, final String op, final String args) {
+            if ("reminder".equals(op)) {
+                runOnUiThread(() -> handleReminder(id, args));
+                return;
+            }
             if ("pickfile".equals(op)) {
                 runOnUiThread(() -> {
                     fileReplyId = id;
