@@ -123,7 +123,7 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 <body>
 <header><div class="av" id="av">N</div><div><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search">🔍</button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx">✕</button></div>
-<div id="filters"><button data-filter="all" class="active">All</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="today">Today</button></div>
+<div id="filters"><button data-filter="all" class="active">All</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
 <div id="selbar"><span id="selc"></span><button data-s="copy">Copy</button><button data-s="del">Delete</button><button data-s="x">Cancel</button></div>
 <div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Checklist">☷</button><button id="fab" aria-label="Quick note">+</button></div>
@@ -245,7 +245,7 @@ chat.addEventListener('pointerdown',e=>{const b=e.target.closest('.b');if(!b||se
 chat.addEventListener('contextmenu',e=>{if(e.target.closest('.b'))e.preventDefault()});
 chat.addEventListener('click',e=>{if(Date.now()-pressed<400){e.preventDefault();return}
  const sbx=e.target.closest('.b');if(selMode){if(sbx){const i=+sbx.dataset.id;if(sel.has(i))sel.delete(i);else sel.add(i);sbx.classList.toggle('sel');renderTop()}return}
- const ci=e.target.closest('.ci');if(ci){const bb=ci.closest('.b'),m=msgs.find(x=>x.id==bb.dataset.id);if(m&&m.c){const it=m.c[+ci.dataset.i];it.s=(it.s+1)%3;ci.className='ci s'+it.s;bb.querySelector('.cnt').textContent=cntText(m);save()}return}
+ const ci=e.target.closest('.ci');if(ci){const bb=ci.closest('.b'),m=msgs.find(x=>x.id==bb.dataset.id);if(m&&m.c){const it=m.c[+ci.dataset.i];it.s=(it.s+1)%3;ci.className='ci s'+it.s;bb.querySelector('.cnt').textContent=cntText(m);if(m.due)scheduleReminder(m);save()}return}
  const mn=e.target.closest('.mn');if(mn){openSheet(mn.closest('.b').dataset.id);return}
  const rp=e.target.closest('.rp');if(rp){jump(+rp.dataset.r);return}
  const sp=e.target.closest('.spoiler');if(sp){sp.classList.toggle('on');return}
@@ -281,7 +281,7 @@ sh.addEventListener('click',e=>{const k=e.target.dataset.k;if(!k)return;
  if(k==='reply'){replyId=id;editId=null;setCtx();ed.focus()}
  if(k==='copy')copy(sh.dataset.txt);
  if(k==='del'){if(replyId===id||editId===id)clearCtx();msgs=msgs.filter(m=>m.id!==id);save();render()}
- if(k==='edit'){const m=msgs.find(m=>m.id===id);if(m){if(m.c)ed.innerText=[plain(m.h)].concat(m.c.map(i=>i.x)).join('\n');else ed.innerHTML=m.h;editId=id;replyId=null;setCtx();ed.focus()}}});
+ if(k==='edit'){const m=msgs.find(m=>m.id===id);if(m){if(m.c){ed.innerText=[plain(m.h)].concat(m.c.map(i=>i.x)).join('\\n');listMode=true;$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');$('#taskdue').value=m.due?new Date(m.due-new Date(m.due).getTimezoneOffset()*60000).toISOString().slice(0,16):''}else ed.innerHTML=m.h;editId=id;replyId=null;setCtx();ed.focus()}}});
 const tn=k=>{const t=topics.find(t=>t.id===(k||'gen'));return t?t.name:'General'};
 const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return 'hsl('+h+' 55% 45%)'};
 const first=s=>[...s][0].toUpperCase();
@@ -353,10 +353,10 @@ $('#fi').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;c
   const rm=replyId&&msgs.find(m=>m.id===replyId);msgs.push({id:Date.now(),t:Date.now(),h:clean(ed),i:c.toDataURL('image/jpeg',.7),k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});replyId=null;editId=null;ed.innerHTML='';setCtx();save();render()};im.src=r.result};r.readAsDataURL(f)};
 let sx=0,sy=0,sb=null,dx=0;
 chat.addEventListener('touchstart',e=>{sb=e.target.closest('.b');if(!sb)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0},{passive:true});
-chat.addEventListener('touchmove',e=>{if(!sb)return;dx=e.touches[0].clientX-sx;if(Math.abs(e.touches[0].clientY-sy)>Math.abs(dx))return;if(dx<0)sb.style.transform='translateX('+Math.max(dx,-70)+'px)'},{passive:true});
+chat.addEventListener('touchmove',e=>{if(!sb)return;dx=e.touches[0].clientX-sx;if(Math.abs(e.touches[0].clientY-sy)>Math.abs(dx))return;if(Math.abs(dx)>0)sb.style.transform='translateX('+Math.max(-70,Math.min(70,dx))+'px)'},{passive:true});
 chat.addEventListener('touchend',()=>{if(!sb)return;sb.style.transform='';if(dx<-55){replyId=+sb.dataset.id;editId=null;setCtx();ed.focus();pressed=Date.now()}else if(dx>55){const m=msgs.find(x=>x.id==sb.dataset.id);if(m){m.p=m.p?0:1;save();render();toast(m.p?'Pinned':'Unpinned')}}sb=null;dx=0});
 function inView(m){return cur==='all'?(m.k||'gen')!=='quick':(m.k||'gen')===cur}
-function matchesFilter(m){const task=Array.isArray(m.c),done=task&&m.c.length>0&&m.c.every(i=>i.s===1),d=new Date(m.t),n=new Date();if(searchFilter==='pinned')return !!m.p;if(searchFilter==='tasks')return task;if(searchFilter==='open')return task&&!done;if(searchFilter==='done')return task&&done;if(searchFilter==='today')return d.toDateString()===n.toDateString();return true}
+function matchesFilter(m){const task=Array.isArray(m.c),done=task&&m.c.length>0&&m.c.every(i=>i.s===1),d=new Date(m.t),n=new Date();if(searchFilter==='pinned')return !!m.p;if(searchFilter==='tasks')return task;if(searchFilter==='open')return task&&!done;if(searchFilter==='done')return task&&done;if(searchFilter==='overdue')return task&&m.due&&m.due<Date.now()&&!done;if(searchFilter==='today')return d.toDateString()===n.toDateString();return true}
 $('#filters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;searchFilter=b.dataset.filter;$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render()});
 const cntText=m=>{const n=m.c.length,d=m.c.filter(i=>i.s===1).length,r=m.c.filter(i=>i.s===2).length;return d+'/'+n+' ho gaya'+(r?' · '+r+' nahi mila':'')};
 function scheduleReminder(m){if(!m||!m.due||!window.Android)return;native('reminder',{id:String(m.id),title:plain(m.h)||'NotesChat task',due:Number(m.due),done:!!(m.c&&m.c.every(i=>i.s===1))}).then(()=>toast('Reminder scheduled')).catch(e=>toast('Reminder error: '+e.message,3000))}
