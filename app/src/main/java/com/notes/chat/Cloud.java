@@ -1,0 +1,365 @@
+package com.notes.chat;
+
+import android.content.ContentResolver;
+import android.content.ContentUris;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.net.Uri;
+import android.provider.MediaStore;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
+import android.util.Base64;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+
+/** Encrypted backup: AES-256-GCM, key from password via PBKDF2-SHA256. Uploads to Nextcloud(WebDAV), Telegram bot, GitHub. */
+public class Cloud {
+
+    static final String FILE = "notes-backup.ncb";
+    static final byte[] MAGIC = {'N', 'C', 'B', '1'};
+
+    // ---------- entry point (called from the JS bridge) ----------
+    static String handle(Context ctx, String op, JSONObject a) throws Exception {
+        switch (op) {
+            case "pwset":
+                savePassword(ctx, a.getString("pw"));
+                return "ok";
+            case "pwget":
+                return loadPassword(ctx);
+            case "mirrorsave":
+                mirrorSave(ctx, a.getString("text"));
+                return "ok";
+            case "mirrorload":
+                return mirrorLoad(ctx);
+            case "pwdel":
+                ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE).edit().remove("pw").apply();
+                return "ok";
+            case "backup": {
+                byte[] enc = encrypt(a.getString("data"), a.getString("pw"));
+                JSONArray ts = a.getJSONArray("targets");
+                StringBuilder sb = new StringBuilder();
+                String fid = "";
+                for (int i = 0; i < ts.length(); i++) {
+                    JSONObject t = ts.getJSONObject(i);
+                    String type = t.getString("type");
+                    String name = name(type);
+                    try {
+                        String r = upload(t, enc);
+                        if ("tg".equals(type)) fid = r;
+                        sb.append(name).append(" \u2713   ");
+                    } catch (Exception e) {
+                        sb.append(name).append(" \u2717 (").append(e.getMessage()).append(")   ");
+                    }
+                }
+                JSONObject o = new JSONObject();
+                o.put("msg", sb.toString().trim());
+                o.put("fid", fid);
+                return o.toString();
+            }
+            case "restore": {
+                byte[] b = download(a.getJSONObject("source"));
+                return decrypt(b, a.getString("pw"));
+            }
+            case "tgchat": {
+                String token = a.getString("token");
+                JSONArray r = tgUpdates(token);
+                for (int i = r.length() - 1; i >= 0; i--) {
+                    JSONObject m = r.getJSONObject(i).optJSONObject("message");
+                    if (m != null) return String.valueOf(m.getJSONObject("chat").getLong("id"));
+                }
+                throw new Exception("Pehle bot ko /start bhejein");
+            }
+        }
+        throw new Exception("Unknown op");
+    }
+
+    static String name(String type) {
+        switch (type) {
+            case "webdav": return "Nextcloud";
+            case "tg": return "Telegram";
+            default: return "GitHub";
+        }
+    }
+
+    // ---------- saved password (Android Keystore, key never leaves the device) ----------
+    static SecretKey ksKey() throws Exception {
+        KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
+        ks.load(null);
+        if (!ks.containsAlias("notes_pw_key")) {
+            KeyGenerator g = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+            g.init(new KeyGenParameterSpec.Builder("notes_pw_key",
+                    KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                    .setKeySize(256).build());
+            g.generateKey();
+        }
+        return (SecretKey) ks.getKey("notes_pw_key", null);
+    }
+
+    static void savePassword(Context ctx, String pw) throws Exception {
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.ENCRYPT_MODE, ksKey());
+        byte[] iv = c.getIV();
+        byte[] ct = c.doFinal(pw.getBytes(StandardCharsets.UTF_8));
+        byte[] all = new byte[iv.length + ct.length];
+        System.arraycopy(iv, 0, all, 0, iv.length);
+        System.arraycopy(ct, 0, all, iv.length, ct.length);
+        ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE).edit()
+                .putString("pw", Base64.encodeToString(all, Base64.NO_WRAP)).apply();
+    }
+
+    static String loadPassword(Context ctx) throws Exception {
+        SharedPreferences sp = ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE);
+        String b = sp.getString("pw", null);
+        if (b == null) return "";
+        byte[] all = Base64.decode(b, Base64.NO_WRAP);
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.DECRYPT_MODE, ksKey(), new GCMParameterSpec(128, Arrays.copyOfRange(all, 0, 12)));
+        return new String(c.doFinal(Arrays.copyOfRange(all, 12, all.length)), StandardCharsets.UTF_8);
+    }
+
+    // ---------- auto copy in phone storage: Documents/NotesChat/notes-mirror.json ----------
+    static Uri mirrorUri(Context ctx) {
+        Uri base = MediaStore.Files.getContentUri("external");
+        Cursor c = ctx.getContentResolver().query(base, new String[]{MediaStore.MediaColumns._ID},
+                MediaStore.MediaColumns.DISPLAY_NAME + "=? AND " + MediaStore.MediaColumns.RELATIVE_PATH + " LIKE ?",
+                new String[]{"notes-mirror.json", "Documents/NotesChat%"}, null);
+        if (c == null) return null;
+        try {
+            if (c.moveToFirst()) return ContentUris.withAppendedId(base, c.getLong(0));
+        } finally {
+            c.close();
+        }
+        return null;
+    }
+
+    static void mirrorSave(Context ctx, String text) throws Exception {
+        ContentResolver r = ctx.getContentResolver();
+        Uri uri = mirrorUri(ctx);
+        if (uri == null) {
+            ContentValues v = new ContentValues();
+            v.put(MediaStore.MediaColumns.DISPLAY_NAME, "notes-mirror.json");
+            v.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
+            v.put(MediaStore.MediaColumns.RELATIVE_PATH, "Documents/NotesChat");
+            uri = r.insert(MediaStore.Files.getContentUri("external"), v);
+        }
+        if (uri == null) throw new Exception("Storage me file nahi ban payi");
+        try (OutputStream o = r.openOutputStream(uri, "wt")) {
+            o.write(text.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    static String mirrorLoad(Context ctx) throws Exception {
+        Uri uri = mirrorUri(ctx);
+        if (uri == null) return "";
+        try (InputStream in = ctx.getContentResolver().openInputStream(uri)) {
+            return new String(readAll(in), StandardCharsets.UTF_8);
+        }
+    }
+
+    // ---------- crypto ----------
+    static SecretKeySpec key(String pw, byte[] salt) throws Exception {
+        SecretKeyFactory f = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        byte[] k = f.generateSecret(new PBEKeySpec(pw.toCharArray(), salt, 200000, 256)).getEncoded();
+        return new SecretKeySpec(k, "AES");
+    }
+
+    static byte[] encrypt(String plain, String pw) throws Exception {
+        SecureRandom r = new SecureRandom();
+        byte[] salt = new byte[16], iv = new byte[12];
+        r.nextBytes(salt);
+        r.nextBytes(iv);
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.ENCRYPT_MODE, key(pw, salt), new GCMParameterSpec(128, iv));
+        byte[] ct = c.doFinal(plain.getBytes(StandardCharsets.UTF_8));
+        ByteArrayOutputStream o = new ByteArrayOutputStream();
+        o.write(MAGIC);
+        o.write(salt);
+        o.write(iv);
+        o.write(ct);
+        return o.toByteArray();
+    }
+
+    static String decrypt(byte[] b, String pw) throws Exception {
+        if (b.length < 48 || b[0] != 'N' || b[1] != 'C' || b[2] != 'B' || b[3] != '1')
+            throw new Exception("Ye valid backup file nahi hai");
+        byte[] salt = Arrays.copyOfRange(b, 4, 20);
+        byte[] iv = Arrays.copyOfRange(b, 20, 32);
+        byte[] ct = Arrays.copyOfRange(b, 32, b.length);
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.DECRYPT_MODE, key(pw, salt), new GCMParameterSpec(128, iv));
+        try {
+            return new String(c.doFinal(ct), StandardCharsets.UTF_8);
+        } catch (javax.crypto.AEADBadTagException e) {
+            throw new Exception("Password galat hai");
+        }
+    }
+
+    // ---------- upload / download per service ----------
+    static String upload(JSONObject t, byte[] data) throws Exception {
+        switch (t.getString("type")) {
+            case "webdav": {
+                Map<String, String> h = new HashMap<>();
+                h.put("Authorization", basic(t.getString("user"), t.optString("pass", "")));
+                http("PUT", webdavUrl(t), h, data, "application/octet-stream");
+                return "";
+            }
+            case "gh": {
+                String api = ghApi(t);
+                Map<String, String> h = ghHeaders(t, "application/vnd.github+json");
+                String sha = null;
+                try {
+                    JSONObject o = new JSONObject(new String(http("GET", api, h, null, null), StandardCharsets.UTF_8));
+                    sha = o.optString("sha", null);
+                } catch (Exception e) {
+                    if (e.getMessage() == null || !e.getMessage().startsWith("HTTP 404")) throw e;
+                }
+                JSONObject b = new JSONObject();
+                b.put("message", "Notes backup " + new java.util.Date());
+                b.put("content", Base64.encodeToString(data, Base64.NO_WRAP));
+                if (sha != null) b.put("sha", sha);
+                http("PUT", api, h, b.toString().getBytes(StandardCharsets.UTF_8), "application/json");
+                return "";
+            }
+            default: { // tg
+                String boundary = "----nc" + System.currentTimeMillis();
+                ByteArrayOutputStream o = new ByteArrayOutputStream();
+                field(o, boundary, "chat_id", t.getString("chat"));
+                field(o, boundary, "caption", "Notes backup (encrypted)");
+                o.write(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"document\"; filename=\"" + FILE
+                        + "\"\r\nContent-Type: application/octet-stream\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                o.write(data);
+                o.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+                byte[] r = http("POST", "https://api.telegram.org/bot" + t.getString("token") + "/sendDocument",
+                        null, o.toByteArray(), "multipart/form-data; boundary=" + boundary);
+                JSONObject j = new JSONObject(new String(r, StandardCharsets.UTF_8));
+                return j.getJSONObject("result").getJSONObject("document").getString("file_id");
+            }
+        }
+    }
+
+    static byte[] download(JSONObject t) throws Exception {
+        switch (t.getString("type")) {
+            case "webdav": {
+                Map<String, String> h = new HashMap<>();
+                h.put("Authorization", basic(t.getString("user"), t.optString("pass", "")));
+                return http("GET", webdavUrl(t), h, null, null);
+            }
+            case "gh":
+                return http("GET", ghApi(t), ghHeaders(t, "application/vnd.github.raw+json"), null, null);
+            default: { // tg
+                String token = t.getString("token");
+                String fid = t.optString("fid", "");
+                if (fid.isEmpty()) {
+                    JSONArray r = tgUpdates(token);
+                    for (int i = r.length() - 1; i >= 0 && fid.isEmpty(); i--) {
+                        JSONObject m = r.getJSONObject(i).optJSONObject("message");
+                        if (m != null && m.has("document"))
+                            fid = m.getJSONObject("document").getString("file_id");
+                    }
+                    if (fid.isEmpty())
+                        throw new Exception("Bot ko backup file bhejein (ya forward karein), phir Restore dabayein");
+                }
+                String info = new String(http("GET", "https://api.telegram.org/bot" + token
+                        + "/getFile?file_id=" + URLEncoder.encode(fid, "UTF-8"), null, null, null), StandardCharsets.UTF_8);
+                String path = new JSONObject(info).getJSONObject("result").getString("file_path");
+                return http("GET", "https://api.telegram.org/file/bot" + token + "/" + path, null, null, null);
+            }
+        }
+    }
+
+    // ---------- helpers ----------
+    static JSONArray tgUpdates(String token) throws Exception {
+        String s = new String(http("GET", "https://api.telegram.org/bot" + token + "/getUpdates",
+                null, null, null), StandardCharsets.UTF_8);
+        return new JSONObject(s).getJSONArray("result");
+    }
+
+    static String webdavUrl(JSONObject t) throws Exception {
+        return t.getString("url").replaceAll("/+$", "") + "/" + FILE;
+    }
+
+    static String ghApi(JSONObject t) {
+        String path = t.optString("path", FILE);
+        if (path.isEmpty()) path = FILE;
+        return "https://api.github.com/repos/" + t.optString("repo") + "/contents/" + path;
+    }
+
+    static Map<String, String> ghHeaders(JSONObject t, String accept) throws Exception {
+        Map<String, String> h = new HashMap<>();
+        h.put("Authorization", "Bearer " + t.getString("token"));
+        h.put("Accept", accept);
+        h.put("User-Agent", "NotesChat");
+        return h;
+    }
+
+    static String basic(String u, String p) {
+        return "Basic " + Base64.encodeToString((u + ":" + p).getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
+    }
+
+    static void field(ByteArrayOutputStream o, String boundary, String name, String val) throws Exception {
+        o.write(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"" + name + "\"\r\n\r\n" + val + "\r\n")
+                .getBytes(StandardCharsets.UTF_8));
+    }
+
+    static byte[] http(String method, String url, Map<String, String> headers, byte[] body, String ctype) throws Exception {
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setRequestMethod(method);
+        c.setConnectTimeout(20000);
+        c.setReadTimeout(60000);
+        if (headers != null)
+            for (Map.Entry<String, String> e : headers.entrySet()) c.setRequestProperty(e.getKey(), e.getValue());
+        if (body != null) {
+            c.setDoOutput(true);
+            if (ctype != null) c.setRequestProperty("Content-Type", ctype);
+            c.setFixedLengthStreamingMode(body.length);
+            try (OutputStream o = c.getOutputStream()) {
+                o.write(body);
+            }
+        }
+        int code = c.getResponseCode();
+        InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
+        byte[] data = readAll(in);
+        if (code >= 400) {
+            String msg = new String(data, StandardCharsets.UTF_8);
+            if (msg.length() > 100) msg = msg.substring(0, 100);
+            throw new Exception("HTTP " + code + ": " + msg);
+        }
+        return data;
+    }
+
+    static byte[] readAll(InputStream in) throws Exception {
+        if (in == null) return new byte[0];
+        ByteArrayOutputStream o = new ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = in.read(buf)) > 0) o.write(buf, 0, n);
+        in.close();
+        return o.toByteArray();
+    }
+}
