@@ -513,6 +513,13 @@ body{min-height:100dvh}
 @media(min-width:600px){#lk{align-items:center}.lk-card{padding:24px}}
 @media(prefers-reduced-motion:reduce){#lk.on,.lk-card,#chat .b,#chat .b.sel,#chat .b.sel::before{animation:none!important;transition:none!important}}
 
+
+/* Final selection polish: keep message text selectable, not attachment chrome */
+#chat .b .msgtext{user-select:text!important;-webkit-user-select:text!important;-webkit-touch-callout:default!important}
+#chat .b .im,#chat .b .tg,#chat .b .tm,#chat .b .mn,#chat .b .due,#chat .b .ci,#chat .b .cnt{user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important}
+#chat .b.sel{transform:translateX(-2px) scale(.993)!important;transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease,background .22s ease!important}
+#chat .b.sel::before{animation:telegramCheckIn .2s cubic-bezier(.18,.82,.22,1.25) both}
+
 </style>
 </head>
 <body>
@@ -786,7 +793,7 @@ function closeInputDialog(){lk.classList.remove('on');if(/^hide(pin|pw)/.test(mo
  if(mode==='restore'){pickFile();return}
  if(mode==='topic'){if(v){const id='t'+Date.now();topics.push({id,name:v});cur=id;saveT();render()}return}
  if(mode==='listtitle'){if(v){listTitle=v;listMode=true;$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.innerHTML='';updateComposerControls();ed.dataset.ph='Add list items, one per line';ed.focus();saveDraft();toast('Ab list ke items likho — naam alag rahega',2200)}return}
- if(['hidepinset','hidepwset','hidepinconfirm','hidepwconfirm','hidepwcheck','hidepinunlock','hidepwunlock'].includes(submittedMode)){completeHiddenCredentialPrompt(submittedMode,v);return}
+ if(['hidepinset','hidepwset','hidepinconfirm','hidepwconfirm','hidepwcheck','hidepinunlock','hidepwunlock','hidepinsettingsverify','hidepwsettingsverify'].includes(submittedMode)){completeHiddenCredentialPrompt(submittedMode,v);return}
  if(mode==='rename'){const t=topics.find(t=>t.id===ren);if(t&&v){t.name=v;saveT();render()}return}
  restore();if(!v)return;
  if(mode==='link'){const u=/^[a-z]+:/i.test(v)?v:'https://'+v;
@@ -1252,8 +1259,9 @@ theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',
 undo:'<path d="M9 14 4 9l5-5"></path><path d="M4 9h9a7 7 0 0 1 7 7v2"></path>',
 redo:'<path d="m15 4 5 5-5 5"></path><path d="M20 9h-9a7 7 0 0 0-7 7v2"></path>',
 hidden:'<rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>',
+settings:'<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.8 1.8 0 0 0-1.9.2l-.2.1h-3.3l-.1-.2a1.8 1.8 0 0 0-1.6-1l-.2.1-2.9-1.7.1-.2a1.8 1.8 0 0 0-.2-1.9l-.1-.2v-3.3l.2-.1a1.8 1.8 0 0 0 1-1.6l-.1-.2 1.7-2.9.2.1a1.8 1.8 0 0 0 1.9-.2l.2-.1h3.3l.1.2a1.8 1.8 0 0 0 1.6 1l.2-.1 2.9 1.7-.1.2a1.8 1.8 0 0 0 .2 1.9l.1.2v3.3z"></path>',
 cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'
-};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',hsettings:'hidden',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Local backup','Save or restore a device backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Appearance','Light / dark theme')+item('hidden','Hidden notes','Password-protected notes')+(cur==='hidden'&&hiddenUnlocked&&hiddenNoteCount()>0?item('hsettings','Hidden Notes settings','Change PIN/password · Lock now'):'')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
+};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',hsettings:'settings',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Local backup','Save or restore a device backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Appearance','Light / dark theme')+item('hidden','Hidden notes','Password-protected notes')+(cur==='hidden'&&hiddenUnlocked&&hiddenNoteCount()>0?item('hsettings','Hidden Notes settings','Change PIN/password · Lock now'):'')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
