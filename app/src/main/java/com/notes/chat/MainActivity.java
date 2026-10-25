@@ -95,6 +95,20 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onPause() {
+        // Best-effort flush when the user backgrounds the app. Avoid triggering this
+        // while a Google authorization resolution is already in progress.
+        if (web != null && pendingDriveAuthId < 0) {
+            try {
+                web.evaluateJavascript(
+                        "(function(){if(window.flushCloudBackupBeforeClose){window.flushCloudBackupBeforeClose();return 'queued'}return 'skip'})()",
+                        null);
+            } catch (Exception ignored) { }
+        }
+        super.onPause();
+    }
+
+    @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
         if (web != null) {
