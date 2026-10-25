@@ -484,7 +484,22 @@ function saveDraft(){try{const value={text:ed.innerHTML,plain:ed.innerText,listM
 function clearDraft(){try{localStorage.removeItem('notes-chat-draft')}catch(e){}}
 ed.addEventListener('input',()=>{updateComposerControls();clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,180);});$('#taskdue').addEventListener('change',saveDraft);
 function restoreDraft(){try{const d=JSON.parse(localStorage.getItem('notes-chat-draft')||'null');if(!d)return;if(d.text)ed.innerHTML=d.text;if(d.listMode){listMode=true;listTitle=d.listTitle||'';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.dataset.ph='Add list items, one per line'}if(d.due)$('#taskdue').value=d.due;if(d.topic&&((d.topic==='all')||d.topic==='quick'||d.topic==='hidden'||topics.some(t=>t.id===d.topic)))cur=d.topic;replyId=d.replyId||null;editId=d.editId||null;if(replyId||editId)setCtx();if(d.plain&&d.plain.trim())toast('Draft restored',1800)}catch(e){}}
-function clearSelection(){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));$('#selbar').classList.remove('on')}function handleAppBack(){if(selMode){$('#sh').classList.remove('on');clearSelection();render();return true}if($('#sh').classList.contains('on')){$('#sh').classList.remove('on');return true}if($('#tgcfg').classList.contains('on')){$('#tgcfg').classList.remove('on');return true}if($('#cfg').classList.contains('on')){$('#cfg').classList.remove('on');return true}if($('#qk').classList.contains('on')){$('#qk').classList.remove('on');return true}if($('#sq').classList.contains('on')){$('#sq').classList.remove('on');return true}if($('#lk').classList.contains('on')){$('#lk').classList.remove('on');return true}if($('#tb').classList.contains('on')){$('#tb').classList.remove('on');return true}if(listMode){saveDraft();listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';return true}if(ed.innerText.trim()||$('#taskdue').value)saveDraft();return false}window.handleAppBack=handleAppBack;
+function clearSelection(){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));$('#selbar').classList.remove('on')}
+function handleAppBack(){
+ // Close the top-most dedicated modal first; the cloud action sheet may still sit underneath.
+ if($('#tgcfg').classList.contains('on')){$('#tgcfg').classList.remove('on');return true}
+ if($('#cfg').classList.contains('on')){$('#cfg').classList.remove('on');return true}
+ if($('#qk').classList.contains('on')){$('#qk').classList.remove('on');return true}
+ if($('#sq').classList.contains('on')){$('#sq').classList.remove('on');return true}
+ if($('#lk').classList.contains('on')){$('#lk').classList.remove('on');return true}
+ if($('#tb').classList.contains('on')){$('#tb').classList.remove('on');return true}
+ if(selMode){$('#sh').classList.remove('on');clearSelection();render();return true}
+ if($('#sh').classList.contains('on')){$('#sh').classList.remove('on');return true}
+ if(listMode){saveDraft();listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';return true}
+ if(ed.innerText.trim()||$('#taskdue').value)saveDraft();
+ return false
+}
+window.handleAppBack=handleAppBack;
 function send(){const h=clean(ed);if(!ed.textContent.trim())return;
  const em=editId&&msgs.find(m=>m.id===editId);
  if(listMode||(em&&em.c)){const title=(listTitle||(em&&plain(em.h))||'').trim();const L=ed.innerText.split('\n').map(x=>x.trim()).filter(Boolean);if(!title||!L.length){toast('List ka naam aur kam se kam ek item likhein',2500);return}
