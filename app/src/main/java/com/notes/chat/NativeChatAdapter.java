@@ -668,7 +668,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                     checkRow.addView(mark, new LinearLayout.LayoutParams(dp(24), LayoutParams.WRAP_CONTENT));
                     TextView label = new TextView(context);
                     label.setText(check.text);
-                    label.setTextColor(check.state == 0 ? fg : stateColor);
+                    label.setTextColor(stateColor);
                     label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
                     label.setMaxLines(5);
                     if (check.state == 1) {
