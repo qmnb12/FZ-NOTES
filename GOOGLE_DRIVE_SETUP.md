@@ -1,32 +1,31 @@
-# FZ NOTES — Google Drive backup and Telegram archive
+# FZ NOTES 1.4.4 — Automatic Google Drive sync
 
-## Google Drive passwordless backup
+## Initial setup
+1. Create/select a Google Cloud project and enable Google Drive API.
+2. Configure Google Auth Platform and create an Android OAuth client for `com.fz.notes.chat` plus the SHA-1 of the APK signing certificate.
+3. While OAuth audience is in **Testing**, add the Google account as a test user. Without this, authorization may be denied.
+4. Install FZ NOTES, open **⋮ → Cloud backup → Google Drive settings**, and connect the Google account.
 
-1. Create a Google Cloud project, enable Google Drive API, and configure Google Auth Platform.
-2. Create an Android OAuth client for package `com.fz.notes.chat` and the SHA-1 for the APK signing key.
-3. If the OAuth app is still in **Testing**, add the Google account you want to test, or authorization can be denied.
-4. Install the APK, open **⋮ → Cloud backup → Google Drive settings**, and tap **Connect Google account**.
-5. Tap **Back up now**. When moving to another phone, connect the **same Google account**, then use **Restore notes** and pick the backup.
+## Automatic backup and restore
+- Creating/editing notes schedules a debounced Google Drive automatic backup.
+- When opening the app with Drive already connected, it checks/syncs notes to Drive.
+- When the app is backgrounded, it requests a best-effort immediate backup using a recently obtained token.
+- Automatic sync updates the rolling `FZ-NOTES-AUTO.ncb` backup. **Backup now** creates a separate restore point.
+- If app data was cleared or the app is fresh and you connect the same Google account, FZ NOTES checks the latest Drive backup and restores it automatically.
+- Manual restore is also available under **⋮ → Cloud backup → Restore notes**.
 
-FZ NOTES generates a random 256-bit AES key and stores it in the app's hidden Google Drive `appDataFolder`. Each backup uses AES-256-GCM with a fresh random IV. The app caches a locally wrapped copy of the key using Android Keystore so the Telegram scheduler can run without asking for a password.
+Background/on-close backup is best-effort and requires a valid, not-expired authorization token and network. Keep the app's JSON export as a separate safety copy for critical notes.
 
-**Security trade-off:** the key is stored in the same app-only Drive folder as the backups. This enables passwordless same-account restore, but it is not zero-knowledge end-to-end encryption: an instance of this app authorized for that same Google account can retrieve the key. Keep your Google account and app authorization secure. The hidden folder is not visible in the regular Drive UI, and Google documents that it is accessible only to the app that created it. If the folder is deleted or the key is lost, those NCB2 backups cannot be decrypted.
+## Encryption model
+FZ NOTES encrypts backup data with AES-256-GCM and a fresh random IV per backup. A random 256-bit account key is stored as a binary file in the app's Google Drive `appDataFolder`; a local copy is wrapped by Android Keystore for scheduled Telegram archive work. This lets a fresh install using the same Google account retrieve the key without asking the user for an encryption password.
 
-## Telegram archive and schedule
+**Security trade-off:** the key is stored in the same app-only Drive folder as the backups. This is passwordless account-bound protection, not zero-knowledge/end-to-end encryption. An authorized instance of this app on the same Google account can retrieve the key. Secure your Google account and app permissions. If the hidden key file is deleted or lost, newer NCB2 backups cannot be decrypted.
 
-1. Open **⋮ → Cloud backup → Google Drive settings**.
-2. Enter the Telegram bot token and chat ID. Use **Detect** after sending `/start` to your bot if you need to find the chat ID.
-3. Choose **Manual only**, **Daily**, **Weekly**, or **Monthly (every 30 days)**.
-4. Tap **Save settings**. To send an archive immediately, tap **Save backup to Telegram now**.
+## Telegram archive
+Telegram settings are separate from Google Drive settings. Open **⋮ → Cloud backup → Backup schedule** to configure the bot token, chat ID and Manual/Daily/Weekly/Monthly (every 30 days) schedule. The archive is encrypted with the same account key; the primary automatic restore source remains Google Drive. WorkManager scheduling is approximate and depends on network/battery restrictions.
 
-Telegram archives are encrypted with the same account key, but Telegram is a separate archive destination; the app's Restore screen currently restores from Google Drive, not from Telegram. Scheduled backups use Android WorkManager and run when network is available, so the execution time is approximate rather than a guaranteed exact clock time. A first-time Google authorization is needed to provision or retrieve the shared key.
+## Older backups
+Older NCB1 backups are password encrypted. If one is selected for restore, enter its original backup password. New NCB2 backups use the account key and do not require a user-entered password.
 
-## Old backups
-
-Backups created by earlier versions use a password-based NCB1 format. The Restore flow detects these older backups and asks for their original backup password. New backups use the account-key NCB2 format and do not ask for a user-entered encryption password.
-
-## Notes
-
-- No OAuth client secret should be embedded in the APK.
-- Each Google account has its own app-data area and therefore its own random backup key.
-- AppData contents may be removed by the user or when the app's data folder is deleted; keep a separate exported JSON backup for critical notes.
+## OAuth note
+No OAuth client secret is embedded in the APK. The Android OAuth client must match the exact package name and signing certificate SHA-1 used by the installed APK.
