@@ -463,6 +463,13 @@ body{min-height:100dvh}
 :root[data-theme="light"] #sh .context-close{color:#60718a;background:#f0f4fa}
 @media(prefers-reduced-motion:reduce){#sh,#shBackdrop,#sh .context-menu-row{transition:none!important;animation:none!important}}
 
+
+/* Notes use Telegram-style message actions, not Android text selection handles. */
+#chat .b,#chat .b *{ -webkit-user-select:none!important; user-select:none!important; -webkit-touch-callout:none!important; }
+#chat .b{ -webkit-tap-highlight-color:transparent; }
+#shBackdrop{background:rgba(2,7,15,.40)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+#sh{isolation:isolate}
+
 </style>
 </head>
 <body>
@@ -709,7 +716,7 @@ $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
   else document.execCommand('insertHTML',false,'<a href="'+esc(u)+'">'+esc(v)+'</a>&nbsp;')}
  else document.execCommand('insertHTML',false,'<span class="mention">'+esc(v.startsWith('@')?v:'@'+v)+'</span>&nbsp;')};
 lki.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#lkok').click()}});
-function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('.tm'))e.preventDefault()},true);root.addEventListener('contextmenu',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('#chat .b')){e.preventDefault();e.stopPropagation()}},true)}
+function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('#chat .b')){e.preventDefault();e.stopPropagation()}},true);root.addEventListener('contextmenu',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('#chat .b')){e.preventDefault();e.stopPropagation()}},true)}
 function contextMenuRow(key,title,path,extra=''){
  return '<button type="button" class="context-menu-row'+(extra?' '+extra:'')+'" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+path+'</svg></span><span class="mt">'+esc(title)+'</span></button>';
 }
@@ -730,6 +737,7 @@ function noteCopyText(m){const tmp=document.createElement('div');tmp.innerHTML=m
 function keepSelectedVisible(id){chat.classList.add('sheet-open');const adjust=()=>{if(!sh.classList.contains('on'))return;const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b)return;const br=b.getBoundingClientRect(),sr=sh.getBoundingClientRect(),cr=chat.getBoundingClientRect();const top=Math.max(cr.top,0)+8,bottom=Math.min(cr.bottom,sr.top,window.innerHeight)-12;if(bottom<=top)return;const available=bottom-top;let desiredTop=br.top;if(br.height>=available)desiredTop=top;else if(br.bottom>bottom)desiredTop=bottom-br.height;else if(br.top<top)desiredTop=top;const delta=br.top-desiredTop;if(Math.abs(delta)>1)chat.scrollTop+=delta};requestAnimationFrame(()=>requestAnimationFrame(adjust));setTimeout(adjust,280)}
  sh.addEventListener('transitionend',e=>{if(e.target===sh&&!sh.classList.contains('on'))chat.classList.remove('sheet-open')});
 function openSheet(id){
+  try{const activeSelection=window.getSelection();if(activeSelection)activeSelection.removeAllRanges()}catch(_){}
   shStack=[];const m=msgs.find(m=>m.id==id);if(!m)return;const txt=noteCopyText(m);
   const preview=(plain(m.h)||(m.i?'Photo attachment':'Empty note')).replace(/\s+/g,' ').slice(0,96);
   sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-head-line"><span class="context-eyebrow">FZ NOTES · MESSAGE</span><button type="button" class="context-close" data-k="x" aria-label="Close menu">×</button></div><div class="context-title">Message options</div><div class="context-preview">'+esc(preview)+'</div></div>'+
@@ -786,7 +794,7 @@ function nearestBubbleAt(x,y){
 function blankTargetAllowed(target){const el=target&&target.nodeType===1?target:target&&target.parentElement;return !!el&&!el.closest('.b,button,#ed,.ci,.rp,.mn,#send,#attach,#fab,#listfab,#sh,#selbar')}
 function blankStart(target,x,y){if(!blankTargetAllowed(target))return null;const n=nearestBubbleAt(x,y);return n?{x,y,id:n.dataset.id,scrollTop:chat.scrollTop}:null}
 function selectNote(id){const num=Number(id);if(!msgs.some(m=>Number(m.id)===num))return;pressed=Date.now();try{const nativeSel=window.getSelection&&window.getSelection();if(nativeSel)nativeSel.removeAllRanges()}catch(_){};if(!selMode){sel.clear();selMode=true}sel.add(num);chat.querySelectorAll('.b').forEach(b=>b.classList.toggle('sel',sel.has(Number(b.dataset.id))));renderTop()}
-function showBlankMenu(id){pressed=Date.now();openSheet(id)}
+function showBlankMenu(id){selectNote(id);try{const activeSelection=window.getSelection();if(activeSelection)activeSelection.removeAllRanges()}catch(_){}pressed=Date.now();openSheet(id)}
 function clearBlankTouch(){if(blankTouchStart&&blankTouchStart.timer)clearTimeout(blankTouchStart.timer);blankTouchStart=null}
 const chatw=$('#chatw');
 chatw.addEventListener('touchstart',e=>{
