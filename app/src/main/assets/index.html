@@ -485,6 +485,34 @@ body{min-height:100dvh}
 #shBackdrop{background:rgba(2,7,15,.40)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 #sh{isolation:isolate}
 
+
+/* Modern Hidden Notes authentication dialog */
+#lk{position:fixed!important;inset:0!important;z-index:10001!important;display:none;align-items:flex-end;justify-content:center;gap:0!important;padding:16px 14px calc(14px + env(safe-area-inset-bottom,0px));box-sizing:border-box;background:rgba(4,10,20,.56);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#lk.on{display:flex!important;animation:authBackdropIn .16s ease both}
+.lk-card{width:min(100%,440px);box-sizing:border-box;padding:20px 18px 18px;border:1px solid rgba(151,184,232,.16);border-radius:24px;background:linear-gradient(150deg,#19263a 0%,#111c2e 100%);box-shadow:0 18px 55px rgba(0,0,0,.42);animation:authCardIn .24s cubic-bezier(.2,.82,.22,1) both}
+.lk-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:9px}
+.lk-eyebrow{font-size:10px;font-weight:800;letter-spacing:1.7px;color:#8fb8ff}
+#lkTitle{margin:5px 0 0;font-size:21px;line-height:1.22;font-weight:750;letter-spacing:-.4px;color:#edf4ff}
+#lkHint{margin:0 0 14px;color:#a5b4c9;font-size:13px;line-height:1.45}
+#lk #lkclose{width:34px;height:34px;min-width:34px;padding:0;display:grid;place-items:center;border:1px solid rgba(154,181,221,.16);border-radius:50%;background:rgba(255,255,255,.04);color:#aabbd4;font-size:24px;line-height:1}
+#lk .lk-fields{display:flex;gap:9px;align-items:stretch}
+#lk input{flex:1;min-width:0;margin:0;padding:13px 14px;border-radius:14px;border:1px solid rgba(132,169,223,.23);background:#0b1422;color:#eff5ff;font:inherit;font-size:16px;outline:none;box-shadow:none;transition:border-color .16s,box-shadow .16s}
+#lk input:focus{border-color:#77aaff;box-shadow:0 0 0 3px rgba(103,164,255,.15)}
+#lk button#lkok{flex:none;min-width:96px;padding:0 16px;border:0;border-radius:14px;background:linear-gradient(135deg,#78aaff,#4e84ef);color:white;font-size:15px;font-weight:750;letter-spacing:.1px;box-shadow:0 4px 12px rgba(54,112,225,.18);transition:transform .13s,filter .13s}
+#lk button#lkok:active{transform:scale(.97);filter:brightness(.95)}
+@keyframes authBackdropIn{from{opacity:0}to{opacity:1}}
+@keyframes authCardIn{from{opacity:.65;transform:translateY(20px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+#sh .hidden-settings-summary{padding:8px 11px 12px;color:#a5b4c9;font-size:12px;line-height:1.45}
+#sh .hidden-settings-status{display:inline-flex;align-items:center;gap:6px;margin-top:9px;color:#8ad5aa;font-size:11px;font-weight:700}
+#sh .hidden-settings-status:before{content:'';width:6px;height:6px;border-radius:50%;background:#64d995;box-shadow:0 0 0 3px rgba(100,217,149,.12)}
+#chat .b{transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s cubic-bezier(.2,.8,.2,1),border-color .22s ease,background .22s ease!important;transform-origin:right center}
+#chat .b.sel{transform:translateX(-3px) scale(.992)!important;animation:telegramBubbleSelect .23s cubic-bezier(.2,.8,.2,1) both;box-shadow:0 0 0 2px rgba(123,179,255,.68),0 6px 20px rgba(0,0,0,.23)!important}
+#chat .b.sel::before{animation:telegramCheckIn .2s cubic-bezier(.18,.82,.22,1.25) both}
+@keyframes telegramBubbleSelect{0%{transform:translateX(2px) scale(.976);filter:brightness(.94)}65%{transform:translateX(-4px) scale(.995)}100%{transform:translateX(-3px) scale(.992);filter:brightness(1)}}
+@keyframes telegramCheckIn{0%{opacity:0;transform:translateY(-50%) scale(.5)}75%{opacity:1;transform:translateY(-50%) scale(1.08)}100%{opacity:1;transform:translateY(-50%) scale(1)}}
+@media(min-width:600px){#lk{align-items:center}.lk-card{padding:24px}}
+@media(prefers-reduced-motion:reduce){#lk.on,.lk-card,#chat .b,#chat .b.sel,#chat .b.sel::before{animation:none!important;transition:none!important}}
+
 </style>
 </head>
 <body>
@@ -505,7 +533,7 @@ body{min-height:100dvh}
 </div>
 <div id="taskmeta"><label for="taskdue">Due / reminder</label><input id="taskdue" type="datetime-local"><span>Optional reminder</span></div>
 <div id="ctx"><div class="cx"><b id="cxt"></b><span id="cxs"></span></div><button id="cxx" aria-label="Cancel">✕</button></div>
-<div id="lk"><input id="lki" type="text" autocomplete="off"><button id="lkok">Add</button></div>
+<div id="lk" role="dialog" aria-modal="true" aria-labelledby="lkTitle"><div class="lk-card"><div class="lk-head"><div><div class="lk-eyebrow" id="lkEyebrow">FZ NOTES · ACTION</div><h3 id="lkTitle">Enter details</h3></div><button type="button" id="lkclose" aria-label="Close dialog">×</button></div><p id="lkHint" class="lk-hint"></p><div class="lk-fields"><input id="lki" type="text" autocomplete="off"><button id="lkok" type="button">Continue</button></div></div></div>
 <div id="cmp"><button id="att" aria-label="Attach image">📎</button><input id="fi" type="file" accept="image/*" hidden><div id="ed" contenteditable="true" data-ph="Message in Notes"></div><button id="send" aria-label="Send" title="Send message">➤</button></div>
 </div>
 <div id="cfg"><div class="cfgb">
@@ -609,7 +637,7 @@ function handleAppBack(){
  if($('#cfg').classList.contains('on')){$('#cfg').classList.remove('on');return true}
  if($('#qk').classList.contains('on')){$('#qk').classList.remove('on');return true}
  if($('#sq').classList.contains('on')){$('#sq').classList.remove('on');return true}
- if($('#lk').classList.contains('on')){$('#lk').classList.remove('on');if(/^hide(pin|pw)/.test(mode)){hiddenUnlocked=false;hideTarget=null;hiddenSetupPurpose=null}return true}
+ if($('#lk').classList.contains('on')){$('#lk').classList.remove('on');if(/^hide(pin|pw)/.test(mode)){hiddenUnlocked=false;hideTarget=null;hiddenSetupPurpose=null;if(cur==='hidden'){cur='all';clearCtx();render()}}return true}
  if($('#tb').classList.contains('on')){$('#tb').classList.remove('on');return true}
  if(selMode){clearSelection();render();if(sh.classList.contains('on'))restoreSheetState();return true}
  if(sh.classList.contains('on')){restoreSheetState();return true}
@@ -654,23 +682,37 @@ window.applyCodeFromNative=function(){
 };
 function ask(m,ph,v){
  mode=m;
- const isPin=m==='hidepinset'||m==='hidepinconfirm'||m==='hidepinunlock';
- const isHiddenPassword=m==='hidepwset'||m==='hidepwconfirm'||m==='hidepwcheck'||m==='hidepwunlock';
+ const isPin=m.startsWith('hidepin');
+ const isHiddenPassword=m.startsWith('hidepw');
  lki.type=(isPin||isHiddenPassword||m==='legacyrestore')?'password':'text';
  lki.inputMode=isPin?'numeric':'text';
  lki.autocomplete=(m==='hidepinset'||m==='hidepwset')?'new-password':(isPin||isHiddenPassword||m==='legacyrestore')?'current-password':'off';
  lki.placeholder=ph;
  lki.value=v!==undefined?v:(m==='link'?'https://':m==='mention'?'@':'');
- const actionLabels={
-  hidepinset:'Set PIN',hidepwset:'Set password',
-  hidepinconfirm:'Hide note',hidepwconfirm:'Hide note',
-  hidepinunlock:'Unlock',hidepwunlock:'Unlock',
-  hidepwcheck:'Continue',legacyrestore:'Restore',
-  savepw:'Save',bkpw:'Back up',rspw:'Restore',
-  topic:'Create topic',rename:'Save',listtitle:'Create list',
-  link:'Insert link',mention:'Insert'
+ const meta={
+  hidepinset:['Create a Hidden Notes PIN','Choose 4–12 digits to protect Hidden Notes.','Set PIN'],
+  hidepwset:['Create a Hidden Notes password','Choose a password with at least 4 characters.','Set password'],
+  hidepinconfirm:['Confirm PIN to hide note','Verify your PIN before moving this note to Hidden Notes.','Hide note'],
+  hidepwconfirm:['Confirm password to hide note','Verify your password before moving this note to Hidden Notes.','Hide note'],
+  hidepinunlock:['Enter Hidden Notes PIN','Your hidden notes stay locked until you verify.','Enter'],
+  hidepwunlock:['Enter Hidden Notes password','Your hidden notes stay locked until you verify.','Enter'],
+  hidepinsettingsverify:['Confirm current PIN','Verify before changing Hidden Notes security.','Continue'],
+  hidepwsettingsverify:['Confirm current password','Verify before changing Hidden Notes security.','Continue'],
+  hidepwcheck:['Confirm password','Verify to continue.','Continue'],
+  savepw:['Save backup password','Enter the backup password.','Save'],
+  bkpw:['Back up notes','Enter your backup password.','Back up'],
+  rspw:['Restore backup','Enter your backup password.','Restore'],
+  legacyrestore:['Restore older backup','Enter the old backup password.','Restore'],
+  topic:['Create topic','Choose a name for this topic.','Create topic'],
+  rename:['Rename topic','Enter the new topic name.','Save'],
+  listtitle:['Name your task list','Give this checklist a title.','Create list'],
+  link:['Insert link','Enter the URL for the selected text.','Insert link'],
+  mention:['Insert mention','Enter the name to mention.','Insert']
  };
- $('#lkok').textContent=actionLabels[m]||'Add';
+ const d=meta[m]||['Enter details',ph||'','Add'];
+ $('#lkEyebrow').textContent=isPin||isHiddenPassword?'FZ NOTES · HIDDEN NOTES':'FZ NOTES · ACTION';
+ $('#lkTitle').textContent=d[0];$('#lkHint').textContent=d[1];
+ $('#lkHint').style.display=d[1]?'block':'none';$('#lkok').textContent=d[2];
  lk.classList.add('on');lki.focus()
 }
 function act(a){restore();
@@ -734,7 +776,9 @@ window.nativeSelectionAction=function(action){
  if(sel){sel.removeAllRanges();sel.addRange(range)}
  act(action);updateComposerControls();saveDraft();return true;
 };
-$('#lkok').onclick=()=>{const submittedMode=mode,v=lki.value.trim();lk.classList.remove('on');
+function closeInputDialog(){lk.classList.remove('on');if(/^hide(pin|pw)/.test(mode)){hiddenUnlocked=false;hideTarget=null;hiddenSetupPurpose=null;if(cur==='hidden'){cur='all';clearCtx();render()}}}
+ $('#lkclose').onclick=closeInputDialog;
+ $('#lkok').onclick=()=>{const submittedMode=mode,v=lki.value.trim();lk.classList.remove('on');
  if(mode==='savepw'){savePw(v);return}
  if(mode==='bkpw'){doGoogleBackup();return}
  if(mode==='rspw'){doDriveRestore(pendDriveId);return}
