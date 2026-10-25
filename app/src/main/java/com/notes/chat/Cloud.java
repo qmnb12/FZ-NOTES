@@ -138,6 +138,7 @@ public class Cloud {
     static String name(String type) {
         switch (type) {
             case "drive": return "Google Drive";
+            case "driveAuto": return "Google Drive auto-sync";
             case "webdav": return "Nextcloud";
             case "tg": return "Telegram";
             default: return "GitHub";
@@ -398,6 +399,42 @@ public class Cloud {
     // ---------- upload / download per service ----------
     static String upload(JSONObject t, byte[] data) throws Exception {
         switch (t.getString("type")) {
+            case "driveAuto": {
+                String token = t.getString("token");
+                Map<String, String> h = new HashMap<>();
+                h.put("Authorization", "Bearer " + token);
+                String query = "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder"
+                        + "&q=name%20%3D%20%27FZ-NOTES-AUTO.ncb%27%20and%20trashed%20%3D%20false"
+                        + "&fields=files(id,name)&pageSize=10";
+                JSONObject found = new JSONObject(new String(http("GET", query, h, null, null), StandardCharsets.UTF_8));
+                JSONArray files = found.optJSONArray("files");
+                if (files != null && files.length() > 0) {
+                    String id = files.getJSONObject(0).getString("id");
+                    // Google API supports HTTP method override for media updates.
+                    Map<String, String> updateHeaders = new HashMap<>(h);
+                    updateHeaders.put("X-HTTP-Method-Override", "PATCH");
+                    http("POST", "https://www.googleapis.com/upload/drive/v3/files/"
+                                    + URLEncoder.encode(id, "UTF-8") + "?uploadType=media",
+                            updateHeaders, data, "application/octet-stream");
+                    return id;
+                }
+                String boundary = "----fzdriveauto" + System.currentTimeMillis();
+                JSONObject meta = new JSONObject();
+                meta.put("name", "FZ-NOTES-AUTO.ncb");
+                JSONArray parents = new JSONArray();
+                parents.put("appDataFolder");
+                meta.put("parents", parents);
+                meta.put("mimeType", "application/octet-stream");
+                ByteArrayOutputStream body = new ByteArrayOutputStream();
+                body.write(("--" + boundary + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
+                        + meta.toString() + "\r\n--" + boundary
+                        + "\r\nContent-Type: application/octet-stream\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                body.write(data);
+                body.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+                http("POST", "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,modifiedTime",
+                        h, body.toByteArray(), "multipart/related; boundary=" + boundary);
+                return "";
+            }
             case "drive": {
                 String token = t.getString("token");
                 String boundary = "----fzdrive" + System.currentTimeMillis();
@@ -501,7 +538,7 @@ public class Cloud {
         Map<String, String> h = new HashMap<>();
         h.put("Authorization", "Bearer " + token);
         byte[] raw = http("GET",
-                "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,createdTime,size)&orderBy=createdTime%20desc&pageSize=100",
+                "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,createdTime,modifiedTime,size)&orderBy=modifiedTime%20desc&pageSize=100",
                 h, null, null);
         JSONObject response = new JSONObject(new String(raw, StandardCharsets.UTF_8));
         JSONArray files = response.optJSONArray("files");
