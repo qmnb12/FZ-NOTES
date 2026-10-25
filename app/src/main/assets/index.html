@@ -322,6 +322,11 @@ body{min-height:100dvh}
 #cfg .cfgb .row button{flex:1;min-width:0}
 #cfg .cfgb button{border-radius:13px;padding:11px 13px;margin:5px 0 0;font-size:13px;font-weight:650;min-height:42px}
 #cfg .cfgb button.alt,#cfg .cfgb button.cfg-secondary{background:rgba(117,170,255,.1);border:1px solid rgba(117,170,255,.2);color:var(--text)}
+#cfg .cfgb button.cfg-danger-button{background:rgba(239,68,82,.13);border:1px solid rgba(239,68,82,.36);color:#ff858e;box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
+#cfg .cfgb button.cfg-danger-button:active{background:rgba(239,68,82,.24);transform:scale(.98)}
+#cfg .cfg-quick-actions{margin-top:9px}
+#cfg .cfg-quick-actions button{flex:1;min-width:0}
+#cfg .cfg-status{border:1px solid rgba(145,164,190,.10)}
 #cfg .cfg-footnote{font-size:11px;line-height:1.45;margin-top:10px}
 #cfg .cfg-actions{display:flex;gap:8px;margin-top:15px}
 #cfg .cfg-actions button{flex:1}
@@ -388,6 +393,36 @@ body{min-height:100dvh}
 :root[data-theme="light"] #lk{background:#fff!important}
 :root[data-theme="light"] #lk input{background:#f7f9fd!important;color:#172235!important}
 :root[data-theme="light"] #toast{background:#172235!important;color:#fff!important}
+
+/* Backup surfaces polish */
+#sh .cloud-sheet-head{padding:12px 17px 16px;margin:0 0 7px;border-bottom:1px solid var(--ln)}
+#sh .cloud-eyebrow{font-size:10px;letter-spacing:1.8px;color:#82b5ff}
+#sh .cloud-sheet-head h3{font-size:24px;letter-spacing:-.6px;margin:2px 0 6px}
+#sh .cloud-sheet-head p{font-size:13px;line-height:1.45;max-width:34em}
+#sh .cloud-group-label{padding:12px 16px 4px;font-size:10px;letter-spacing:1.35px}
+#sh button.cloud-row{min-height:68px;padding:10px 13px;border:1px solid transparent;transition:background .16s,border-color .16s,transform .14s}
+#sh button.cloud-row:active{background:rgba(117,170,255,.10);border-color:rgba(117,170,255,.13);transform:scale(.99)}
+#sh button.cloud-row .mi{width:43px;height:43px;border-radius:15px}
+#sh button.cloud-row .mt strong{font-size:15px;letter-spacing:-.15px}
+#sh button.cloud-row .ms{font-size:12px;line-height:1.35}
+#sh[data-type="localbackup"] .local-backup-head{margin-bottom:11px}
+#sh[data-type="localbackup"] button.cloud-row{min-height:78px;margin:4px 0;background:rgba(255,255,255,.018);border-color:var(--ln);border-radius:15px}
+#sh[data-type="localbackup"] button.cloud-row .mi{width:46px;height:46px}
+#sh[data-type="localbackup"] button[data-k="x"]{min-height:52px;background:transparent;border-color:transparent;color:var(--mut)}
+#cfg .cfg-top{margin-bottom:15px}
+#cfg .cfg-brand h3{font-size:22px;letter-spacing:-.45px}
+#cfg .cfg-card{padding:15px;border-radius:20px;box-shadow:0 7px 18px rgba(0,0,0,.08)}
+#cfg .cfg-card-title p{line-height:1.45}
+#cfg .cfg-status{font-weight:600;border-radius:13px}
+#cfg .cfgb button{transition:transform .14s,filter .14s,background .14s}
+#cfg .cfgb button:active{transform:scale(.985);filter:brightness(1.04)}
+#cfg .cfgb button:not(.alt):not(.cfg-secondary):not(.cfg-danger-button){box-shadow:0 5px 15px rgba(64,137,245,.12)}
+#tgcfg .cfg-card{box-shadow:0 7px 18px rgba(0,0,0,.08)}
+#tgcfg .cfg-label{font-size:12px;letter-spacing:.1px}
+#tgcfg .cfgb button.cfg-primary-action{letter-spacing:-.15px}
+:root[data-theme="light"] #cfg .cfgb button.cfg-danger-button{background:#fff0f0;border-color:#f2b2b6;color:#bd2332}
+:root[data-theme="light"] #sh[data-type="localbackup"] button.cloud-row{background:#fff;border-color:#e0e8f4}
+:root[data-theme="light"] #sh[data-type="localbackup"] button.cloud-row[data-k="x"]{background:transparent;border-color:transparent}
 </style>
 </head>
 <body>
@@ -416,7 +451,7 @@ body{min-height:100dvh}
   <section class="cfg-card">
     <div class="cfg-card-title"><span class="cfg-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"/></svg></span><div><h4>Google account sync</h4><p class="hint">Same Google account se notes automatic restore aur backup ho sakte hain.</p></div></div>
     <div id="c_driveStatus" class="cfg-status"><span class="status-dot"></span><span>Not connected</span></div>
-    <div class="row"><button id="c_driveConnect">Connect Google account</button><button id="c_driveDisconnect" class="alt">Disconnect</button></div>
+    <div class="row"><button id="c_driveConnect">Connect Google account</button><button id="c_driveDisconnect" class="alt cfg-danger-button">Disconnect</button></div>
     <div class="row cfg-quick-actions"><button id="c_driveBackup" class="cfg-secondary">Back up now</button><button id="c_driveRestore" class="cfg-secondary">Restore notes</button></div>
     <p class="hint cfg-footnote">New/edit notes ke baad backup, app open hone par backup aur app background mein jaate waqt best-effort backup. Fresh install ya Clear data ke baad connect karte hi latest Drive backup restore hoga, agar backup available hai.</p>
     <p class="hint cfg-footnote">Backup AES-GCM se encrypt hota hai. Passwordless restore ke liye random key Google ke hidden app folder mein store hoti hai; apna Google account secure rakhein.</p>
@@ -665,7 +700,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   return}
  if(sh.dataset.type==='menu'){
   if(k==='cl'){pushSheetState();openCloud();return}
-  if(k==='bk'){pushSheetState();sh.dataset.type='localbackup';sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · DEVICE</span><h3>Local backup</h3><p>Save a backup file on this device or restore an existing one</p></div>'+cloudRow('localExport',icons.drive,'Backup to file','Save all notes to device (.json)')+cloudRow('localRestore',icons.restore,'Restore backup file','Import a previous FZ Notes backup')+cloudRow('x',icons.cancel,'Back','');sh.classList.add('on');return}
+  if(k==='bk'){pushSheetState();sh.dataset.type='localbackup';sh.innerHTML='<div class="cloud-sheet-head local-backup-head"><span class="cloud-eyebrow">FZ NOTES · DEVICE</span><h3>Local backup</h3><p>Your notes file stays on your device</p></div>'+cloudRow('localExport','<path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 17v3h14v-3"/>','Backup to file','Export all notes as a .json file')+cloudRow('localRestore','<path d="M3 11a9 9 0 1 0 3-6.7L3 7"/><path d="M3 3v4h4m5-1v6l4 2"/>','Restore backup file','Import an earlier FZ NOTES .json backup')+cloudRow('x','<path d="m6 6 12 12M18 6 6 18"/>','Back','Return to the menu');sh.classList.add('on');return}
   if(k==='rs'||k==='pf'){sh.classList.remove('on');pickFile();return}
   sh.classList.remove('on');
   if(k==='srch'){$('#sq').classList.add('on');$('#sqi').focus()}
@@ -854,7 +889,7 @@ $('#c_driveConnect').onclick=async()=>{
   toast('Google account connected',2200);
  }catch(e){toast('Google connect failed: '+e.message,4500)}
 };
-$('#c_driveDisconnect').onclick=()=>{const c=cfgGet();c.driveOn=false;cfgSet(c);openCfg();toast('Google Drive auto-sync paused',2500)};
+$('#c_driveDisconnect').onclick=()=>{const c=cfgGet();c.driveOn=false;cfgSet(c);cachedDriveAuth=null;try{clearTimeout(autoBackupTimer);autoBackupAgain=false}catch(_){}openCfg();toast('Google Drive disconnected · automatic backup stopped',2800)};
 $('#c_save').onclick=async()=>{if(await saveTelegramSettings())$('#tgcfg').classList.remove('on')};
 $('#c_tgClose').onclick=()=>$('#tgcfg').classList.remove('on');
 $('#c_tgNow').onclick=async()=>{
@@ -961,7 +996,7 @@ undo:'<path d="M9 14 4 9l5-5"></path><path d="M4 9h9a7 7 0 0 1 7 7v2"></path>',
 redo:'<path d="m15 4 5 5-5 5"></path><path d="M20 9h-9a7 7 0 0 0-7 7v2"></path>',
 hidden:'<rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>',
 cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'
-};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Backup to file','Save all notes to device (.json)')+item('rs','Restore backup file','Import a previous FZ Notes backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Appearance','Light / dark theme')+item('hidden','Hidden notes','Password-protected notes')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
+};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Local backup','Save or restore a device backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Appearance','Light / dark theme')+item('hidden','Hidden notes','Password-protected notes')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
