@@ -43,7 +43,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
-/** Encrypted backup: AES-256-GCM, key from password via PBKDF2-SHA256. Uploads to Nextcloud(WebDAV), Telegram bot, GitHub. */
+/** Encrypted backup transport for password-based legacy archives and account-key NCB2 archives. Current UI uses Google Drive appDataFolder and scheduled/manual Telegram archives. */
 public class Cloud {
 
     static final String FILE = "notes-backup.ncb";
