@@ -981,7 +981,10 @@ function syncNativeSelection(){try{if(hasNativeChat()&&typeof window.Android.set
 function syncNativeChatOverlay(){
  if(!hasNativeChat()||!window.Android.setNativeChatBounds||!window.Android.setNativeChatVisible)return;
  try{
-  const r=chat.getBoundingClientRect();
+  // The WebView chat list can become narrower than its column on some layouts.
+  // Anchor the native RecyclerView to the full chat column so message bubbles use the whole available width.
+  const area=document.getElementById('chatw')||chat;
+  const r=area.getBoundingClientRect();
   window.Android.setNativeChatBounds(Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.max(0,Math.round(r.height-72)));
   const modalIds=['sh','cfg','tgcfg','qk','lk'];
   let modalOpen=modalIds.some(id=>{const e=document.getElementById(id);return !!(e&&e.classList.contains('on'))});
