@@ -13,6 +13,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.content.Intent;
+import android.content.ClipboardManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.JavascriptInterface;
@@ -222,6 +223,7 @@ public class MainActivity extends Activity {
             switch (id) {
                 case 0x435059: return "copy";
                 case 0x435554: return "cut";
+                case 0x504153: return "paste";
                 case 0x424F4C: return "b";
                 case 0x495441: return "i";
                 case 0x4D4F: return "mono";
@@ -246,6 +248,7 @@ public class MainActivity extends Activity {
             return new ActionMode.Callback2() {
                 private static final int MENU_COPY = 0x435059;
                 private static final int MENU_CUT = 0x435554;
+                private static final int MENU_PASTE = 0x504153;
                 private static final int MENU_BOLD = 0x424F4C;
                 private static final int MENU_ITALIC = 0x495441;
                 private static final int MENU_MONO = 0x4D4F;
@@ -267,6 +270,7 @@ public class MainActivity extends Activity {
                     addSelectionMenuItem(menu, MENU_CUT, 10, "Cut", MenuItem.SHOW_AS_ACTION_ALWAYS);
                     addSelectionMenuItem(menu, MENU_COPY, 20, "Copy", MenuItem.SHOW_AS_ACTION_ALWAYS);
                     addSelectionMenuItem(menu, MENU_MONO, 30, "Mono", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                    addSelectionMenuItem(menu, MENU_PASTE, 35, "Paste", MenuItem.SHOW_AS_ACTION_NEVER);
                     addSelectionMenuItem(menu, MENU_SELECT_ALL, 40, "Select all", MenuItem.SHOW_AS_ACTION_NEVER);
                     addSelectionMenuItem(menu, MENU_BOLD, 50, "Bold", MenuItem.SHOW_AS_ACTION_NEVER);
                     addSelectionMenuItem(menu, MENU_ITALIC, 60, "Italic", MenuItem.SHOW_AS_ACTION_NEVER);
@@ -396,6 +400,24 @@ public class MainActivity extends Activity {
     class Bridge {
         @JavascriptInterface
         public void run(final int id, final String op, final String args) {
+            if ("clipboardread".equals(op)) {
+                runOnUiThread(() -> {
+                    try {
+                        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                        if (clipboard == null || !clipboard.hasPrimaryClip()
+                                || clipboard.getPrimaryClip() == null
+                                || clipboard.getPrimaryClip().getItemCount() == 0) {
+                            reply(id, true, "");
+                            return;
+                        }
+                        CharSequence value = clipboard.getPrimaryClip().getItemAt(0).coerceToText(MainActivity.this);
+                        reply(id, true, value == null ? "" : value.toString());
+                    } catch (Exception e) {
+                        reply(id, false, e.getMessage() == null ? "Clipboard read failed" : e.getMessage());
+                    }
+                });
+                return;
+            }
             if ("driveauth".equals(op)) {
                 runOnUiThread(() -> authorizeDrive(id));
                 return;
