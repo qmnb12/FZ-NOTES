@@ -22,6 +22,11 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import org.json.JSONObject;
+import com.google.android.gms.auth.api.identity.AuthorizationRequest;
+import com.google.android.gms.auth.api.identity.AuthorizationResult;
+import com.google.android.gms.auth.api.identity.Identity;
+import com.google.android.gms.common.api.Scope;
+import java.util.Collections;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -32,6 +37,8 @@ public class MainActivity extends Activity {
     private static final int REQ_IMAGE = 1;
     private static final int REQ_FILE = 2;
     private static final int REQ_SAVE_FILE = 3;
+    private static final int REQ_DRIVE_AUTH = 904;
+    private int pendingDriveAuthId = -1;
     private int fileReplyId = -1;
     private int saveFileReplyId = -1;
     private String pendingSaveText;
@@ -154,6 +161,18 @@ public class MainActivity extends Activity {
             } else {
                 reply(id, false, "Backup save cancel hua");
             }
+        } else if (requestCode == REQ_DRIVE_AUTH) {
+            int id = pendingDriveAuthId;
+            pendingDriveAuthId = -1;
+            try {
+                if (resultCode != RESULT_OK || data == null) throw new Exception("Google authorization cancel hua");
+                AuthorizationResult result = Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(data);
+                String token = result.getAccessToken();
+                if (token == null || token.isEmpty()) throw new Exception("Google se access token nahi mila");
+                reply(id, true, token);
+            } catch (Exception e) {
+                reply(id, false, e.getMessage() == null ? "Google authorization failed" : e.getMessage());
+            }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
@@ -221,6 +240,36 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void authorizeDrive(int callbackId) {
+        try {
+            AuthorizationRequest request = AuthorizationRequest.builder()
+                    .setRequestedScopes(Collections.singletonList(
+                            new Scope("https://www.googleapis.com/auth/drive.appdata")))
+                    .build();
+            Identity.getAuthorizationClient(this).authorize(request)
+                    .addOnSuccessListener(result -> {
+                        if (result.hasResolution()) {
+                            pendingDriveAuthId = callbackId;
+                            try {
+                                startIntentSenderForResult(result.getPendingIntent().getIntentSender(),
+                                        REQ_DRIVE_AUTH, null, 0, 0, 0);
+                            } catch (Exception e) {
+                                pendingDriveAuthId = -1;
+                                reply(callbackId, false, "Google permission screen nahi khul saki: " + e.getMessage());
+                            }
+                        } else {
+                            String token = result.getAccessToken();
+                            if (token == null || token.isEmpty()) reply(callbackId, false, "Google access token nahi mila");
+                            else reply(callbackId, true, token);
+                        }
+                    })
+                    .addOnFailureListener(e -> reply(callbackId, false,
+                            e.getMessage() == null ? "Google authorization failed" : e.getMessage()));
+        } catch (Exception e) {
+            reply(callbackId, false, e.getMessage() == null ? "Google authorization failed" : e.getMessage());
+        }
+    }
+
     private void handleReminder(int callbackId, String rawArgs) {
         try {
             JSONObject data = new JSONObject(rawArgs);
@@ -257,6 +306,10 @@ public class MainActivity extends Activity {
     class Bridge {
         @JavascriptInterface
         public void run(final int id, final String op, final String args) {
+            if ("driveauth".equals(op)) {
+                runOnUiThread(() -> authorizeDrive(id));
+                return;
+            }
             if ("reminder".equals(op)) {
                 runOnUiThread(() -> handleReminder(id, args));
                 return;
