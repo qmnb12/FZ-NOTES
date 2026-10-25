@@ -975,8 +975,64 @@ function clean(n){let o='';n.childNodes.forEach(c=>{
  else if(t==='A'){const h=c.getAttribute('href')||'';o+=/^(https?:|mailto:|tel:)/i.test(h)?'<a href="'+esc(h)+'" target="_blank" rel="noopener">'+x+'</a>':x}
  else if(t==='SPAN'||t==='CODE'){const k=KINDS.find(k=>c.classList.contains(k));o+=k?'<span class="'+k+'">'+x+'</span>':x}
  else o+=x});return o}
-function render(){syncHiddenCredentialLifecycle();renderSide();renderTop();chat.innerHTML='';const fragment=document.createDocumentFragment();
+const nativeImagePayloadCache=new Map();
+function hasNativeChat(){return !!(window.Android&&typeof window.Android.setNativeChatData==='function')}
+function syncNativeSelection(){try{if(hasNativeChat()&&typeof window.Android.setNativeSelectionIds==='function')window.Android.setNativeSelectionIds(JSON.stringify([...sel].map(String)))}catch(_){}}
+function syncNativeChatOverlay(){
+ if(!hasNativeChat()||!window.Android.setNativeChatBounds||!window.Android.setNativeChatVisible)return;
+ try{
+  const r=chat.getBoundingClientRect();
+  window.Android.setNativeChatBounds(Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.max(0,Math.round(r.height-72)));
+  const modalIds=['sh','cfg','tgcfg','qk','lk'];
+  let modalOpen=modalIds.some(id=>{const e=document.getElementById(id);return !!(e&&e.classList.contains('on'))});
+  const viewer=document.getElementById('photoViewer');
+  if(viewer&&viewer.classList.contains('on'))modalOpen=true;
+  window.Android.setNativeChatVisible(!document.hidden&&!modalOpen);
+ }catch(_){}
+}
+function installNativeChatOverlayObservers(){
+ if(!hasNativeChat())return;
+ window.addEventListener('resize',syncNativeChatOverlay,{passive:true});
+ if(window.visualViewport)window.visualViewport.addEventListener('resize',syncNativeChatOverlay,{passive:true});
+ if(window.ResizeObserver){
+  const ro=new ResizeObserver(syncNativeChatOverlay);
+  [chat,document.querySelector('header'),$('#footer'),$('#sq'),$('#filters'),$('#pin')].filter(Boolean).forEach(e=>ro.observe(e));
+ }
+ ['sh','cfg','tgcfg','qk','lk','sq','filters','pin'].forEach(id=>{
+  const e=document.getElementById(id);if(!e)return;
+  new MutationObserver(syncNativeChatOverlay).observe(e,{attributes:true,attributeFilter:['class','style']});
+ });
+ const bodyObserver=new MutationObserver(records=>{
+  let changed=false;
+  records.forEach(rec=>rec.addedNodes.forEach(node=>{
+   if(node.nodeType!==1)return;
+   const viewer=node.id==='photoViewer'?node:node.querySelector&&node.querySelector('#photoViewer');
+   if(viewer){new MutationObserver(syncNativeChatOverlay).observe(viewer,{attributes:true,attributeFilter:['class','style']});changed=true}
+  }));
+  if(changed)syncNativeChatOverlay();
+ });
+ bodyObserver.observe(document.body,{childList:true});
+ document.addEventListener('visibilitychange',syncNativeChatOverlay);
+}
+function render(){syncHiddenCredentialLifecycle();renderSide();renderTop();
  const list=msgs.filter(m=>inView(m)&&(!q||(plain(m.h)+' '+(m.c||[]).map(i=>i.x).join(' ')).toLowerCase().includes(q))&&matchesFilter(m));if(searchFilter==='focus')list.sort((a,b)=>(a.due||Infinity)-(b.due||Infinity));
+ if(hasNativeChat()){
+  chat.innerHTML='';
+  const visibleIds=new Set(list.map(m=>String(m.id)));
+  [...nativeImagePayloadCache.keys()].forEach(id=>{if(!visibleIds.has(id))nativeImagePayloadCache.delete(id)});
+  const items=list.map(m=>{
+   const id=String(m.id),image=typeof m.i==='string'&&m.i.length>0;
+   const reply=m.r?msgs.find(x=>Number(x.id)===Number(m.r)):null;
+   const item={id,time:Number(m.t)||Date.now(),html:m.h||'',imagePresent:image,topic:cur==='all'?tn(m.k):'',edited:!!m.e,pinned:!!m.p,due:Number(m.due)||0,reply:reply?(plain(reply.h)||'Photo').slice(0,100):'',checks:Array.isArray(m.c)?m.c.map(c=>({text:String(c.x||''),state:Number(c.s)||0})):[]};
+   if(image&&nativeImagePayloadCache.get(id)!==m.i){item.image=m.i;nativeImagePayloadCache.set(id,m.i)}
+   if(!image)nativeImagePayloadCache.delete(id);
+   return item;
+  });
+  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',showTopics:cur==='all',selectedIds:[...sel].map(String),items}))}catch(_){}
+  syncNativeChatOverlay();
+  return
+ }
+ chat.innerHTML='';const fragment=document.createDocumentFragment();
  if(!list.length){chat.innerHTML='<div class="empty">Apna pehla note likho. Ye chat ki tarah send hoga.</div>';return}
  let last='';
  list.forEach(m=>{const d=new Date(m.t),ds=d.toDateString();
@@ -1185,7 +1241,7 @@ const contextIcons={
 /* Robust Android WebView long-press handling */
 let timer,pressTarget=null,pressX=0,pressY=0,pressMenuArea=false;
 function noteCopyText(m){const tmp=document.createElement('div');tmp.innerHTML=m.h||'';tmp.querySelectorAll('.tg,.tm,.mn,.due,.cnt').forEach(n=>n.remove());let t=(tmp.innerText||tmp.textContent||'').trim();if(m.c)t+=(t?'\n':'')+m.c.map(i=>i.x).join('\n');return t}
-function keepSelectedVisible(id){chat.classList.add('sheet-open');const adjust=()=>{if(!sh.classList.contains('on'))return;const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b)return;const br=b.getBoundingClientRect(),sr=sh.getBoundingClientRect(),cr=chat.getBoundingClientRect();const top=Math.max(cr.top,0)+8,bottom=Math.min(cr.bottom,sr.top,window.innerHeight)-12;if(bottom<=top)return;const available=bottom-top;let desiredTop=br.top;if(br.height>=available)desiredTop=top;else if(br.bottom>bottom)desiredTop=bottom-br.height;else if(br.top<top)desiredTop=top;const delta=br.top-desiredTop;if(Math.abs(delta)>1)chat.scrollTop+=delta};requestAnimationFrame(()=>requestAnimationFrame(adjust));setTimeout(adjust,280)}
+function keepSelectedVisible(id){chat.classList.add('sheet-open');if(hasNativeChat())return;const adjust=()=>{if(!sh.classList.contains('on'))return;const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b)return;const br=b.getBoundingClientRect(),sr=sh.getBoundingClientRect(),cr=chat.getBoundingClientRect();const top=Math.max(cr.top,0)+8,bottom=Math.min(cr.bottom,sr.top,window.innerHeight)-12;if(bottom<=top)return;const available=bottom-top;let desiredTop=br.top;if(br.height>=available)desiredTop=top;else if(br.bottom>bottom)desiredTop=bottom-br.height;else if(br.top<top)desiredTop=top;const delta=br.top-desiredTop;if(Math.abs(delta)>1)chat.scrollTop+=delta};requestAnimationFrame(()=>requestAnimationFrame(adjust));setTimeout(adjust,280)}
  sh.addEventListener('transitionend',e=>{if(e.target===sh&&!sh.classList.contains('on'))chat.classList.remove('sheet-open')});
 function openSheet(id){
   try{const activeSelection=window.getSelection();if(activeSelection)activeSelection.removeAllRanges()}catch(_){}
@@ -1253,7 +1309,7 @@ chat.addEventListener('contextmenu',e=>{
  if(target&&target.closest('#chat .b')){e.preventDefault();e.stopPropagation()}
 });
 chatwSelectTimestampGuard();
-function openPhotoViewer(src){if(!src)return;let viewer=document.getElementById('photoViewer');if(!viewer){viewer=document.createElement('div');viewer.id='photoViewer';viewer.innerHTML='<button type="button" aria-label="Close photo">×</button><img alt="Full size photo">';document.body.appendChild(viewer);viewer.addEventListener('click',()=>viewer.classList.remove('on'));viewer.querySelector('img').addEventListener('click',e=>e.stopPropagation());viewer.querySelector('button').addEventListener('click',()=>viewer.classList.remove('on'))}viewer.querySelector('img').src=src;viewer.classList.add('on')}
+function openPhotoViewer(src){if(!src)return;let viewer=document.getElementById('photoViewer');if(!viewer){viewer=document.createElement('div');viewer.id='photoViewer';viewer.innerHTML='<button type="button" aria-label="Close photo">×</button><img alt="Full size photo">';document.body.appendChild(viewer);viewer.addEventListener('click',()=>{viewer.classList.remove('on');syncNativeChatOverlay()});viewer.querySelector('img').addEventListener('click',e=>e.stopPropagation());viewer.querySelector('button').addEventListener('click',()=>{viewer.classList.remove('on');syncNativeChatOverlay()})}viewer.querySelector('img').src=src;viewer.classList.add('on');syncNativeChatOverlay()}
 chat.addEventListener('click',e=>{
  if(longPressClickPending){longPressClickPending=false;clearTimeout(longPressClickTimer);e.preventDefault();e.stopPropagation();return}
  if(Date.now()-pressed<650&&!e.target.closest('.ci')&&!selMode){e.preventDefault();e.stopPropagation();return}
@@ -1394,7 +1450,7 @@ function openTopicSheet(t){sh.innerHTML='<button data-k="ren">Rename topic</butt
 $('#side').addEventListener('contextmenu',e=>e.preventDefault());
 const plain=h=>{const d=document.createElement('div');d.innerHTML=h.replace(/<br>/g,' ');return d.textContent};
 const rq=m=>{if(!m.r)return '';const o=msgs.find(x=>x.id===m.r);return '<span class="rp" data-r="'+m.r+'"><b>Note</b><span>'+(o?(esc(plain(o.h).slice(0,80))||'Photo'):'Deleted note')+'</span></span>'};
-function jump(id){const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b){toast('Note nahi mila');return}b.scrollIntoView({block:'center',behavior:'smooth'});b.classList.add('hl');setTimeout(()=>b.classList.remove('hl'),1200)}
+function jump(id){if(hasNativeChat()){const found=msgs.some(m=>Number(m.id)===Number(id));if(!found){toast('Note nahi mila');return}try{window.Android.scrollNativeChatToId(String(id))}catch(_){}return}const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b){toast('Note nahi mila');return}b.scrollIntoView({block:'center',behavior:'smooth'});b.classList.add('hl');setTimeout(()=>b.classList.remove('hl'),1200)}
 function setCtx(){const c=$('#ctx'),id=editId||replyId,m=id&&msgs.find(m=>m.id===id);
  if(m){$('#cxt').textContent=editId?'Edit message':'Reply to note';$('#cxs').textContent=plain(m.h);c.classList.add('on')}else c.classList.remove('on')}
 function clearCtx(){if(editId){ed.innerHTML='';updateComposerControls()}editId=null;replyId=null;setCtx()}
@@ -1627,7 +1683,31 @@ window.flushCloudBackupBeforeClose=()=>{
   doGoogleBackup(true,true,true);
 };
 try{const th=localStorage.getItem('notes-theme');document.documentElement.dataset.theme=th||'dark'}catch(e){}
-let selectionExitTimer=0;function updateSelectionModeUI(active){const bar=$('#selbar');if(active){if(selectionExitTimer){clearTimeout(selectionExitTimer);selectionExitTimer=0}document.body.classList.remove('selection-mode-out');document.body.classList.add('selection-mode');bar.classList.remove('leaving');bar.classList.add('on');return}if(document.body.classList.contains('selection-mode')){document.body.classList.remove('selection-mode');document.body.classList.add('selection-mode-out');bar.classList.add('leaving');if(selectionExitTimer)clearTimeout(selectionExitTimer);selectionExitTimer=setTimeout(()=>{document.body.classList.remove('selection-mode-out');bar.classList.remove('leaving','on');selectionExitTimer=0},190);return}if(!document.body.classList.contains('selection-mode-out'))bar.classList.remove('leaving','on')} function renderTop(){const pn=msgs.filter(m=>m.p&&inView(m)).pop(),pb=$('#pin');pb.classList.toggle('on',!!pn);if(pn){pb.dataset.id=pn.id;pb.querySelector('span').textContent=plain(pn.h)||'Photo'}updateSelectionModeUI(selMode&&sel.size>0);$('#selc').textContent=sel.size+' selected'}
+let selectionExitTimer=0;function updateSelectionModeUI(active){const bar=$('#selbar');if(active){if(selectionExitTimer){clearTimeout(selectionExitTimer);selectionExitTimer=0}document.body.classList.remove('selection-mode-out');document.body.classList.add('selection-mode');bar.classList.remove('leaving');bar.classList.add('on');return}if(document.body.classList.contains('selection-mode')){document.body.classList.remove('selection-mode');document.body.classList.add('selection-mode-out');bar.classList.add('leaving');if(selectionExitTimer)clearTimeout(selectionExitTimer);selectionExitTimer=setTimeout(()=>{document.body.classList.remove('selection-mode-out');bar.classList.remove('leaving','on');selectionExitTimer=0},190);return}if(!document.body.classList.contains('selection-mode-out'))bar.classList.remove('leaving','on')} function renderTop(){const pn=msgs.filter(m=>m.p&&inView(m)).pop(),pb=$('#pin');pb.classList.toggle('on',!!pn);if(pn){pb.dataset.id=pn.id;pb.querySelector('span').textContent=plain(pn.h)||'Photo'}updateSelectionModeUI(selMode&&sel.size>0);$('#selc').textContent=sel.size+' selected';syncNativeSelection()}
+window.nativeChatSelectionChanged=function(raw){
+ let ids=[];try{ids=JSON.parse(raw||'[]').map(Number).filter(Number.isFinite)}catch(_){}
+ sel.clear();ids.forEach(id=>{if(msgs.some(m=>Number(m.id)===id))sel.add(id)});
+ selMode=sel.size>0;
+ renderTop();
+};
+window.nativeChatAction=function(rawId,action,index){
+ const id=Number(rawId),m=msgs.find(x=>Number(x.id)===id);if(!m)return;
+ if(action==='menu'){openSheet(id);return}
+ if(action==='photo'){if(m.i)openPhotoViewer(m.i);return}
+ if(action==='reply'){if(m.r)jump(m.r);return}
+ if(action==='check'){
+  if(!Array.isArray(m.c)||!m.c[index])return;
+  m.c[index].s=(Number(m.c[index].s)||0)+1;if(m.c[index].s>2)m.c[index].s=0;
+  if(m.due)scheduleReminder(m);save();render();return
+ }
+ if(action==='copy'){copy(noteCopyText(m));return}
+ if(action==='code'||action==='mono'){
+  const tmp=document.createElement('div');tmp.innerHTML=m.h||'';
+  const el=tmp.querySelector(action==='code'?'.code':'.mono');
+  if(el)copy(el.innerText||el.textContent||'',action==='code'?'Code copied':'Mono copied');
+  return
+ }
+};
 $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
@@ -1808,7 +1888,7 @@ function applyFile(t){let d;try{d=JSON.parse(t)}catch(_){throw new Error('FZ Not
 async function pickFile(){try{if(window.Android){toast('Pehle FZ Notes se banayi backup file select karo',2200);const raw=await native('pickfile',{});if(applyFile(raw))toast('Restore complete · '+msgs.length+' notes',3000);else toast('Ye FZ Notes backup nahi lagti; original data safe hai',3500)}else{const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=async()=>{const f=input.files&&input.files[0];if(!f)return;try{const raw=await f.text();if(applyFile(raw))toast('Restore complete · '+msgs.length+' notes',3000);else toast('Valid FZ Notes backup select karo',3500)}catch(e){toast(e.message||'Backup import nahi hua',3500)}};input.click()}}catch(e){toast(e.message||'Backup import nahi hua',3500)}}
 async function exportBackupFile(){const payload=JSON.stringify({format:'FZ-NOTES-BACKUP',version:3,exportedAt:new Date().toISOString(),msgs,topics},null,2);const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.json';try{if(window.Android){toast('Backup save karne ke liye location choose karo',2200);const result=await native('savefile',{filename,text:payload});toast(result||'Backup file save ho gayi',3000);return true}const blob=new Blob([payload],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup download start ho gaya',3000);return true}catch(e){toast(e.message||'Backup save nahi hua',3500);return false}}
 msgs.filter(m=>m.due>Date.now()&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
-render();restoreDraft();updateComposerControls();lastSnapshot=snapshot();
+installNativeChatOverlayObservers();render();restoreDraft();updateComposerControls();lastSnapshot=snapshot();syncNativeChatOverlay();
 if(window.Android&&cfgGet().driveOn)setTimeout(()=>startupCloudSync(),1100);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&cur==='hidden'){hiddenUnlocked=false;cur='all';clearCtx();render()}});
 window.addEventListener('pagehide',()=>{if(cur==='hidden'){hiddenUnlocked=false;cur='all'}});
