@@ -84,6 +84,8 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 #sq input{flex:1;min-width:0;padding:8px 12px;border-radius:16px;border:1px solid var(--ln);background:var(--bg);color:var(--text);font:inherit}
 #sq button,#selbar button{border:0;background:var(--mono);color:var(--text);border-radius:14px;padding:6px 12px;font:inherit;font-size:14px}
 #selbar span{flex:1;min-width:0;font-size:17px;font-weight:600;white-space:nowrap}#selbar{min-height:54px;padding:6px 10px;gap:8px;background:var(--bar);box-shadow:0 2px 8px rgba(0,0,0,.14)}#selbar button{width:38px;height:38px;min-width:38px;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:transparent;color:var(--text);font-size:21px;line-height:1;-webkit-tap-highlight-color:transparent}#selbar button:active{background:var(--mono)}
+#selbar{position:relative;z-index:20;pointer-events:auto}
+#selbar button{pointer-events:auto;touch-action:manipulation}
 #pin .cx{flex:1;min-width:0;border-left:3px solid var(--acc);padding-left:8px;cursor:pointer}
 #pin b{display:block;font-size:12px;color:var(--acc)}
 #pin span{display:block;font-size:13px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1263,7 +1265,7 @@ function openSheet(id){
    contextMenuRow('del','Delete message',contextIcons.delete,'del')+
    contextMenuRow('x','Cancel',contextIcons.close,'cancel')+
    '</div>';
-  sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=txt;sh.classList.add('on');keepSelectedVisible(id)
+  sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=txt;sh.classList.add('on');keepSelectedVisible(id);syncNativeChatOverlay()
 }
 function openCopySheet(id){shStack=[];const m=msgs.find(m=>m.id==id);if(!m)return;sh.innerHTML='<button data-k="copy">▢ Copy text</button><button data-k="x">✕ Cancel</button>';sh.dataset.id=id;sh.dataset.type='copyonly';sh.dataset.txt=noteCopyText(m);sh.classList.add('on')}
 let longPressClickPending=false,longPressClickTimer=0,pressPointerId=null;
@@ -1708,8 +1710,11 @@ window.nativeChatAction=function(rawId,action,index){
  if(action==='copy'){copy(noteCopyText(m));return}
  if(action==='code'||action==='mono'){
   const tmp=document.createElement('div');tmp.innerHTML=m.h||'';
-  const el=tmp.querySelector(action==='code'?'.code':'.mono');
+  const matches=tmp.querySelectorAll(action==='code'?'.code':'.mono');
+  const ix=Math.max(0,Number(index)||0);
+  const el=matches[ix]||matches[0];
   if(el)copy(el.innerText||el.textContent||'',action==='code'?'Code copied':'Mono copied');
+  else toast(action==='code'?'Code block nahi mila':'Mono text nahi mila',1800);
   return
  }
 };
@@ -1730,12 +1735,32 @@ hidden:'<rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7
 settings:'<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.8 1.8 0 0 0-1.9.2l-.2.1h-3.3l-.1-.2a1.8 1.8 0 0 0-1.6-1l-.2.1-2.9-1.7.1-.2a1.8 1.8 0 0 0-.2-1.9l-.1-.2v-3.3l.2-.1a1.8 1.8 0 0 0 1-1.6l-.1-.2 1.7-2.9.2.1a1.8 1.8 0 0 0 1.9-.2l.2-.1h3.3l.1.2a1.8 1.8 0 0 0 1.6 1l.2-.1 2.9 1.7-.1.2a1.8 1.8 0 0 0 .2 1.9l.1.2v3.3z"></path>',
 cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'
 };const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',hsettings:'settings',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Local backup','Save or restore a device backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Appearance','Light / dark theme')+item('hidden','Hidden notes','Password-protected notes')+(cur==='hidden'&&hiddenUnlocked&&hiddenNoteCount()>0?item('hsettings','Hidden Notes settings','Change PIN/password · Lock now'):'')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
-$('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
+function handleSelectionToolbarAction(e){
+ const target=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
+ const btn=target&&target.closest('[data-s]');if(!btn)return;
+ const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
  if(a==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render();return}
  if(a==='reply'){if(ids.length!==1){toast('Reply ke liye ek note select karo');return}replyId=ids[0];editId=null;setCtx();selMode=false;sel.clear();render();ed.focus();return}
- if(a==='more'){if(ids.length===1){openSheet(ids[0]);return}sh.innerHTML='<button data-k="copy">▢ Copy '+ids.length+' selected notes</button><button data-k="del" class="del">🗑 Delete '+ids.length+' selected notes</button><button data-k="x">✕ Close</button>';sh.dataset.type='multi-select';sh.dataset.ids=JSON.stringify(ids);sh.classList.add('on')}
+ if(a==='more'){
+  if(ids.length===1){openSheet(ids[0]);return}
+  if(ids.length>1){sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-head-line"><span class="context-eyebrow">FZ NOTES · SELECTION</span><button type="button" class="context-close" data-k="x" aria-label="Close menu">×</button></div><div class="context-title">'+ids.length+' selected notes</div><div class="context-preview">Actions for selected notes</div></div><div class="context-actions">'+contextMenuRow('copy','Copy selected notes',contextIcons.copy)+contextMenuRow('del','Delete selected notes',contextIcons.delete,'del')+contextMenuRow('x','Cancel',contextIcons.close,'cancel')+'</div>';sh.dataset.type='multi-select';sh.dataset.ids=JSON.stringify(ids);sh.classList.add('on');syncNativeChatOverlay();return}
+  toast('Pehle ek note select karo',1800);
+ }
+}
+let selectionToolbarPointerAt=0;
+$('#selbar').addEventListener('pointerup',e=>{
+ const target=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
+ if(!target||!target.closest('button[data-s]'))return;
+ selectionToolbarPointerAt=Date.now();
+ e.preventDefault();
+ e.stopPropagation();
+ handleSelectionToolbarAction(e);
+},true);
+$('#selbar').onclick=e=>{
+ if(Date.now()-selectionToolbarPointerAt<700){e.preventDefault();e.stopPropagation();return}
+ handleSelectionToolbarAction(e);
 };
 $('#att').onclick=()=>$('#fi').click();
 $('#fi').onchange=e=>{
