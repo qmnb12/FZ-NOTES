@@ -1225,7 +1225,7 @@ function hiddenAuthType(){return localStorage.getItem('notes-hide-auth-type')===
 function hasHiddenCredential(){return !!localStorage.getItem('notes-hide-hash')}
 function openHiddenAuthSetup(purpose){
  hiddenSetupPurpose=purpose;shStack=[];sh.dataset.type='hideauthsetup';
- sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · PRIVACY</div><div class="context-title">Secure Hidden Notes</div><div class="context-preview">'+(purpose==='hide'?'Create a PIN or password before hiding this note.':'Create a PIN or password to open Hidden Notes.')+'</div></div><div class="context-actions">'+
+ sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · PRIVACY</div><div class="context-title">Secure Hidden Notes</div><div class="context-preview">'+(purpose==='hide'?'Create a PIN or password before hiding this note.':purpose==='migrate'?'Choose a PIN or password for future unlocks.':'Create a PIN or password to open Hidden Notes.')+'</div></div><div class="context-actions">'+
   contextMenuRow('createpin','Create PIN (4–12 digits)',contextIcons.pin)+
   contextMenuRow('createpassword','Create password',contextIcons.lock)+
   '<div class="context-menu-divider"></div>'+contextMenuRow('x','Cancel',contextIcons.close,'cancel')+'</div>';
@@ -1273,6 +1273,11 @@ function completeHiddenCredentialPrompt(authMode,v){
   if(hash!==localStorage.getItem('notes-hide-hash')){
    toast(isPin?'Wrong PIN':'Incorrect password',2400);
    ask(authMode,isPin?'Enter Hidden Notes PIN':'Enter Hidden Notes password');return
+  }
+  if(!isPin&&!localStorage.getItem('notes-hide-auth-type')&&(authMode==='hidepwunlock'||authMode==='hidepwconfirm'||authMode==='hidepwcheck')){
+   hiddenSetupPurpose=confirmMode&&hideTarget!==null?'hide':'migrate';
+   openHiddenAuthSetup(hiddenSetupPurpose);
+   return
   }
   localStorage.setItem('notes-hide-auth-type',expectedType);
   if(confirmMode){hideSelected();return}
