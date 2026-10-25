@@ -12,6 +12,12 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 
+import androidx.work.Constraints;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -27,6 +33,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -58,10 +65,29 @@ public class Cloud {
             case "pwdel":
                 ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE).edit().remove("pw").apply();
                 return "ok";
+            case "drivekey": {
+                String key = getOrCreateDriveKey(a.getString("token"));
+                saveLocalSecret(ctx, "drive_key", key);
+                return key;
+            }
+            case "tgsnapshot":
+                ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE).edit()
+                        .putString("snapshot", a.getString("data")).apply();
+                return "ok";
+            case "tgconfigure":
+                configureTelegramBackup(ctx, a);
+                return "ok";
+            case "tgstatus":
+                return String.valueOf(ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE)
+                        .getLong("lastSuccess", 0L));
             case "drivehistory":
                 return driveHistory(a.getString("token")).toString();
             case "backup": {
-                byte[] enc = encrypt(a.getString("data"), a.getString("pw"));
+                String key = a.optString("key", "");
+                String pw = a.optString("pw", "");
+                if (key.isEmpty() && pw.isEmpty()) throw new Exception("Backup encryption key is missing");
+                byte[] enc = key.isEmpty() ? encrypt(a.getString("data"), pw)
+                        : encryptWithKey(a.getString("data"), key);
                 JSONArray ts = a.getJSONArray("targets");
                 StringBuilder sb = new StringBuilder();
                 String fid = "";
@@ -92,6 +118,8 @@ public class Cloud {
             }
             case "restore": {
                 byte[] b = download(a.getJSONObject("source"));
+                String key = a.optString("key", "");
+                if (!key.isEmpty()) return decryptWithKey(b, key);
                 return decrypt(b, a.getString("pw"));
             }
             case "tgchat": {
@@ -231,6 +259,142 @@ public class Cloud {
         }
     }
 
+    /** App-scoped random key enables same-account restore without a user password. */
+    static byte[] encryptWithKey(String plain, String keyB64) throws Exception {
+        byte[] rawKey = Base64.decode(keyB64, Base64.DEFAULT);
+        if (rawKey.length != 32) throw new Exception("Google backup key is invalid");
+        byte[] iv = new byte[12];
+        new SecureRandom().nextBytes(iv);
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(rawKey, "AES"), new GCMParameterSpec(128, iv));
+        byte[] ct = c.doFinal(plain.getBytes(StandardCharsets.UTF_8));
+        ByteArrayOutputStream o = new ByteArrayOutputStream();
+        o.write(new byte[]{'N','C','B','2'});
+        o.write(iv);
+        o.write(ct);
+        return o.toByteArray();
+    }
+
+    static String decryptWithKey(byte[] b, String keyB64) throws Exception {
+        if (b.length >= 4 && b[0] == 'N' && b[1] == 'C' && b[2] == 'B' && b[3] == '1')
+            throw new Exception("LEGACY_PASSWORD_BACKUP: This older backup uses a password.");
+        if (b.length < 32 || b[0] != 'N' || b[1] != 'C' || b[2] != 'B' || b[3] != '2')
+            throw new Exception("Ye valid FZ NOTES encrypted backup nahi hai");
+        byte[] rawKey = Base64.decode(keyB64, Base64.DEFAULT);
+        if (rawKey.length != 32) throw new Exception("Google backup key is invalid");
+        byte[] iv = Arrays.copyOfRange(b, 4, 16);
+        byte[] ct = Arrays.copyOfRange(b, 16, b.length);
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.DECRYPT_MODE, new SecretKeySpec(rawKey, "AES"), new GCMParameterSpec(128, iv));
+        try {
+            return new String(c.doFinal(ct), StandardCharsets.UTF_8);
+        } catch (javax.crypto.AEADBadTagException e) {
+            throw new Exception("Google account backup key does not match");
+        }
+    }
+
+    static void saveLocalSecret(Context ctx, String prefName, String value) throws Exception {
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.ENCRYPT_MODE, ksKey());
+        byte[] iv = c.getIV();
+        byte[] ct = c.doFinal(value.getBytes(StandardCharsets.UTF_8));
+        byte[] all = new byte[iv.length + ct.length];
+        System.arraycopy(iv, 0, all, 0, iv.length);
+        System.arraycopy(ct, 0, all, iv.length, ct.length);
+        ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE).edit()
+                .putString(prefName, Base64.encodeToString(all, Base64.NO_WRAP)).apply();
+    }
+
+    static String loadDriveKey(Context ctx) throws Exception {
+        String value = ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE)
+                .getString("drive_key", null);
+        if (value == null || value.isEmpty()) throw new Exception("Connect Google Drive once to set up the backup key");
+        byte[] all = Base64.decode(value, Base64.NO_WRAP);
+        if (all.length < 29) throw new Exception("Saved Google backup key is damaged");
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.DECRYPT_MODE, ksKey(), new GCMParameterSpec(128, Arrays.copyOfRange(all, 0, 12)));
+        return new String(c.doFinal(Arrays.copyOfRange(all, 12, all.length)), StandardCharsets.UTF_8);
+    }
+
+    static String getOrCreateDriveKey(String token) throws Exception {
+        Map<String, String> h = new HashMap<>();
+        h.put("Authorization", "Bearer " + token);
+        String listUrl = "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder"
+                + "&q=name%20%3D%20%27FZ-NOTES-KEY-1.bin%27&fields=files(id,name)&pageSize=10";
+        JSONObject result = new JSONObject(new String(http("GET", listUrl, h, null, null), StandardCharsets.UTF_8));
+        JSONArray files = result.optJSONArray("files");
+        if (files != null && files.length() > 0) {
+            String id = files.getJSONObject(0).getString("id");
+            byte[] existing = http("GET", "https://www.googleapis.com/drive/v3/files/"
+                    + URLEncoder.encode(id, "UTF-8") + "?alt=media", h, null, null);
+            if (existing.length != 32) throw new Exception("Google Drive backup key file is invalid");
+            return Base64.encodeToString(existing, Base64.NO_WRAP);
+        }
+
+        byte[] key = new byte[32];
+        new SecureRandom().nextBytes(key);
+        String boundary = "----fzkey" + System.currentTimeMillis();
+        JSONObject meta = new JSONObject();
+        meta.put("name", "FZ-NOTES-KEY-1.bin");
+        JSONArray parents = new JSONArray();
+        parents.put("appDataFolder");
+        meta.put("parents", parents);
+        meta.put("mimeType", "application/octet-stream");
+        ByteArrayOutputStream body = new ByteArrayOutputStream();
+        body.write(("--" + boundary + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
+                + meta.toString() + "\r\n--" + boundary
+                + "\r\nContent-Type: application/octet-stream\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+        body.write(key);
+        body.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+        http("POST", "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",
+                h, body.toByteArray(), "multipart/related; boundary=" + boundary);
+        return Base64.encodeToString(key, Base64.NO_WRAP);
+    }
+
+    static void configureTelegramBackup(Context ctx, JSONObject a) throws Exception {
+        String token = a.optString("token", "").trim();
+        String chat = a.optString("chat", "").trim();
+        String interval = a.optString("interval", "manual");
+        if (!"manual".equals(interval) && !"daily".equals(interval)
+                && !"weekly".equals(interval) && !"monthly".equals(interval))
+            throw new Exception("Unknown Telegram backup schedule");
+        if (!"manual".equals(interval) && (token.isEmpty() || chat.isEmpty()))
+            throw new Exception("Telegram bot token aur chat ID pehle save karein");
+        ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE).edit()
+                .putString("token", token).putString("chat", chat).putString("interval", interval).apply();
+        WorkManager wm = WorkManager.getInstance(ctx.getApplicationContext());
+        if ("manual".equals(interval) || token.isEmpty() || chat.isEmpty()) {
+            wm.cancelUniqueWork("fz_notes_telegram_backup");
+            return;
+        }
+        long days = "daily".equals(interval) ? 1L : "weekly".equals(interval) ? 7L : 30L;
+        Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
+        PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
+                TelegramBackupWorker.class, days, TimeUnit.DAYS)
+                .setConstraints(constraints).build();
+        wm.enqueueUniquePeriodicWork("fz_notes_telegram_backup", ExistingPeriodicWorkPolicy.UPDATE, work);
+    }
+
+    static void sendScheduledTelegramBackup(Context ctx) throws Exception {
+        SharedPreferences sp = ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE);
+        String token = sp.getString("token", "");
+        String chat = sp.getString("chat", "");
+        String interval = sp.getString("interval", "manual");
+        String data = sp.getString("snapshot", "");
+        if (token.isEmpty() || chat.isEmpty() || "manual".equals(interval))
+            throw new Exception("Scheduled Telegram backup is not configured");
+        if (data.isEmpty()) throw new Exception("Notes snapshot is empty");
+        String key = loadDriveKey(ctx);
+        byte[] encrypted = encryptWithKey(data, key);
+        JSONObject target = new JSONObject();
+        target.put("type", "tg");
+        target.put("token", token);
+        target.put("chat", chat);
+        String fileId = upload(target, encrypted);
+        sp.edit().putLong("lastSuccess", System.currentTimeMillis())
+                .putString("lastFileId", fileId).putString("lastError", "").apply();
+    }
+
     // ---------- upload / download per service ----------
     static String upload(JSONObject t, byte[] data) throws Exception {
         switch (t.getString("type")) {
@@ -337,11 +501,16 @@ public class Cloud {
         Map<String, String> h = new HashMap<>();
         h.put("Authorization", "Bearer " + token);
         byte[] raw = http("GET",
-                "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,createdTime,size)&orderBy=createdTime%20desc&pageSize=30",
+                "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,createdTime,size)&orderBy=createdTime%20desc&pageSize=100",
                 h, null, null);
         JSONObject response = new JSONObject(new String(raw, StandardCharsets.UTF_8));
         JSONArray files = response.optJSONArray("files");
-        return files == null ? new JSONArray() : files;
+        JSONArray backups = new JSONArray();
+        if (files != null) for (int i = 0; i < files.length(); i++) {
+            JSONObject file = files.getJSONObject(i);
+            if (file.optString("name", "").endsWith(".ncb")) backups.put(file);
+        }
+        return backups;
     }
 
     // ---------- helpers ----------
