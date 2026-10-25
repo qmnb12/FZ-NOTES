@@ -30,7 +30,7 @@ jobs:
           curl -fsSL https://services.gradle.org/distributions/gradle-9.6.1-bin.zip -o "$RUNNER_TEMP/gradle.zip"
           unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
       - name: Build debug APK
-        run: "$RUNNER_TEMP/gradle-9.6.1/bin/gradle" --no-daemon --stacktrace :app:assembleDebug
+        run: $RUNNER_TEMP/gradle-9.6.1/bin/gradle --no-daemon --stacktrace :app:assembleDebug
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
