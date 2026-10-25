@@ -597,10 +597,10 @@ function handleAppBack(){
  if($('#qk').classList.contains('on')){$('#qk').classList.remove('on');return true}
  if($('#sq').classList.contains('on')){$('#sq').classList.remove('on');return true}
  if($('#lk').classList.contains('on')){$('#lk').classList.remove('on');if(/^hide(pin|pw)/.test(mode)){hiddenUnlocked=false;hideTarget=null;hiddenSetupPurpose=null}return true}
- if(cur==='hidden'){hiddenUnlocked=false;cur='all';clearCtx();render();return true}
  if($('#tb').classList.contains('on')){$('#tb').classList.remove('on');return true}
  if(selMode){clearSelection();render();if(sh.classList.contains('on'))restoreSheetState();return true}
  if(sh.classList.contains('on')){restoreSheetState();return true}
+ if(cur==='hidden'){hiddenUnlocked=false;cur='all';clearCtx();render();return true}
  if(listMode){saveDraft();listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';return true}
  if(ed.innerText.trim()||$('#taskdue').value)saveDraft();
  return false
