@@ -1692,6 +1692,8 @@ window.nativeChatSelectionChanged=function(raw){
 };
 window.nativeChatAction=function(rawId,action,index){
  const id=Number(rawId),m=msgs.find(x=>Number(x.id)===id);if(!m)return;
+ if(action==='swipeReply'){replyId=id;editId=null;setCtx();ed.focus();pressed=Date.now();return}
+ if(action==='pinToggle'){m.p=m.p?0:1;save();render();toast(m.p?'Pinned':'Unpinned');return}
  if(action==='menu'){openSheet(id);return}
  if(action==='photo'){if(m.i)openPhotoViewer(m.i);return}
  if(action==='reply'){if(m.r)jump(m.r);return}
