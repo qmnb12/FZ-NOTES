@@ -792,7 +792,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private static String makeSignature(Note note) {
         String checks = "";
         for (CheckItem item : note.checks) checks += item.text + ":" + item.state + ";";
-        return note.time + "|" + note.html + "|" + note.image.hashCode() + "|" + note.image.length()
+        return note.time + "|" + note.html.length() + ":" + note.html.hashCode()
+                + "|" + note.image.length() + ":" + note.image.hashCode()
                 + "|" + note.topic + "|" + note.edited + "|" + note.pinned + "|" + note.due
                 + "|" + note.reply + "|" + checks;
     }
