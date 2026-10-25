@@ -615,7 +615,7 @@ function clean(n){let o='';n.childNodes.forEach(c=>{
  else if(t==='A'){const h=c.getAttribute('href')||'';o+=/^(https?:|mailto:|tel:)/i.test(h)?'<a href="'+esc(h)+'" target="_blank" rel="noopener">'+x+'</a>':x}
  else if(t==='SPAN'||t==='CODE'){const k=KINDS.find(k=>c.classList.contains(k));o+=k?'<span class="'+k+'">'+x+'</span>':x}
  else o+=x});return o}
-function render(){renderSide();renderTop();chat.innerHTML='';const fragment=document.createDocumentFragment();
+function render(){syncHiddenCredentialLifecycle();renderSide();renderTop();chat.innerHTML='';const fragment=document.createDocumentFragment();
  const list=msgs.filter(m=>inView(m)&&(!q||(plain(m.h)+' '+(m.c||[]).map(i=>i.x).join(' ')).toLowerCase().includes(q))&&matchesFilter(m));if(searchFilter==='focus')list.sort((a,b)=>(a.due||Infinity)-(b.due||Infinity));
  if(!list.length){chat.innerHTML='<div class="empty">Apna pehla note likho. Ye chat ki tarah send hoga.</div>';return}
  let last='';
@@ -922,6 +922,12 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='createpassword'){sh.classList.remove('on');ask('hidepwset','Create password (4+ characters)');return}
   sh.classList.remove('on');hideTarget=null;hiddenSetupPurpose=null;return
  }
+ if(sh.dataset.type==='hidden-settings'){
+  if(k==='x'){sh.classList.remove('on');return}
+  if(k==='lockNow'){sh.classList.remove('on');hiddenUnlocked=false;cur='all';clearCtx();render();toast('Hidden Notes locked',1800);return}
+  if(k==='changeAuth'){sh.classList.remove('on');const pin=hiddenAuthType()==='pin';ask(pin?'hidepinsettingsverify':'hidepwsettingsverify',pin?'Enter current Hidden Notes PIN':'Enter current Hidden Notes password');return}
+  return
+ }
  if(sh.dataset.type==='multi-select'){if(k==='x'){sh.classList.remove('on');return}const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);sh.classList.remove('on');if(k==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));return}if(k==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render()}return}
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='cloud'){
@@ -944,7 +950,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='localRestore'){restoreSheetState();pickFile();return}
   return}
  if(sh.dataset.type==='menu'){
-  if(cur==='hidden'&&k!=='hidden'){hiddenUnlocked=false;cur='all';render()}
+  if(cur==='hidden'&&k!=='hidden'&&k!=='hsettings'){hiddenUnlocked=false;cur='all';render()}
   if(k==='cl'){pushSheetState();openCloud();return}
   if(k==='bk'){pushSheetState();sh.dataset.type='localbackup';sh.innerHTML='<div class="cloud-sheet-head local-backup-head"><span class="cloud-eyebrow">FZ NOTES · DEVICE</span><h3>Local backup</h3><p>Your notes file stays on your device</p></div>'+cloudRow('localExport','<path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 17v3h14v-3"/>','Backup to file','Export all notes as a .json file')+cloudRow('localRestore','<path d="M3 11a9 9 0 1 0 3-6.7L3 7"/><path d="M3 3v4h4m5-1v6l4 2"/>','Restore backup file','Import an earlier FZ NOTES .json backup')+cloudRow('x','<path d="m6 6 12 12M18 6 6 18"/>','Back','Return to the menu');sh.classList.add('on');return}
   if(k==='rs'||k==='pf'){sh.classList.remove('on');pickFile();return}
@@ -952,7 +958,8 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='srch'){$('#sq').classList.add('on');$('#sqi').focus()}
   if(k==='undo'){undoChange();return}if(k==='redo'){redoChange();return}
   if(k==='th'){const d=document.documentElement,n=(d.dataset.theme||'dark')==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('notes-theme',n)}catch(e){}toast(n==='light'?'Light appearance enabled':'Dark appearance enabled',1800);}
-  if(k==='hidden'){requestHiddenNotesAccess();return}
+  if(k==='hsettings'){openHiddenSettings();return}
+   if(k==='hidden'){requestHiddenNotesAccess();return}
   return}
  if(sh.dataset.type==='topic'){const tid=sh.dataset.id;sh.classList.remove('on');
   if(k==='up'||k==='dn'){const i=topics.findIndex(t=>t.id===tid),j=i+(k==='up'?-1:1);if(j>=0&&j<topics.length){[topics[i],topics[j]]=[topics[j],topics[i]];saveT();render()}}
@@ -1246,7 +1253,7 @@ undo:'<path d="M9 14 4 9l5-5"></path><path d="M4 9h9a7 7 0 0 1 7 7v2"></path>',
 redo:'<path d="m15 4 5 5-5 5"></path><path d="M20 9h-9a7 7 0 0 0-7 7v2"></path>',
 hidden:'<rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>',
 cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'
-};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Local backup','Save or restore a device backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Appearance','Light / dark theme')+item('hidden','Hidden notes','Password-protected notes')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
+};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',hsettings:'hidden',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Local backup','Save or restore a device backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Appearance','Light / dark theme')+item('hidden','Hidden notes','Password-protected notes')+(cur==='hidden'&&hiddenUnlocked&&hiddenNoteCount()>0?item('hsettings','Hidden Notes settings','Change PIN/password · Lock now'):'')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
@@ -1304,20 +1311,33 @@ function hashPw(v){
 }
 function hiddenAuthType(){return localStorage.getItem('notes-hide-auth-type')==='pin'?'pin':'password'}
 function hasHiddenCredential(){return !!localStorage.getItem('notes-hide-hash')}
+function hiddenNoteCount(){return msgs.reduce((count,m)=>count+(m&&m.hidden?1:0),0)}
+function clearHiddenCredentialIfEmpty(){
+ if(hiddenNoteCount()>0)return false;
+ try{localStorage.removeItem('notes-hide-hash');localStorage.removeItem('notes-hide-auth-type')}catch(_){}
+ hiddenUnlocked=false;
+ if(cur==='hidden')cur='all';
+ return true
+}
+function syncHiddenCredentialLifecycle(){if(hiddenNoteCount()===0)clearHiddenCredentialIfEmpty()}
 function openHiddenAuthSetup(purpose){
  hiddenSetupPurpose=purpose;shStack=[];sh.dataset.type='hideauthsetup';
- sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · PRIVACY</div><div class="context-title">Secure Hidden Notes</div><div class="context-preview">'+(purpose==='hide'?'Create a PIN or password before hiding this note.':purpose==='migrate'?'Choose a PIN or password for future unlocks.':'Create a PIN or password to open Hidden Notes.')+'</div></div><div class="context-actions">'+
+ const title=purpose==='change'?'Change Hidden Notes security':'Secure Hidden Notes';
+ const description=purpose==='hide'?'Create a PIN or password before hiding this note.':purpose==='migrate'?'Choose a PIN or password for future entry.':purpose==='change'?'Choose a new PIN or password. Your hidden notes will remain intact.':'Create a PIN or password before your first hidden note.';
+ sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-head-line"><span class="context-eyebrow">FZ NOTES · PRIVACY</span><button type="button" class="context-close" data-k="x" aria-label="Close menu">×</button></div><div class="context-title">'+title+'</div><div class="context-preview">'+description+'</div></div><div class="context-actions">'+
   contextMenuRow('createpin','Create PIN (4–12 digits)',contextIcons.pin)+
   contextMenuRow('createpassword','Create password',contextIcons.lock)+
   '<div class="context-menu-divider"></div>'+contextMenuRow('x','Cancel',contextIcons.close,'cancel')+'</div>';
  sh.classList.add('on')
 }
 function enterHiddenNotes(){
+ if(hiddenNoteCount()===0){syncHiddenCredentialLifecycle();cur='all';hiddenUnlocked=false;lk.classList.remove('on');sh.classList.remove('on');render();toast('No hidden notes yet. Hide a note first.',2600);return}
  hiddenUnlocked=true;hiddenSetupPurpose=null;hideTarget=null;cur='hidden';
  lk.classList.remove('on');sh.classList.remove('on');clearCtx();render();toast('Hidden Notes unlocked',1800)
 }
 function requestHiddenNotesAccess(){
  hiddenUnlocked=false;
+ if(hiddenNoteCount()===0){clearHiddenCredentialIfEmpty();if(cur==='hidden'){cur='all';render()}toast('No hidden notes yet. Hide a note to secure Hidden Notes.',2800);return}
  if(cur==='hidden'){cur='all';clearCtx();render()}
  if(!hasHiddenCredential()){hideTarget=null;openHiddenAuthSetup('enter');return}
  const pin=hiddenAuthType()==='pin';
@@ -1325,6 +1345,7 @@ function requestHiddenNotesAccess(){
 }
 function requestHideNoteAuth(id){
  hideTarget=id;
+ if(hiddenNoteCount()===0)clearHiddenCredentialIfEmpty();
  if(!hasHiddenCredential()){openHiddenAuthSetup('hide');return}
  const pin=hiddenAuthType()==='pin';
  ask(pin?'hidepinconfirm':'hidepwconfirm',pin?'Enter PIN to hide this note':'Enter password to hide this note')
@@ -1334,9 +1355,17 @@ function hideSelected(){
  if(m){m.hidden=true;m.p=0;save();render();toast('Note hidden securely')}
  hideTarget=null;hiddenSetupPurpose=null
 }
+function openHiddenSettings(){
+ if(!hiddenUnlocked||cur!=='hidden'||hiddenNoteCount()===0){toast('Unlock Hidden Notes first',2400);return}
+ shStack=[];sh.dataset.type='hidden-settings';
+ const count=hiddenNoteCount();
+ sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-head-line"><span class="context-eyebrow">FZ NOTES · PRIVACY</span><button type="button" class="context-close" data-k="x" aria-label="Close settings">×</button></div><div class="context-title">Hidden Notes settings</div><div class="context-preview">Security and access control</div></div><div class="hidden-settings-summary">'+count+' hidden note'+(count===1?'':'s')+' · authentication is required every time.<div class="hidden-settings-status">Auto-lock on exit is always on</div></div><div class="context-actions">'+contextMenuRow('changeAuth','Change PIN / password',contextIcons.lock)+contextMenuRow('lockNow','Lock Hidden Notes now',contextIcons.close,'cancel')+'</div>';
+ sh.classList.add('on')
+}
 function completeHiddenCredentialPrompt(authMode,v){
  const isPin=authMode.startsWith('hidepin');
  const isSetup=authMode==='hidepinset'||authMode==='hidepwset';
+ const isSettingsVerify=authMode==='hidepinsettingsverify'||authMode==='hidepwsettingsverify';
  if(isSetup){
   if(isPin&&!/^\d{4,12}$/.test(v)){toast('PIN 4 se 12 digits ka hona chahiye',2800);ask(authMode,'Create PIN (4–12 digits)');return}
   if(!isPin&&v.length<4){toast('Password kam se kam 4 characters ka rakhein',2800);ask(authMode,'Create password (4+ characters)');return}
@@ -1344,7 +1373,9 @@ function completeHiddenCredentialPrompt(authMode,v){
    localStorage.setItem('notes-hide-hash',hash);
    localStorage.setItem('notes-hide-auth-type',isPin?'pin':'password');
    const purpose=hiddenSetupPurpose||(hideTarget!==null?'hide':'enter');
-   if(purpose==='hide')hideSelected();else enterHiddenNotes()
+   if(purpose==='hide')hideSelected();
+   else if(purpose==='change'){hiddenSetupPurpose=null;enterHiddenNotes()}
+   else enterHiddenNotes()
   }).catch(()=>{toast('Hidden Notes security setup nahi ho saka',3000);ask(authMode,isPin?'Create PIN (4–12 digits)':'Create password (4+ characters)')});
   return
  }
@@ -1355,17 +1386,17 @@ function completeHiddenCredentialPrompt(authMode,v){
    toast(isPin?'Wrong PIN':'Incorrect password',2400);
    ask(authMode,isPin?'Enter Hidden Notes PIN':'Enter Hidden Notes password');return
   }
-  if(!isPin&&!localStorage.getItem('notes-hide-auth-type')&&(authMode==='hidepwunlock'||authMode==='hidepwconfirm'||authMode==='hidepwcheck')){
-   hiddenSetupPurpose=confirmMode&&hideTarget!==null?'hide':'migrate';
+  if(!isPin&&!localStorage.getItem('notes-hide-auth-type')&&(authMode==='hidepwunlock'||authMode==='hidepwconfirm'||authMode==='hidepwcheck'||isSettingsVerify)){
+   hiddenSetupPurpose=isSettingsVerify?'change':confirmMode&&hideTarget!==null?'hide':'migrate';
    openHiddenAuthSetup(hiddenSetupPurpose);
    return
   }
   localStorage.setItem('notes-hide-auth-type',expectedType);
   if(confirmMode){hideSelected();return}
+  if(isSettingsVerify){openHiddenAuthSetup('change');return}
   enterHiddenNotes()
  }).catch(()=>{toast('Verification failed',2500);ask(authMode,isPin?'Enter PIN':'Enter password')})
 }
-function inView(m){if(m.hidden)return cur==='hidden'&&hiddenUnlocked;if(cur==='hidden')return false;return cur==='all'?(m.k||'gen')!=='quick':(m.k||'gen')===cur}
 function matchesFilter(m){const task=Array.isArray(m.c),done=task&&m.c.length>0&&m.c.every(i=>i.s===1),d=new Date(m.t),n=new Date();if(searchFilter==='focus')return task&&!done;if(searchFilter==='pinned')return !!m.p;if(searchFilter==='tasks')return task;if(searchFilter==='open')return task&&!done;if(searchFilter==='done')return task&&done;if(searchFilter==='overdue')return task&&m.due&&m.due<Date.now()&&!done;if(searchFilter==='today')return d.toDateString()===n.toDateString();return true}
 $('#filters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;searchFilter=b.dataset.filter;$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render()});
 const cntText=m=>{const n=m.c.length,d=m.c.filter(i=>i.s===1).length,r=m.c.filter(i=>i.s===2).length;return d+'/'+n+' ho gaya'+(r?' · '+r+' nahi mila':'')};
