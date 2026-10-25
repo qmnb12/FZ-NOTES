@@ -793,6 +793,7 @@ async function doGoogleBackup(quiet=false,automatic=false,cachedOnly=false){
   const r=JSON.parse(await native('backup',{key,data:backupPayload(),targets:[{type,token}]}));
   if(Number(r.successCount||0)<1)throw new Error(r.msg||'Google Drive backup upload failed');
   try{localStorage.setItem('notes-last-backup',noteStamp());localStorage.removeItem('notes-sync-error')}catch(_){}
+  const cloudStatus=sh.querySelector('[data-k="status"] .ms');if(cloudStatus)cloudStatus.textContent=lastBackup()||noteStamp();
   if(!quiet)toast('Google Drive backup complete · '+msgs.length+' notes',3500);
   return true;
  }catch(e){try{localStorage.setItem('notes-sync-error',e.message||'Drive backup failed')}catch(_){}if(!quiet)toast('Google Drive: '+e.message,4500);return false}
