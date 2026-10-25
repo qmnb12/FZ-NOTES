@@ -317,7 +317,12 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     @Override public int getItemViewType(int position) { return TYPE_MESSAGE; }
 
     @Override public Holder onCreateViewHolder(ViewGroup parent, int viewType) {
-        return new Holder(new NoteRow(context));
+        NoteRow row = new NoteRow(context);
+        // Give every message the full chat-column width. Otherwise wrap-content
+        // measurement can make the bubble's RIGHT gravity behave like left alignment.
+        row.setLayoutParams(new RecyclerView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return new Holder(row);
     }
 
     @Override public void onBindViewHolder(Holder holder, int position) {
