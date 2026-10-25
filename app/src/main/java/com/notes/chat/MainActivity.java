@@ -93,7 +93,7 @@ public class MainActivity extends Activity {
         nativeChatView.setBackgroundColor(Color.TRANSPARENT);
         nativeChatView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         nativeChatView.setClipToPadding(false);
-        nativeChatView.setPadding(dp(8), dp(7), dp(8), dp(54));
+        nativeChatView.setPadding(0, dp(7), 0, dp(54));
         nativeChatView.setItemViewCacheSize(12);
         nativeChatView.setNestedScrollingEnabled(false);
         nativeChatView.setLayoutManager(new LinearLayoutManager(this, RecyclerView.VERTICAL, false));
