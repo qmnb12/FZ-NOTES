@@ -601,16 +601,43 @@ function act(a){restore();
 $('#tb').addEventListener('mousedown',e=>e.preventDefault());
 $('#tb').addEventListener('click',e=>{const b=e.target.closest('button');if(b){act(b.dataset.a);if(!hasSel())$('#tb').classList.remove('on')}});
 window.nativeSelectionAction=function(action){
- const sel=getSelection(),live=!!(sel&&sel.rangeCount&&!sel.isCollapsed);
- const range=live?sel.getRangeAt(0).cloneRange():lastAnySelectionRange;
- if(!range){toast('Pehle text select karo');return false}
- const text=live?sel.toString():range.toString();
- if(!text){toast('Pehle text select karo');return false}
- const inEditor=ed.contains(range.startContainer)&&ed.contains(range.endContainer);
- if(action==='selectAll'){
-  if(!inEditor){toast('Select all sirf message box mein kaam karta hai',2500);return false}
-  const all=document.createRange();all.selectNodeContents(ed);if(sel){sel.removeAllRanges();sel.addRange(all)}saved=all.cloneRange();nativeSelectionSession=true;$('#tb').classList.add('native-selection-hidden');$('#tb').classList.remove('on');return true
+ const sel=window.getSelection();
+ const liveRange=sel&&sel.rangeCount?sel.getRangeAt(0).cloneRange():null;
+ const liveTextSelection=!!(liveRange&&!liveRange.collapsed);
+ const range=liveTextSelection?liveRange:(saved?saved.cloneRange():liveRange||lastAnySelectionRange);
+ const text=liveTextSelection?sel.toString():(range?range.toString():'');
+ const isInEditor=r=>!!r&&ed.contains(r.startContainer)&&ed.contains(r.endContainer);
+ const editorRange=isInEditor(liveRange)?liveRange:(isInEditor(saved)?saved.cloneRange():null);
+
+ if(action==='paste'){
+  if(!editorRange){toast('Paste ke liye message box mein cursor rakho',2600);return false}
+  native('clipboardread',{}).then(clipText=>{
+   if(!clipText){toast('Clipboard empty hai',2200);return}
+   ed.focus();
+   const current=window.getSelection();current.removeAllRanges();current.addRange(editorRange);
+   const inserted=document.execCommand('insertText',false,clipText);
+   if(!inserted){
+    const target=current.rangeCount?current.getRangeAt(0):editorRange;
+    target.deleteContents();target.insertNode(document.createTextNode(clipText));
+    target.collapse(false);current.removeAllRanges();current.addRange(target);
+   }
+   saved=null;const after=window.getSelection();
+   if(after.rangeCount&&ed.contains(after.anchorNode))saved=after.getRangeAt(0).cloneRange();
+   nativeSelectionSession=false;$('#tb').classList.remove('native-selection-hidden','on');
+   updateComposerControls();saveDraft();ed.dispatchEvent(new Event('input',{bubbles:true}));
+  }).catch(e=>toast('Paste nahi ho paya: '+(e.message||'clipboard read failed'),3200));
+  return true;
  }
+ if(action==='selectAll'){
+  if(!editorRange){toast('Select all ke liye message box mein cursor rakho',2600);return false}
+  ed.focus();const all=document.createRange();all.selectNodeContents(ed);
+  if(sel){sel.removeAllRanges();sel.addRange(all)}saved=all.cloneRange();
+  nativeSelectionSession=true;$('#tb').classList.add('native-selection-hidden');$('#tb').classList.remove('on');
+  return true;
+ }
+ if(!range){toast('Pehle text select karo');return false}
+ if(!text){toast('Pehle text select karo');return false}
+ const inEditor=isInEditor(range);
  if(action==='copy'){copy(text);return true}
  if(action==='cut'){
   if(!inEditor){toast('Cut sirf message box ke selected text par kaam karta hai',2800);return false}
