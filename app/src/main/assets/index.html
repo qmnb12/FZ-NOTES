@@ -347,10 +347,11 @@ body{min-height:100dvh}
 #tgcfg .cfgb .row input{flex:1;min-width:0}
 #tgcfg .cfgb button{border-radius:13px;padding:11px 13px;margin:5px 0 0;font-size:13px;font-weight:650;min-height:42px}
 #tgcfg .cfgb button.alt,#tgcfg .cfgb button.cfg-secondary{background:rgba(117,170,255,.1);border:1px solid rgba(117,170,255,.2);color:var(--text)}
+#tgcfg .cfgb button.cfg-primary-action{display:block;width:100%;min-height:54px;padding:14px 16px;margin-top:14px;background:linear-gradient(135deg,#82b5ff,#4b8ef2);border:0;color:#071528;font-size:15px;font-weight:750;box-shadow:0 6px 18px rgba(56,127,232,.19)}
 #tgcfg .cfg-footnote{font-size:11px;line-height:1.45;margin-top:10px}
 #tgcfg .cfg-actions{display:flex;gap:8px;margin-top:15px}
 #tgcfg .cfg-actions button{flex:1}
-#tgcfg .cfg-actions #c_save{background:linear-gradient(135deg,#82b5ff,#4b8ef2);color:#061427}
+#tgcfg .cfg-actions #c_save{background:rgba(117,170,255,.1);border:1px solid rgba(117,170,255,.2);color:var(--text)}
 #tgcfg .cfg-actions #c_tgClose{background:rgba(255,255,255,.06);border:1px solid var(--ln);color:var(--text)}
 @media(max-width:420px){#tgcfg .cfg-card{padding:12px}#tgcfg .cfgb{padding-left:12px;padding-right:12px}}
 
@@ -415,6 +416,7 @@ body{min-height:100dvh}
     <div class="cfg-card-title"><span class="cfg-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"/></svg></span><div><h4>Google account sync</h4><p class="hint">Same Google account se notes automatic restore aur backup ho sakte hain.</p></div></div>
     <div id="c_driveStatus" class="cfg-status"><span class="status-dot"></span><span>Not connected</span></div>
     <div class="row"><button id="c_driveConnect">Connect Google account</button><button id="c_driveDisconnect" class="alt">Disconnect</button></div>
+    <div class="row cfg-quick-actions"><button id="c_driveBackup" class="cfg-secondary">Back up now</button><button id="c_driveRestore" class="cfg-secondary">Restore notes</button></div>
     <p class="hint cfg-footnote">New/edit notes ke baad backup, app open hone par backup aur app background mein jaate waqt best-effort backup. Fresh install ya Clear data ke baad connect karte hi latest Drive backup restore hoga, agar backup available hai.</p>
     <p class="hint cfg-footnote">Backup AES-GCM se encrypt hota hai. Passwordless restore ke liye random key Google ke hidden app folder mein store hoti hai; apna Google account secure rakhein.</p>
   </section>
@@ -423,19 +425,23 @@ body{min-height:100dvh}
 <div id="tgcfg"><div class="cfgb">
   <div class="cfg-top"><div class="cfg-brand"><span class="cfg-brand-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 4-3.2 16-5.4-5-3 2.9.4-5.2L19 6 7.2 13.4 3 12l18-8Z"/></svg></span><div><h3>Telegram archive</h3><p class="hint">Separate encrypted backup copy</p></div></div><span class="cfg-badge">TELEGRAM</span></div>
   <section class="cfg-card">
+    <div id="c_tgLast" class="cfg-footnote">Last Telegram archive: No successful archive yet</div>
     <label class="cfg-label" for="c_tgToken">Bot token</label><input id="c_tgToken" placeholder="Token from @BotFather" autocomplete="off">
     <label class="cfg-label" for="c_tgChat">Chat ID</label><div class="row"><input id="c_tgChat" placeholder="Telegram chat ID" autocomplete="off"><button id="c_tgDet" class="alt">Detect</button></div>
     <label class="cfg-label" for="c_tgSchedule">Automatic backup schedule</label>
     <select id="c_tgSchedule"><option value="manual">Manual only — when I tap backup</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly (every 30 days)</option></select>
     <p class="hint cfg-footnote">Scheduled archive needs a network connection. Google Drive remains the automatic restore source.</p>
-    <button id="c_tgNow" class="cfg-secondary">Save backup to Telegram now</button>
+    <button id="c_tgNow" class="cfg-primary-action">Save backup to Telegram</button>
   </section>
-  <div class="cfg-actions"><button id="c_save">Save Telegram settings</button><button id="c_tgClose" class="alt">Close</button></div>
+  <div class="cfg-actions"><button id="c_save" class="alt">Save Telegram settings</button><button id="c_tgClose" class="alt">Close</button></div>
 </div></div>
 <div id="qk" class="ov"><div class="cfgb"><h3>⚡ Quick note</h3><p class="hint">Topic se alag Quick folder me save hoga.</p><textarea id="qkt" rows="4" placeholder="Jaldi note likho…"></textarea><div class="row"><button id="qks">Save</button><button id="qkx" class="alt">Cancel</button></div></div></div>
 <div id="sh"></div><div id="toast"></div>
 <script>
 const $=s=>document.querySelector(s),ed=$('#ed'),chat=$('#chat'),sh=$('#sh'),lk=$('#lk'),lki=$('#lki');
+let shStack=[];
+function pushSheetState(){if(!sh.classList.contains('on'))return;shStack.push({html:sh.innerHTML,dataset:Object.assign({},sh.dataset)});}
+function restoreSheetState(){if(shStack.length){const state=shStack.pop();sh.innerHTML=state.html;Array.from(sh.attributes).forEach(a=>{if(a.name.indexOf('data-')===0)sh.removeAttribute(a.name)});Object.keys(state.dataset).forEach(k=>sh.dataset[k]=state.dataset[k]);sh.classList.add('on');return true;}sh.classList.remove('on');return true;}
 function updateComposerControls(){const hasText=!!ed.innerText.trim();$('#cmp').classList.toggle('has-text',hasText)}
 let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',searchFilter='all',selMode=false,listMode=false,listTitle='',tt,replyId=null,editId=null,saved=null,mode='',pressed=0,hiddenUnlocked=false,draftTimer=null;
 let hadLocalNotesState=false;try{hadLocalNotesState=localStorage.getItem('notes-chat')!==null||localStorage.getItem('notes-topics')!==null}catch(e){}
@@ -493,8 +499,8 @@ function handleAppBack(){
  if($('#sq').classList.contains('on')){$('#sq').classList.remove('on');return true}
  if($('#lk').classList.contains('on')){$('#lk').classList.remove('on');return true}
  if($('#tb').classList.contains('on')){$('#tb').classList.remove('on');return true}
- if(selMode){$('#sh').classList.remove('on');clearSelection();render();return true}
- if($('#sh').classList.contains('on')){$('#sh').classList.remove('on');return true}
+ if(selMode){clearSelection();render();if(sh.classList.contains('on'))restoreSheetState();return true}
+ if(sh.classList.contains('on')){restoreSheetState();return true}
  if(listMode){saveDraft();listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';return true}
  if(ed.innerText.trim()||$('#taskdue').value)saveDraft();
  return false
@@ -570,10 +576,10 @@ let timer,pressTarget=null,pressX=0,pressY=0,pressMenuArea=false;
 function noteCopyText(m){const tmp=document.createElement('div');tmp.innerHTML=m.h||'';tmp.querySelectorAll('.tg,.tm,.mn,.due,.cnt').forEach(n=>n.remove());let t=(tmp.innerText||tmp.textContent||'').trim();if(m.c)t+=(t?'\n':'')+m.c.map(i=>i.x).join('\n');return t}
 function keepSelectedVisible(id){chat.classList.add('sheet-open');const adjust=()=>{if(!sh.classList.contains('on'))return;const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b)return;const br=b.getBoundingClientRect(),sr=sh.getBoundingClientRect(),cr=chat.getBoundingClientRect();const top=Math.max(cr.top,0)+8,bottom=Math.min(cr.bottom,sr.top,window.innerHeight)-12;if(bottom<=top)return;const available=bottom-top;let desiredTop=br.top;if(br.height>=available)desiredTop=top;else if(br.bottom>bottom)desiredTop=bottom-br.height;else if(br.top<top)desiredTop=top;const delta=br.top-desiredTop;if(Math.abs(delta)>1)chat.scrollTop+=delta};requestAnimationFrame(()=>requestAnimationFrame(adjust));setTimeout(adjust,280)}
  sh.addEventListener('transitionend',e=>{if(e.target===sh&&!sh.classList.contains('on'))chat.classList.remove('sheet-open')});
- function openSheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;const txt=noteCopyText(m);
+ function openSheet(id){shStack=[];const m=msgs.find(m=>m.id==id);if(!m)return;const txt=noteCopyText(m);
  sh.innerHTML='<button data-k="reply">↩️ Reply</button><button data-k="edit">✏️ Edit</button><button data-k="copy">▢ Copy text</button><button data-k="pin">'+(m.p?'📌 Unpin':'📌 Pin')+'</button><button data-k="hide">'+(m.hidden?'🔓 Unhide note':'🔒 Hide note')+'</button><button data-k="mv">📁 Move to topic</button><button data-k="sel">☑ Select</button><button data-k="del" class="del">🗑 Delete</button><button data-k="x">✕ Cancel</button>';
  sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=txt;sh.classList.add('on');keepSelectedVisible(id)}
-function openCopySheet(id){const m=msgs.find(m=>m.id==id);if(!m)return;sh.innerHTML='<button data-k="copy">▢ Copy text</button><button data-k="x">✕ Cancel</button>';sh.dataset.id=id;sh.dataset.type='copyonly';sh.dataset.txt=noteCopyText(m);sh.classList.add('on')}
+function openCopySheet(id){shStack=[];const m=msgs.find(m=>m.id==id);if(!m)return;sh.innerHTML='<button data-k="copy">▢ Copy text</button><button data-k="x">✕ Cancel</button>';sh.dataset.id=id;sh.dataset.type='copyonly';sh.dataset.txt=noteCopyText(m);sh.classList.add('on')}
 function startNotePress(e){const b=e.target.closest('.b');if(!b||selMode||e.target.closest('.ci,.rp,.a'))return;clearTimeout(timer);pressTarget=b;pressX=e.clientX||0;pressY=e.clientY||0;const id=b.dataset.id;timer=setTimeout(()=>{if(!pressTarget)return;selectNote(id);openSheet(id);pressTarget=null},520)}
 function cancelNotePress(){clearTimeout(timer);pressTarget=null}
 chat.addEventListener('pointerdown',startNotePress);
@@ -638,23 +644,21 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(sh.dataset.type==='multi-select'){if(k==='x'){sh.classList.remove('on');return}const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);sh.classList.remove('on');if(k==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));return}if(k==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render()}return}
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='cloud'){
-  if(k==='tgNow'){
-   const c=cfgGet();
-   if(!c.tgToken||!c.tgChat){openTgCfg();toast('Pehle Telegram settings save karo',2600);return}
-   sh.classList.remove('on');doTelegramBackup();return
-  }
-  if(k==='tgcfg'){openTgCfg();return}
-  sh.classList.remove('on');
-  if(k==='x')return;
+  if(k==='x'){restoreSheetState();return}
   if(k==='status'){toast(lastBackup()?'Last successful Drive backup: '+lastBackup():'No successful Drive backup recorded',3000);return}
   if(k==='cset'){openCfg();return}
-  if(k==='cbk'){if(!cfgGet().driveOn){openCfg();toast('Connect Google account first',2600);return}doGoogleBackup();return}
+  if(k==='tgcfg'){openTgCfg();return}
+  if(k==='tgNow'){
+   const c=cfgGet();
+   if(!c.tgToken||!c.tgChat){openTgCfg();toast('Telegram settings mein bot token aur chat ID save karo',2800);return}
+   shStack=[];sh.classList.remove('on');doTelegramBackup();return
+  }
   if(k==='crs'){openDriveHistory();return}
-  if(k==='tgstatus'){toast(lastTelegramBackup()?'Last Telegram backup: '+lastTelegramBackup():'No successful Telegram backup recorded',3000);return}
-  if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Drive backup nahi mila');return}doDriveRestore(driveHistoryItems[i].id);return}
+  if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Drive backup nahi mila');return}restoreSheetState();doDriveRestore(driveHistoryItems[i].id);return}
   return}
- if(sh.dataset.type==='menu'){sh.classList.remove('on');
-  if(k==='cl')openCloud();
+ if(sh.dataset.type==='menu'){
+  if(k==='cl'){pushSheetState();openCloud();return}
+  sh.classList.remove('on');
   if(k==='srch'){$('#sq').classList.add('on');$('#sqi').focus()}
   if(k==='bk'){exportBackupFile();return}
   if(k==='rs'||k==='pf'){pickFile();return}
@@ -717,7 +721,7 @@ function cloudRow(key, icon, title, sub) {
  return '<button type="button" class="cloud-row" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+icon+'</svg></span><span class="mt"><strong>'+title+'</strong><span class="ms">'+sub+'</span></span></button>';
 }
 function openCloud(){
- const lb=lastBackup(),lt=lastTelegramBackup(),c=cfgGet();
+ const lb=lastBackup(),c=cfgGet();
  const icons={
   drive:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"/><path d="M12 12v7m-3-3 3 3 3-3"/>',
   status:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',
@@ -729,18 +733,16 @@ function openCloud(){
  };
  sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · BACKUP</span><h3>Cloud backup</h3><p>Google Drive sync and encrypted Telegram archive</p></div>'+
   '<div class="cloud-group-label">Google Drive</div>'+
-  cloudRow('cbk',icons.drive,'Back up now',c.driveOn?'Save encrypted notes to your Google account':'Connect Google account to start sync')+
   cloudRow('status',icons.status,'Last Drive backup',lb||'No successful backup yet')+
-  cloudRow('crs',icons.restore,'Restore notes','Choose one of your recent Drive backups')+
-  cloudRow('cset',icons.settings,'Google Drive settings',c.driveOn?'Account connected':'Connect or disconnect your account')+
+  cloudRow('cset',icons.settings,'Google Drive settings',c.driveOn?'Account connected':'Connect your Google account')+
   '<div class="cloud-divider"></div><div class="cloud-group-label">Telegram archive</div>'+
   cloudRow('tgNow',icons.telegram,'Save backup to Telegram','Send one encrypted archive now')+
-  cloudRow('tgstatus',icons.status,'Last Telegram archive',lt||'No successful Telegram backup yet')+
   cloudRow('tgcfg',icons.settings,'Telegram settings','Bot connection and automatic backup schedule')+
   cloudRow('x',icons.cancel,'Close','');
  sh.dataset.type='cloud';sh.classList.add('on');
 }
 let driveHistoryItems=[];async function openDriveHistory(){
+ pushSheetState();
  try{
   toast('Google Drive backups load ho rahe hain…',3000);
   const token=await native('driveauth',{});
@@ -762,6 +764,8 @@ function openCfg(){
 function openTgCfg(){
  const c=cfgGet();
  ['tgToken','tgChat','tgSchedule'].forEach(f=>{const el=$('#c_'+f);if(el)el.value=c[f]||(f==='tgSchedule'?'manual':'')});
+ const last=localStorage.getItem('notes-last-telegram-backup')||'';
+ $('#c_tgLast').textContent='Last Telegram archive: '+(last||'No successful archive yet');
  $('#tgcfg').classList.add('on');
 }
 const lastBackup=()=>{try{return localStorage.getItem('notes-last-backup')||''}catch(e){return ''}};
@@ -832,6 +836,8 @@ async function saveTelegramSettings(){
  }catch(e){toast('Settings save failed: '+e.message,4500);return false}
 }
 $('#c_close').onclick=()=>$('#cfg').classList.remove('on');
+$('#c_driveBackup').onclick=()=>{if(!cfgGet().driveOn){toast('Google account connect kar raha hoon…',2500);$('#c_driveConnect').click();return}doGoogleBackup()};
+$('#c_driveRestore').onclick=()=>{if(!cfgGet().driveOn){toast('Pehle Google account connect karo',2800);return}$('#cfg').classList.remove('on');openDriveHistory()};
 $('#c_driveConnect').onclick=async()=>{
  try{
   toast('Google account connect ho raha hai…',3500);
@@ -936,7 +942,7 @@ $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
 $('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
-$('#hm').onclick=()=>{const ico={
+$('#hm').onclick=()=>{shStack=[];const ico={
 search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',
 cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',
 backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',
