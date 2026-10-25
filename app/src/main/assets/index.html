@@ -319,6 +319,7 @@ body{min-height:100dvh}
 #cfg .cfgb select{color-scheme:dark}
 #cfg .cfgb .row{align-items:stretch;gap:7px}
 #cfg .cfgb .row input{flex:1;min-width:0}
+#cfg .cfgb .row button{flex:1;min-width:0}
 #cfg .cfgb button{border-radius:13px;padding:11px 13px;margin:5px 0 0;font-size:13px;font-weight:650;min-height:42px}
 #cfg .cfgb button.alt,#cfg .cfgb button.cfg-secondary{background:rgba(117,170,255,.1);border:1px solid rgba(117,170,255,.2);color:var(--text)}
 #cfg .cfg-footnote{font-size:11px;line-height:1.45;margin-top:10px}
@@ -742,11 +743,11 @@ function openCloud(){
  sh.dataset.type='cloud';sh.classList.add('on');
 }
 let driveHistoryItems=[];async function openDriveHistory(){
- pushSheetState();
  try{
   toast('Google Drive backups load ho rahe hain…',3000);
   const token=await native('driveauth',{});
   driveHistoryItems=JSON.parse(await native('drivehistory',{token}));
+  pushSheetState();
   sh.innerHTML='<div style="padding:8px 14px;color:var(--mut);font-size:13px">Google Drive backup history · newest first</div>'+
    (driveHistoryItems.length?driveHistoryItems.map((x,i)=>'<button data-k="drv:'+i+'">📦 '+esc(x.name||'FZ Notes backup')+'<span class="ms">'+esc(x.modifiedTime||x.createdTime||'Google Drive backup')+'</span></button>').join(''):'<div style="padding:12px;color:var(--mut)">Koi Google Drive backup nahi mila. Pehle Backup now karein.</div>')+
    '<button data-k="x">Cancel</button>';
