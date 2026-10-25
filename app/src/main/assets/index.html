@@ -791,6 +791,88 @@ body.selection-mode-out #chat .b.sel{
  background:rgba(255,255,255,.045)!important;color:inherit!important;line-height:1.4!important;
 }
 :root[data-theme="light"] #chat .msgtext .quote,:root[data-theme="light"] #ed .quote{background:rgba(20,45,80,.045)!important}
+
+/* FZ NOTES selection/rich-text pass — authoritative override for legacy styles. */
+#chat .b{
+ position:relative!important;overflow:visible!important;box-sizing:border-box!important;
+ transition:transform .20s cubic-bezier(.2,.8,.2,1),border-color .18s ease,box-shadow .20s cubic-bezier(.2,.8,.2,1),filter .18s ease!important;
+}
+#chat .b::before,#chat .b::after{
+ content:""!important;position:absolute!important;left:-30px!important;top:50%!important;margin:0!important;
+ width:23px!important;height:23px!important;box-sizing:border-box!important;border-radius:50%!important;
+ display:grid!important;place-items:center!important;pointer-events:none!important;
+ opacity:0!important;transform:translateY(-50%) scale(.68)!important;
+ transition:opacity .16s ease,transform .20s cubic-bezier(.18,.8,.22,1),background-color .16s ease,border-color .16s ease,box-shadow .16s ease!important;
+}
+#chat .b::before{
+ background:transparent!important;border:2px solid rgba(147,169,196,.82)!important;
+ box-shadow:0 1px 4px rgba(0,0,0,.14)!important;
+}
+#chat .b::after{
+ color:#fff!important;border:0!important;background:transparent!important;box-shadow:none!important;
+ font:800 14px/1 system-ui,-apple-system,sans-serif!important;
+}
+body.selection-mode #chat .b::before,body.selection-mode-out #chat .b::before{
+ opacity:1!important;transform:translateY(-50%) scale(1)!important;
+}
+body.selection-mode #chat .b.sel::before{
+ content:""!important;background:#3390ec!important;border-color:#3390ec!important;
+ box-shadow:0 2px 7px rgba(51,144,236,.28)!important;
+}
+body.selection-mode #chat .b.sel::after{
+ content:"✓"!important;opacity:1!important;transform:translateY(-50%) scale(1)!important;
+}
+body.selection-mode-out #chat .b::before,body.selection-mode-out #chat .b::after{
+ opacity:0!important;transform:translateY(-50%) scale(.68)!important;
+}
+body.selection-mode #chat .b.sel{
+ border:1px solid rgba(51,144,236,.72)!important;
+ box-shadow:inset 0 0 0 9999px rgba(51,144,236,.13),0 0 0 1px rgba(51,144,236,.16)!important;
+ transform:translateX(-1px)!important;filter:none!important;z-index:2!important;
+}
+body.selection-mode-out #chat .b.sel{
+ box-shadow:inset 0 0 0 9999px rgba(51,144,236,0),0 0 0 0 rgba(51,144,236,0)!important;
+ transform:translateX(0)!important;
+}
+body.selection-mode header{
+ max-height:0!important;padding-top:0!important;padding-bottom:0!important;margin-top:0!important;margin-bottom:0!important;
+ opacity:0!important;transform:translateY(-6px)!important;pointer-events:none!important;
+}
+body.selection-mode #sq,body.selection-mode #filters,body.selection-mode #pin{display:none!important}
+#selbar.on{animation:telegramSelectBarIn .20s cubic-bezier(.18,.8,.22,1) both!important}
+#selbar.leaving{animation:telegramSelectBarOut .16s ease-in both!important;pointer-events:none!important}
+@keyframes telegramSelectBarIn{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes telegramSelectBarOut{to{opacity:0;transform:translateY(-7px)}}
+#chat .msgtext .mono,#ed .mono{
+ display:inline!important;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+ font-size:.9em!important;font-weight:500!important;line-height:1.4!important;color:inherit!important;
+ background:rgba(8,16,28,.22)!important;border:0!important;border-radius:4px!important;padding:1px 4px!important;
+ box-decoration-break:clone;-webkit-box-decoration-break:clone;overflow-wrap:anywhere!important;
+}
+:root[data-theme="light"] #chat .msgtext .mono,:root[data-theme="light"] #ed .mono{background:rgba(28,58,96,.10)!important}
+#chat .msgtext .code,#ed .code{
+ display:block!important;position:relative!important;box-sizing:border-box!important;width:100%!important;max-width:100%!important;
+ margin:6px 0!important;padding:24px 10px 10px!important;border:0!important;border-left:2px solid var(--acc)!important;
+ border-radius:0 6px 6px 0!important;background:rgba(8,16,28,.23)!important;color:inherit!important;box-shadow:none!important;
+ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-size:.86em!important;
+ font-weight:400!important;line-height:1.45!important;white-space:pre-wrap!important;overflow-wrap:anywhere!important;word-break:break-word!important;
+}
+#chat .msgtext .code::before,#ed .code::before{content:none!important;display:none!important}
+#chat .msgtext .code::after{
+ content:"Copy"!important;display:block!important;position:absolute!important;top:5px!important;right:7px!important;
+ margin:0!important;padding:3px 4px!important;color:var(--acc)!important;background:transparent!important;border:0!important;
+ font:600 11px/1.2 system-ui,-apple-system,sans-serif!important;pointer-events:none!important;
+}
+#chat .msgtext .quote,#ed .quote{
+ display:block!important;box-sizing:border-box!important;margin:5px 0!important;padding:5px 9px!important;
+ border:0!important;border-left:2px solid var(--acc)!important;border-radius:0 5px 5px 0!important;
+ background:rgba(255,255,255,.05)!important;color:inherit!important;line-height:1.42!important;
+}
+:root[data-theme="light"] #chat .msgtext .quote,:root[data-theme="light"] #ed .quote{background:rgba(28,58,96,.055)!important}
+@media(prefers-reduced-motion:reduce){
+ #chat .b,#chat .b::before,#chat .b::after,#selbar{transition:none!important;animation:none!important}
+}
+
 </style>
 </head>
 <body>
@@ -1125,34 +1207,58 @@ function openSheet(id){
   sh.dataset.id=id;sh.dataset.type='msg';sh.dataset.txt=txt;sh.classList.add('on');keepSelectedVisible(id)
 }
 function openCopySheet(id){shStack=[];const m=msgs.find(m=>m.id==id);if(!m)return;sh.innerHTML='<button data-k="copy">▢ Copy text</button><button data-k="x">✕ Cancel</button>';sh.dataset.id=id;sh.dataset.type='copyonly';sh.dataset.txt=noteCopyText(m);sh.classList.add('on')}
-let longPressClickPending=false,longPressClickTimer=0;
+let longPressClickPending=false,longPressClickTimer=0,pressPointerId=null;
 function startNotePress(e){
-  const target=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
-  if(!target||target.closest('.ci,.rp,.a,.mn,a,button,input,textarea,select,[contenteditable="true"]'))return;
-  const b=target.closest('.b');if(!b||selMode)return;
-  clearTimeout(timer);pressTarget=b;pressX=e.clientX||0;pressY=e.clientY||0;const id=b.dataset.id;
-  timer=setTimeout(()=>{
-    if(!pressTarget)return;
-    pressed=Date.now();longPressClickPending=true;
-    clearTimeout(longPressClickTimer);
-    longPressClickTimer=setTimeout(()=>{longPressClickPending=false},700);
-    selectNote(id);pressTarget=null
-  },490)
+ const target=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
+ if(!target||target.closest('.ci,.rp,.a,.mn,a,button,input,textarea,select,[contenteditable="true"]'))return;
+ const bubble=target.closest('#chat .b');
+ if(!bubble||selMode)return;
+ cancelNotePress();
+ pressTarget=bubble;pressX=Number(e.clientX)||0;pressY=Number(e.clientY)||0;
+ pressPointerId=e.pointerId===undefined?null:e.pointerId;
+ const id=bubble.dataset.id;
+ timer=setTimeout(()=>{
+  if(pressTarget!==bubble)return;
+  pressTarget=null;timer=0;pressPointerId=null;
+  pressed=Date.now();longPressClickPending=true;
+  clearTimeout(longPressClickTimer);
+  longPressClickTimer=setTimeout(()=>{longPressClickPending=false},450);
+  selectNote(id);
+ },480);
 }
-function cancelNotePress(){clearTimeout(timer);pressTarget=null}
-chat.addEventListener('pointerdown',startNotePress);
-chat.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;startNotePress({target:e.target,clientX:t.clientX,clientY:t.clientY})},{passive:true});
-['pointerup','pointercancel','pointerleave','touchend','touchcancel'].forEach(t=>chat.addEventListener(t,cancelNotePress));
-chat.addEventListener('pointermove',e=>{if(pressTarget&&(Math.abs(e.clientX-pressX)>14||Math.abs(e.clientY-pressY)>14))cancelNotePress()},{passive:true});
-chat.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(pressTarget&&t&&(Math.abs(t.clientX-pressX)>14||Math.abs(t.clientY-pressY)>14))cancelNotePress()},{passive:true});
-chat.addEventListener('contextmenu',e=>{if(e.target.closest('.b')){e.preventDefault();e.stopPropagation()}});
+function cancelNotePress(){
+ if(timer)clearTimeout(timer);
+ timer=0;pressTarget=null;pressPointerId=null;
+}
+function moveNotePress(e){
+ if(!pressTarget)return;
+ if(e.pointerId!==undefined&&pressPointerId!==null&&e.pointerId!==pressPointerId)return;
+ const x=Number(e.clientX)||0,y=Number(e.clientY)||0;
+ if(Math.abs(x-pressX)>13||Math.abs(y-pressY)>13)cancelNotePress();
+}
+/* Use exactly one input path: parallel pointer + touch handlers were resetting the same long-press timer. */
+if(window.PointerEvent){
+ chat.addEventListener('pointerdown',startNotePress,{passive:true});
+ document.addEventListener('pointerup',cancelNotePress,true);
+ document.addEventListener('pointercancel',cancelNotePress,true);
+ document.addEventListener('pointermove',moveNotePress,{capture:true,passive:true});
+}else{
+ chat.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(t)startNotePress({target:e.target,clientX:t.clientX,clientY:t.clientY})},{passive:true});
+ document.addEventListener('touchend',cancelNotePress,{capture:true,passive:true});
+ document.addEventListener('touchcancel',cancelNotePress,{capture:true,passive:true});
+ document.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(!pressTarget||!t)return;if(Math.abs(t.clientX-pressX)>13||Math.abs(t.clientY-pressY)>13)cancelNotePress()},{capture:true,passive:true});
+}
+chat.addEventListener('contextmenu',e=>{
+ const target=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
+ if(target&&target.closest('#chat .b')){e.preventDefault();e.stopPropagation()}
+});
 chatwSelectTimestampGuard();
 function openPhotoViewer(src){if(!src)return;let viewer=document.getElementById('photoViewer');if(!viewer){viewer=document.createElement('div');viewer.id='photoViewer';viewer.innerHTML='<button type="button" aria-label="Close photo">×</button><img alt="Full size photo">';document.body.appendChild(viewer);viewer.addEventListener('click',()=>viewer.classList.remove('on'));viewer.querySelector('img').addEventListener('click',e=>e.stopPropagation());viewer.querySelector('button').addEventListener('click',()=>viewer.classList.remove('on'))}viewer.querySelector('img').src=src;viewer.classList.add('on')}
 chat.addEventListener('click',e=>{
  if(longPressClickPending){longPressClickPending=false;clearTimeout(longPressClickTimer);e.preventDefault();e.stopPropagation();return}
  if(Date.now()-pressed<650&&!e.target.closest('.ci')&&!selMode){e.preventDefault();e.stopPropagation();return}
  const ci=e.target.closest('.ci');if(ci){const bb=ci.closest('.b'),m=msgs.find(x=>x.id==bb.dataset.id);if(m&&m.c){const it=m.c[+ci.dataset.i];it.s=(it.s+1)%3;ci.className='ci s'+it.s;bb.querySelector('.cnt').textContent=cntText(m);if(m.due)scheduleReminder(m);save()}return}
- const sbx=e.target.closest('.b');if(selMode){if(sbx){const i=+sbx.dataset.id;if(sel.has(i))sel.delete(i);else sel.add(i);sbx.classList.toggle('sel',sel.has(i));if(!sel.size)selMode=false;renderTop()}return}
+ const sbx=e.target.closest('.b');if(selMode){if(sbx){const i=Number(sbx.dataset.id);if(sel.has(i)){sel.delete(i);sbx.classList.remove('sel')}else{sel.add(i);sbx.classList.add('sel')}if(sel.size===0)selMode=false;renderTop()}return}
  const mn=e.target.closest('.mn');if(mn){openSheet(mn.closest('.b').dataset.id);return}
  const rp=e.target.closest('.rp');if(rp){jump(+rp.dataset.r);return}
  const photo=e.target.closest('.im');if(photo&&photo.getAttribute('src')){openPhotoViewer(photo.getAttribute('src'));return}
