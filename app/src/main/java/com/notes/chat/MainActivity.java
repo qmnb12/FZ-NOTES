@@ -13,6 +13,7 @@ import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.content.Intent;
 import android.content.ClipboardManager;
@@ -125,6 +126,63 @@ public class MainActivity extends Activity {
         });
         nativeChatAdapter.attachRecyclerView(nativeChatView);
         nativeChatView.setAdapter(nativeChatAdapter);
+        nativeChatView.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
+            private float downX, downY, deltaX;
+            private String noteId;
+            private boolean tracking, swiping;
+
+            @Override public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downX = event.getX();
+                        downY = event.getY();
+                        deltaX = 0f;
+                        noteId = null;
+                        tracking = !nativeChatAdapter.hasSelection();
+                        swiping = false;
+                        if (tracking) noteId = nativeChatAdapter.idAt(downX, downY);
+                        tracking = tracking && noteId != null;
+                        return false;
+                    case MotionEvent.ACTION_MOVE:
+                        if (!tracking) return false;
+                        if (nativeChatAdapter.hasSelection()) {
+                            tracking = false;
+                            return false;
+                        }
+                        deltaX = event.getX() - downX;
+                        float deltaY = event.getY() - downY;
+                        if (Math.abs(deltaX) > dp(12) && Math.abs(deltaX) > Math.abs(deltaY) * 1.25f) {
+                            swiping = true;
+                            rv.getParent().requestDisallowInterceptTouchEvent(true);
+                            nativeChatAdapter.setSwipeOffset(noteId, deltaX);
+                            return true;
+                        }
+                        return false;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (!swiping) tracking = false;
+                        return false;
+                    default:
+                        return swiping;
+                }
+            }
+
+            @Override public void onTouchEvent(RecyclerView rv, MotionEvent event) {
+                if (!swiping) return;
+                if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
+                    deltaX = event.getX() - downX;
+                    nativeChatAdapter.setSwipeOffset(noteId, deltaX);
+                } else if (event.getActionMasked() == MotionEvent.ACTION_UP
+                        || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                    boolean commit = event.getActionMasked() == MotionEvent.ACTION_UP;
+                    nativeChatAdapter.finishSwipe(noteId, deltaX, commit);
+                    swiping = false;
+                    tracking = false;
+                    noteId = null;
+                    rv.getParent().requestDisallowInterceptTouchEvent(false);
+                }
+            }
+        });
         nativeChatLayer.addView(nativeChatView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
