@@ -466,7 +466,16 @@ body{min-height:100dvh}
 
 /* Notes use Telegram-style message actions, not Android text selection handles. */
 #chat .b,#chat .b *,#sh,#sh *,#chatw>#fab,#chatw>#listfab,#shBackdrop{ -webkit-user-select:none!important; user-select:none!important; -webkit-touch-callout:none!important; }
+#chat .b .msgtext,#chat .b .msgtext *{ -webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important}
+#chat .b .im,#chat .b .tg,#chat .b .tm,#chat .b .mn,#chat .b .due,#chat .b .ci,#chat .b .cnt{ -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
+#chat .b .msgtext ::selection{background:rgba(88,153,255,.42);color:inherit}
+#chat .b .msgtext ::-moz-selection{background:rgba(88,153,255,.42);color:inherit}
 #chat .b,#sh button,#chatw>#fab,#chatw>#listfab{ -webkit-tap-highlight-color:transparent; }
+#chat .b{position:relative;transform-origin:right center;transition:transform .19s cubic-bezier(.2,.8,.2,1),background .19s ease,border-color .19s ease,box-shadow .19s ease!important;will-change:transform,background-color,box-shadow}
+#chat .b.sel{transform:scale(.985);box-shadow:0 0 0 2px rgba(119,177,255,.58),0 6px 20px rgba(0,0,0,.28)!important}
+#chat .b.sel::before{content:'✓';position:absolute;left:-27px;top:50%;width:20px;height:20px;margin-top:-10px;border-radius:50%;display:grid;place-items:center;background:#3988f5;color:#fff;font:700 13px/1 system-ui;box-shadow:0 2px 7px rgba(0,0,0,.22);animation:noteSelectPop .2s cubic-bezier(.2,.8,.2,1) both}
+@keyframes noteSelectPop{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){#chat .b,#chat .b.sel{transition:none!important;animation:none!important}}
 #sh{ -webkit-user-select:none!important; user-select:none!important; }
 #sh *{ -webkit-user-select:none!important; user-select:none!important; }
 #shBackdrop{background:rgba(2,7,15,.40)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
@@ -581,7 +590,7 @@ function render(){renderSide();renderTop();chat.innerHTML='';const fragment=docu
  list.forEach(m=>{const d=new Date(m.t),ds=d.toDateString();
   if(ds!==last){last=ds;const c=document.createElement('div');c.className='chip';c.textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});fragment.appendChild(c)}
   const b=document.createElement('div');b.className='b'+(m.h&&m.h.includes('class="code"')?' has-code':'')+(selMode&&sel.has(Number(m.id))?' sel':'');b.dataset.id=m.id;
-  b.innerHTML=(cur==='all'?'<span class="tg">'+esc(tn(m.k))+'</span>':'')+rq(m)+(m.i?'<img class="im" src="'+m.i+'" alt="Photo">':'')+m.h+(m.due?'<span class="due '+(m.due<Date.now()&&!(m.c&&m.c.every(i=>i.s===1))?'late':'')+'">◷ '+esc(new Date(m.due).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}))+'</span>':'')+ckHtml(m)+'<span class="tm">'+(m.e?'edited · ':'')+d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'<button class="mn" aria-label="Options">⋮</button></span>';
+  b.innerHTML=(cur==='all'?'<span class="tg">'+esc(tn(m.k))+'</span>':'')+(m.i?'<img class="im" src="'+m.i+'" alt="Photo">':'')+'<div class="msgtext">'+rq(m)+m.h+'</div>'+(m.due?'<span class="due '+(m.due<Date.now()&&!(m.c&&m.c.every(i=>i.s===1))?'late':'')+'">◷ '+esc(new Date(m.due).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}))+'</span>':'')+ckHtml(m)+'<span class="tm">'+(m.e?'edited · ':'')+d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'<button class="mn" aria-label="Options">⋮</button></span>';
   const photo=b.querySelector('.im');if(photo)photo.addEventListener('error',()=>{photo.onerror=null;photo.classList.add('image-error');photo.alt='Photo preview could not be loaded';photo.removeAttribute('src')});
   fragment.appendChild(b)});
  chat.appendChild(fragment);chat.scrollTop=chat.scrollHeight}
@@ -727,7 +736,7 @@ $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
   else document.execCommand('insertHTML',false,'<a href="'+esc(u)+'">'+esc(v)+'</a>&nbsp;')}
  else document.execCommand('insertHTML',false,'<span class="mention">'+esc(v.startsWith('@')?v:'@'+v)+'</span>&nbsp;')};
 lki.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#lkok').click()}});
-function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('#chat .b, #sh, #chatw>#fab, #chatw>#listfab')){e.preventDefault();e.stopPropagation()}},true);root.addEventListener('contextmenu',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('#chat .b, #sh, #chatw>#fab, #chatw>#listfab')){e.preventDefault();e.stopPropagation()}},true)}
+function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(!t)return;if(t.closest('#chat .b .msgtext'))return;if(t.closest('#chat .b, #sh, #chatw>#fab, #chatw>#listfab')){e.preventDefault();e.stopPropagation()}},true);root.addEventListener('contextmenu',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(!t)return;if(t.closest('#chat .b .msgtext'))return;if(t.closest('#chat .b, #sh, #chatw>#fab, #chatw>#listfab')){e.preventDefault();e.stopPropagation()}},true)}
 function contextMenuRow(key,title,path,extra=''){
  return '<button type="button" class="context-menu-row'+(extra?' '+extra:'')+'" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+path+'</svg></span><span class="mt">'+esc(title)+'</span></button>';
 }
@@ -770,6 +779,7 @@ function openCopySheet(id){shStack=[];const m=msgs.find(m=>m.id==id);if(!m)retur
 function startNotePress(e){
   const target=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
   if(!target||target.closest('.ci,.rp,.a,.mn,a,button,input,textarea,select,[contenteditable="true"]'))return;
+  if(target.closest('.msgtext'))return;
   const b=target.closest('.b');if(!b||selMode)return;
   clearTimeout(timer);pressTarget=b;pressX=e.clientX||0;pressY=e.clientY||0;const id=b.dataset.id;
   timer=setTimeout(()=>{if(!pressTarget)return;pressed=Date.now();openSheet(id);pressTarget=null},520)
