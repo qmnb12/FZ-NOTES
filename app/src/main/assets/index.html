@@ -283,6 +283,50 @@ body{min-height:100dvh}
 #sh button .mi,#sh button .mt,#sh button .ms{pointer-events:none}
 @media(max-width:420px){#chat{padding-bottom:100px!important;scroll-padding-bottom:100px}#chatw>#listfab{right:68px!important;bottom:24px!important}#chatw>#fab{bottom:18px!important}#footer>#cmp{padding-left:9px!important;padding-right:9px!important}}
 
+
+/* Premium backup surface and consistent SVG menu icons */
+#sh .cloud-sheet-head{padding:10px 16px 14px;border-bottom:1px solid var(--ln);margin-bottom:5px}
+#sh .cloud-eyebrow{display:block;font-size:10px;letter-spacing:1.6px;font-weight:800;color:var(--acc);margin-bottom:5px}
+#sh .cloud-sheet-head h3{font-size:21px;line-height:1.25;margin:0 0 4px}
+#sh .cloud-sheet-head p{margin:0;color:var(--mut);font-size:12px}
+#sh .cloud-group-label{padding:9px 16px 3px;color:var(--mut);font-size:10px;letter-spacing:1.2px;font-weight:800;text-transform:uppercase}
+#sh button.cloud-row{padding:9px 13px;min-height:62px;gap:13px}
+#sh button.cloud-row .mi{width:42px;height:42px;border:1px solid rgba(117,170,255,.16);border-radius:14px;background:linear-gradient(145deg,rgba(117,170,255,.18),rgba(117,170,255,.045))}
+#sh button.cloud-row .mi svg{width:23px;height:23px}
+#sh button.cloud-row .mt strong{display:block;font-size:14px;font-weight:650;line-height:1.25}
+#sh button.cloud-row .ms{font-size:11px;line-height:1.25;margin-top:3px}
+#sh .cloud-divider{height:1px;background:var(--ln);margin:7px 15px}
+#cfg{z-index:30;backdrop-filter:blur(7px);background:rgba(3,8,17,.62)}
+#cfg .cfgb{max-height:91dvh;border-radius:25px 25px 0 0;padding:17px 16px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(160deg,#142135 0%,var(--bar) 45%,#0e1725 100%);border:1px solid rgba(153,183,224,.15);box-shadow:0 -20px 55px rgba(0,0,0,.38)}
+#cfg .cfg-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+#cfg .cfg-brand{display:flex;align-items:center;gap:11px;min-width:0}
+#cfg .cfg-brand h3{font-size:21px;margin:0;letter-spacing:-.4px}
+#cfg .cfg-brand-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:rgba(117,170,255,.15);color:var(--acc);flex:none}
+#cfg .cfg-brand-icon svg{width:27px;height:27px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#cfg .cfg-badge{font-size:9px;letter-spacing:1px;font-weight:800;border:1px solid var(--ln);color:var(--mut);padding:5px 7px;border-radius:9px}
+#cfg .cfg-card{border:1px solid rgba(160,184,216,.13);border-radius:19px;background:rgba(7,15,26,.48);padding:14px;margin:11px 0}
+#cfg .cfg-card-title{display:flex;align-items:flex-start;gap:11px}
+#cfg .cfg-card-title h4{font-size:16px;color:var(--text);margin:2px 0 4px}
+#cfg .cfg-icon{display:grid;place-items:center;width:39px;height:39px;border-radius:13px;background:rgba(117,170,255,.12);color:var(--acc);flex:none}
+#cfg .cfg-icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#cfg .cfg-icon.telegram{background:rgba(58,169,224,.13);color:#52b8ee}
+#cfg .cfg-status{display:flex;align-items:center;gap:8px;margin:13px 0;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.035);font-size:12px;color:var(--mut)}
+#cfg .status-dot{width:8px;height:8px;border-radius:50%;background:#738297;box-shadow:0 0 0 4px rgba(115,130,151,.12)}
+#cfg .cfg-status.on{color:#80e3a3}#cfg .cfg-status.on .status-dot{background:#51d783;box-shadow:0 0 0 4px rgba(81,215,131,.12)}
+#cfg .cfg-label{display:block;color:var(--mut);font-size:11px;font-weight:700;margin:12px 0 5px}
+#cfg .cfgb input,#cfg .cfgb select{width:100%;box-sizing:border-box;margin:0 0 7px;padding:12px 13px;border-radius:12px;border:1px solid rgba(160,184,216,.16);background:#091321;color:var(--text);font:inherit;font-size:14px;min-width:0;outline:none}
+#cfg .cfgb input:focus,#cfg .cfgb select:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(117,170,255,.1)}
+#cfg .cfgb select{color-scheme:dark}
+#cfg .cfgb .row{align-items:stretch;gap:7px}
+#cfg .cfgb .row input{flex:1;min-width:0}
+#cfg .cfgb button{border-radius:13px;padding:11px 13px;margin:5px 0 0;font-size:13px;font-weight:650;min-height:42px}
+#cfg .cfgb button.alt,#cfg .cfgb button.cfg-secondary{background:rgba(117,170,255,.1);border:1px solid rgba(117,170,255,.2);color:var(--text)}
+#cfg .cfg-footnote{font-size:11px;line-height:1.45;margin-top:10px}
+#cfg .cfg-actions{display:flex;gap:8px;margin-top:15px}
+#cfg .cfg-actions button{flex:1}
+#cfg .cfg-actions #c_save{background:linear-gradient(135deg,#82b5ff,#4b8ef2);color:#061427}
+#cfg .cfg-actions #c_close{background:rgba(255,255,255,.06);border:1px solid var(--ln);color:var(--text)}
+@media(max-width:420px){#cfg .cfg-card{padding:12px}#cfg .cfgb{padding-left:12px;padding-right:12px}#sh button.cloud-row{padding-left:10px;padding-right:10px}}
 </style>
 </head>
 <body>
@@ -306,12 +350,28 @@ body{min-height:100dvh}
 <div id="lk"><input id="lki" type="text" autocomplete="off"><button id="lkok">Add</button></div>
 <div id="cmp"><button id="att" aria-label="Attach image">📎</button><input id="fi" type="file" accept="image/*" hidden><div id="ed" contenteditable="true" data-ph="Message in Notes"></div><button id="send" aria-label="Send" title="Send message">➤</button></div>
 </div>
-<div id="cfg"><div class="cfgb"><h3>Cloud backup</h3><p class="hint">Data phone par hi password se encrypt hoke jaata hai. Password kahin save nahi hota, bhool gaye to backup khul nahi sakta.</p>
-<h4>Google Drive</h4><div class="row"><button id="c_driveConnect">Connect Google account</button><button id="c_driveDisconnect" class="alt">Disconnect</button></div><p class="hint">Encrypted backups aapke Google account ke hidden app folder mein save honge. Google permission ek baar approve karni hogi.</p>
-<h4>Nextcloud / WebDAV</h4><input id="c_wdUrl" placeholder="https://host/remote.php/dav/files/USER/folder"><input id="c_wdUser" placeholder="Username"><input id="c_wdPass" type="password" placeholder="App password">
-<h4>Telegram bot</h4><input id="c_tgToken" placeholder="Bot token (@BotFather se)"><div class="row"><input id="c_tgChat" placeholder="Chat ID"><button id="c_tgDet">Detect</button></div><p class="hint">Pehle bot ko /start bhejein, phir Detect dabayein.</p>
-<h4>GitHub (private repo)</h4><input id="c_ghToken" placeholder="Personal access token"><input id="c_ghRepo" placeholder="username/repo"><input id="c_ghPath" placeholder="notes-backup.ncb">
-<div class="row"><button id="c_save">Save</button><button id="c_close" class="alt">Close</button></div></div></div>
+<div id="cfg"><div class="cfgb">
+  <div class="cfg-top">
+    <div class="cfg-brand"><span class="cfg-brand-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h11a4 4 0 0 0 .3-8A6.5 6.5 0 0 0 6 8.8 4.8 4.8 0 0 0 7 18Z"/><path d="M12 11v8m-3-3 3 3 3-3"/></svg></span><div><h3>Cloud backup</h3><p class="hint">Your notes, safely backed up</p></div></div>
+    <span class="cfg-badge">FZ NOTES</span>
+  </div>
+  <section class="cfg-card">
+    <div class="cfg-card-title"><span class="cfg-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"/></svg></span><div><h4>Google Drive sync</h4><p class="hint">Same Google account se notes restore karein; password type karna nahi padega.</p></div></div>
+    <div id="c_driveStatus" class="cfg-status"><span class="status-dot"></span><span>Not connected</span></div>
+    <div class="row"><button id="c_driveConnect">Connect Google account</button><button id="c_driveDisconnect" class="alt">Disconnect</button></div>
+    <p class="hint cfg-footnote">A random backup key aapke Google account ke hidden app folder mein store hoti hai. Ye passwordless account-bound protection hai, zero-knowledge encryption nahi. Apna Google account secure rakhein.</p>
+  </section>
+  <section class="cfg-card">
+    <div class="cfg-card-title"><span class="cfg-icon telegram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 4-3.2 16-5.4-5-3 2.9.4-5.2L19 6 7.2 13.4 3 12l18-8Z"/></svg></span><div><h4>Telegram archive</h4><p class="hint">Separate encrypted archive; Google Drive restore se independent.</p></div></div>
+    <label class="cfg-label" for="c_tgToken">Bot token</label><input id="c_tgToken" placeholder="Token from @BotFather" autocomplete="off">
+    <label class="cfg-label" for="c_tgChat">Chat ID</label><div class="row"><input id="c_tgChat" placeholder="Telegram chat ID" autocomplete="off"><button id="c_tgDet" class="alt">Detect</button></div>
+    <label class="cfg-label" for="c_tgSchedule">Automatic backup schedule</label>
+    <select id="c_tgSchedule"><option value="manual">Manual only — when I tap backup</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly (every 30 days)</option></select>
+    <p class="hint cfg-footnote">Automatic runs need network and one-time Google key setup. Telegram backup does not require typing a password; the key is protected locally by Android Keystore.</p>
+    <button id="c_tgNow" class="cfg-secondary">Save backup to Telegram now</button>
+  </section>
+  <div class="cfg-actions"><button id="c_save">Save settings</button><button id="c_close" class="alt">Close</button></div>
+</div></div>
 <div id="qk" class="ov"><div class="cfgb"><h3>⚡ Quick note</h3><p class="hint">Topic se alag Quick folder me save hoga.</p><textarea id="qkt" rows="4" placeholder="Jaldi note likho…"></textarea><div class="row"><button id="qks">Save</button><button id="qkx" class="alt">Cancel</button></div></div></div>
 <div id="sh"></div><div id="toast"></div>
 <script>
@@ -397,7 +457,7 @@ window.applyCodeFromNative=function(){
  if(ok){saved=null;const n=getSelection();if(n.rangeCount&&ed.contains(n.anchorNode))saved=n.getRangeAt(0).cloneRange();$('#tb').classList.remove('on')}
  return ok
 };
-function ask(m,ph,v){mode=m;lki.type=/pw$/.test(m)?'password':'text';lki.placeholder=ph;lki.value=v!==undefined?v:(m==='link'?'https://':m==='mention'?'@':'');lk.classList.add('on');lki.focus()}
+function ask(m,ph,v){mode=m;lki.type=(/pw$/.test(m)||m==='legacyrestore')?'password':'text';lki.placeholder=ph;lki.value=v!==undefined?v:(m==='link'?'https://':m==='mention'?'@':'');lk.classList.add('on');lki.focus()}
 function act(a){restore();
  const ex={b:'bold',i:'italic',u:'underline',s:'strikeThrough'};
  if(ex[a])document.execCommand(ex[a]);
@@ -412,8 +472,9 @@ $('#tb').addEventListener('mousedown',e=>e.preventDefault());
 $('#tb').addEventListener('click',e=>{const b=e.target.closest('button');if(b){act(b.dataset.a);if(!hasSel())$('#tb').classList.remove('on')}});
 $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
  if(mode==='savepw'){savePw(v);return}
- if(mode==='bkpw'){doBackup(v);return}
- if(mode==='rspw'){doRestore(v);return}
+ if(mode==='bkpw'){doGoogleBackup();return}
+ if(mode==='rspw'){doDriveRestore(pendDriveId);return}
+ if(mode==='legacyrestore'){restoreLegacyWithPassword(v);return}
  if(mode==='restore'){pickFile();return}
  if(mode==='topic'){if(v){const id='t'+Date.now();topics.push({id,name:v});cur=id;saveT();render()}return}
  if(mode==='listtitle'){if(v){listTitle=v;listMode=true;$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.innerHTML='';updateComposerControls();ed.dataset.ph='Add list items, one per line';ed.focus();saveDraft();toast('Ab list ke items likho — naam alag rahega',2200)}return}
@@ -500,16 +561,16 @@ chatw.addEventListener('pointercancel',()=>{if(blankPointerStart&&blankPointerSt
 sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');if(!button)return;const k=button.dataset.k;
  if(sh.dataset.type==='multi-select'){if(k==='x'){sh.classList.remove('on');return}const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);sh.classList.remove('on');if(k==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));return}if(k==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render()}return}
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
- if(sh.dataset.type==='cloud'){sh.classList.remove('on');
-  if(k==='status'){toast(lastBackup()?'Last backup: '+lastBackup():'No successful backup recorded',2600)}
-  if(k==='cset')openCfg();
-  if(k==='cbk'){if(!targets(cfgGet()).length){openCfg();toast('Pehle backup destination set karo',2500);return}needPw('bkpw')}
-  if(k==='cpw')ask('savepw','Password jo save karna hai','');
-  if(k==='cpd')delPw();
-  if(k==='crs')openSrc();
-  if(k.startsWith('src:')){pendSrc=k.slice(4);if(pendSrc==='tg'){openTgHistory();return}if(pendSrc==='drive'){openDriveHistory();return}pendFid='';needPw('rspw')}
-  if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Google Drive backup nahi mila');return}pendSrc='drive';pendDriveId=driveHistoryItems[i].id;needPw('rspw')}
-  if(k.startsWith('tgh:')){const i=Number(k.slice(4)),h=tgHistory();if(!Number.isInteger(i)||!h[i]){toast('Backup history nahi mili');return}pendSrc='tg';pendFid=h[i].fid;needPw('rspw')}
+ if(sh.dataset.type==='cloud'){
+  sh.classList.remove('on');
+  if(k==='x')return;
+  if(k==='status'){toast(lastBackup()?'Last successful Drive backup: '+lastBackup():'No successful Drive backup recorded',3000);return}
+  if(k==='cset'){openCfg();return}
+  if(k==='cbk'){if(!cfgGet().driveOn){openCfg();toast('Connect Google account first',2600);return}doGoogleBackup();return}
+  if(k==='crs'){openDriveHistory();return}
+  if(k==='tgNow'){doTelegramBackup();return}
+  if(k==='tgcfg'){openCfg();setTimeout(()=>$('#c_tgToken').scrollIntoView({block:'center',behavior:'smooth'}),180);return}
+  if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Drive backup nahi mila');return}doDriveRestore(driveHistoryItems[i].id);return}
   return}
  if(sh.dataset.type==='menu'){sh.classList.remove('on');
   if(k==='cl')openCloud();
@@ -564,18 +625,40 @@ function clearCtx(){if(editId){ed.innerHTML='';updateComposerControls()}editId=n
 $('#cxx').onclick=clearCtx;
 const sel=new Set();
 let pendSrc='';let autoBackupTimer=null,autoBackupBusy=false,autoBackupAgain=false,suppressAutoBackup=false;
-const NM={drive:'Google Drive',webdav:'Nextcloud',tg:'Telegram',gh:'GitHub'},F=['wdUrl','wdUser','wdPass','tgToken','tgChat','ghToken','ghRepo','ghPath'];
+const NM={drive:'Google Drive'},F=['tgToken','tgChat','tgSchedule'];
 const cfgGet=()=>{try{return JSON.parse(localStorage.getItem('notes-sync')||'{}')}catch(e){return{}}};
 const cfgSet=c=>{try{localStorage.setItem('notes-sync',JSON.stringify(c))}catch(e){}};
-function targets(c){const t=[];if(c.driveOn)t.push({type:'drive'});if(c.wdUrl&&c.wdUser)t.push({type:'webdav',url:c.wdUrl,user:c.wdUser,pass:c.wdPass||''});if(c.tgToken&&c.tgChat)t.push({type:'tg',token:c.tgToken,chat:c.tgChat,fid:c.tgFid||''});if(c.ghToken&&c.ghRepo)t.push({type:'gh',token:c.ghToken,repo:c.ghRepo,path:c.ghPath||'notes-backup.ncb'});return t}
+function targets(c){return c.driveOn?[{type:'drive'}]:[]}
 const pend={};let nid=0;
 function native(op,args){return new Promise((res,rej)=>{if(!window.Android||typeof window.Android.run!=='function'){rej(new Error('Android bridge available nahi hai'));return}const id=++nid;pend[id]={res,rej};try{window.Android.run(id,op,JSON.stringify(args))}catch(e){delete pend[id];rej(e)}})}
 window.onNative=(id,ok,d)=>{const p=pend[id];delete pend[id];if(p)ok?p.res(d):p.rej(new Error(d))};
-function openCloud(){const lb=lastBackup();sh.innerHTML='<button data-k="cbk">☁ Backup now</button><button data-k="status">ⓘ Last backup: '+esc(lb||'Not yet')+'</button><button data-k="crs">⬇ Restore</button><button data-k="cset">⚙ Settings (Nextcloud / Telegram / GitHub)</button><button data-k="'+(pwSaved()?'cpd':'cpw')+'">🔑 '+(pwSaved()?'Remove saved password':'Save password on phone')+'</button><button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
-function tgHistory(){let h=[];try{h=JSON.parse(localStorage.getItem('notes-tg-history')||'[]')}catch(_){}const c=cfgGet();if(c.tgFid&&!h.some(x=>x.fid===c.tgFid))h.unshift({fid:c.tgFid,at:'Previously saved backup'});return h.filter(x=>x&&x.fid).slice(0,30)}
-function openTgHistory(){const h=tgHistory();sh.innerHTML='<div style="padding:8px 14px;color:var(--mut);font-size:13px">Telegram backup history · newest first</div>'+(h.length?h.map((x,i)=>'<button data-k="tgh:'+i+'">📦 '+esc(x.at||'Telegram backup')+'<span class="ms">Encrypted backup'+(x.notes?' · '+x.notes+' notes':'')+'</span></button>').join(''):'<div style="padding:12px;color:var(--mut)">Abhi koi saved backup reference nahi hai. Naya Backup now karein.</div>')+'<button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
-let driveHistoryItems=[];
-async function openDriveHistory(){
+function cloudRow(key, icon, title, sub) {
+ return '<button type="button" class="cloud-row" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+icon+'</svg></span><span class="mt"><strong>'+title+'</strong><span class="ms">'+sub+'</span></span></button>';
+}
+function openCloud(){
+ const lb=lastBackup(),c=cfgGet();
+ const icons={
+  drive:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"/><path d="M12 12v7m-3-3 3 3 3-3"/>',
+  status:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',
+  restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"/><path d="M3 3v4h4m5-1v6l4 2"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19 13.5l1.2 1-.9 1.6-1.5-.3a7 7 0 0 1-1.5.9l-.3 1.5h-2l-.5-1.5a7 7 0 0 1-1.7-.1l-1 1.2-1.6-.9.3-1.5a7 7 0 0 1-.9-1.5l-1.5-.3v-2l1.5-.5a7 7 0 0 1 .1-1.7l-1.2-1 .9-1.6 1.5.3a7 7 0 0 1 1.5-.9l.3-1.5h2l.5 1.5a7 7 0 0 1 1.7.1l1-1.2 1.6.9-.3 1.5a7 7 0 0 1 .9 1.5l1.5.3v2z"/>',
+  telegram:'<path d="m21 4-3.2 16-5.4-5-3 2.9.4-5.2L19 6 7.2 13.4 3 12l18-8Z"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  cancel:'<path d="m6 6 12 12M18 6 6 18"/>'
+ };
+ sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · BACKUP</span><h3>Cloud backup</h3><p>Google Drive sync and encrypted Telegram archive</p></div>'+
+  '<div class="cloud-group-label">Google Drive</div>'+
+  cloudRow('cbk',icons.drive,'Back up now',c.driveOn?'Save encrypted notes to your Google account':'Connect Google account to start sync')+
+  cloudRow('status',icons.status,'Last Drive backup',lb||'No successful backup yet')+
+  cloudRow('crs',icons.restore,'Restore notes','Choose one of your recent Drive backups')+
+  cloudRow('cset',icons.settings,'Google Drive settings',c.driveOn?'Account connected':'Connect or disconnect your account')+
+  '<div class="cloud-divider"></div><div class="cloud-group-label">Telegram archive</div>'+
+  cloudRow('tgNow',icons.telegram,'Save backup to Telegram','Send one encrypted archive now')+
+  cloudRow('tgcfg',icons.clock,'Backup schedule',({manual:'Manual only',daily:'Daily',weekly:'Weekly',monthly:'Monthly'}[c.tgSchedule||'manual'])+' · Change Telegram settings')+
+  cloudRow('x',icons.cancel,'Close','');
+ sh.dataset.type='cloud';sh.classList.add('on');
+}
+let driveHistoryItems=[];async function openDriveHistory(){
  try{
   toast('Google Drive backups load ho rahe hain…',3000);
   const token=await native('driveauth',{});
@@ -586,25 +669,111 @@ async function openDriveHistory(){
   sh.dataset.type='cloud';sh.classList.add('on');
  }catch(e){toast('Google Drive: '+e.message,4000)}
 }
-function openSrc(){const t=targets(cfgGet());if(!t.length){toast('Pehle Settings me cloud bharein',2500);return}sh.innerHTML=t.map(x=>'<button data-k="src:'+x.type+'">Restore from '+NM[x.type]+(x.type==='tg'?' · backup history':'')+'</button>').join('')+'<button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
-function openCfg(){const c=cfgGet();F.forEach(f=>{$('#c_'+f).value=c[f]||''});$('#c_driveConnect').textContent=c.driveOn?'Google account connected':'Connect Google account';$('#cfg').classList.add('on')}
-const pwSaved=()=>{try{return localStorage.getItem('notes-pwsaved')==='1'}catch(e){return false}};
+function openSrc(){openDriveHistory()}
+function openCfg(){
+ const c=cfgGet();
+ F.forEach(f=>{const el=$('#c_'+f);if(el)el.value=c[f]||''});
+ $('#c_tgSchedule').value=c.tgSchedule||'manual';
+ $('#c_driveConnect').textContent=c.driveOn?'Google account connected':'Connect Google account';
+ const st=$('#c_driveStatus');st.classList.toggle('on',!!c.driveOn);
+ st.querySelector('span:last-child').textContent=c.driveOn?'Connected · encrypted Drive backup ready':'Not connected · tap Connect Google account';
+ $('#cfg').classList.add('on');
+}
 const lastBackup=()=>{try{return localStorage.getItem('notes-last-backup')||''}catch(e){return ''}};
-async function needPw(m){if(pwSaved()){try{const p=await native('pwget',{});if(p){if(m==='bkpw')doBackup(p);else doRestore(p);return}}catch(e){}}ask(m,'Encryption password','')}
-async function savePw(v){if(!v)return toast('Password chahiye');try{await native('pwset',{pw:v});localStorage.setItem('notes-pwsaved','1');toast('Password phone ke secure storage me save ho gaya',3000)}catch(e){toast(e.message,3000)}}
-async function delPw(){try{await native('pwdel',{});localStorage.removeItem('notes-pwsaved');toast('Saved password hata diya',2500)}catch(e){toast(e.message,3000)}}
+const lastTelegramBackup=()=>{try{return localStorage.getItem('notes-last-telegram-backup')||''}catch(e){return ''}};
+function backupPayload(){return JSON.stringify({format:'FZ-NOTES-BACKUP',version:4,exportedAt:new Date().toISOString(),msgs,topics})}
+async function ensureDriveKey(){const token=await native('driveauth',{});const key=await native('drivekey',{token});return {token,key}}
+function noteStamp(){return new Date().toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'})}
+async function doGoogleBackup(quiet=false){
+ const c=cfgGet();
+ if(!c.driveOn){if(!quiet){openCfg();toast('Pehle Google account connect karo',2800)}return false}
+ if(!quiet)toast('Encrypt karke Google Drive par save kar raha hoon…',4500);
+ try{
+  const {token,key}=await ensureDriveKey();
+  const r=JSON.parse(await native('backup',{key,data:backupPayload(),targets:[{type:'drive',token}]}));
+  if(Number(r.successCount||0)<1)throw new Error(r.msg||'Google Drive backup upload failed');
+  try{localStorage.setItem('notes-last-backup',noteStamp())}catch(_){}
+  if(!quiet)toast('Google Drive backup complete · '+msgs.length+' notes',3500);
+  return true;
+ }catch(e){if(!quiet)toast('Google Drive: '+e.message,4500);return false}
+}
+async function doTelegramBackup(quiet=false){
+ const c=cfgGet();
+ if(!c.tgToken||!c.tgChat){if(!quiet){openCfg();toast('Pehle Telegram bot token aur chat ID save karo',3000)}return false}
+ if(!quiet)toast('Encrypted Telegram archive bana raha hoon…',4500);
+ try{
+  const {key}=await ensureDriveKey();
+  const r=JSON.parse(await native('backup',{key,data:backupPayload(),targets:[{type:'tg',token:c.tgToken,chat:c.tgChat}]}));
+  if(Number(r.successCount||0)<1)throw new Error(r.msg||'Telegram backup upload failed');
+  try{localStorage.setItem('notes-last-telegram-backup',noteStamp())}catch(_){}
+  if(!quiet)toast('Telegram backup saved · '+msgs.length+' notes',3500);
+  return true;
+ }catch(e){if(!quiet)toast('Telegram backup: '+e.message,4500);return false}
+}
+function scheduleAutoBackup(){
+ if(suppressAutoBackup)return;
+ clearTimeout(autoBackupTimer);
+ if(!cfgGet().driveOn)return;
+ autoBackupTimer=setTimeout(async()=>{
+  if(autoBackupBusy){autoBackupAgain=true;return}
+  autoBackupBusy=true;
+  try{await doGoogleBackup(true)}catch(_){}
+  finally{autoBackupBusy=false;if(autoBackupAgain){autoBackupAgain=false;scheduleAutoBackup()}}
+ },3500);
+}
+async function saveTelegramSettings(){
+ const c=cfgGet();
+ F.forEach(f=>{const el=$('#c_'+f);if(el)c[f]=el.value.trim()});
+ c.tgSchedule=c.tgSchedule||'manual';
+ if(c.tgSchedule!=='manual'&&(!c.tgToken||!c.tgChat)){toast('Schedule ke liye Telegram token aur chat ID zaroori hain');return false}
+ try{
+  if(c.tgSchedule!=='manual'&&c.tgToken&&c.tgChat)await ensureDriveKey();
+  cfgSet(c);
+  await native('tgsnapshot',{data:backupPayload()});
+  await native('tgconfigure',{token:c.tgToken||'',chat:c.tgChat||'',interval:c.tgSchedule});
+  toast(c.tgSchedule==='manual'?'Backup settings saved':'Telegram schedule saved · '+c.tgSchedule,3000);
+  return true;
+ }catch(e){toast('Settings save failed: '+e.message,4500);return false}
+}
 $('#c_close').onclick=()=>$('#cfg').classList.remove('on');
-$('#c_driveConnect').onclick=async()=>{try{await native('driveauth',{});const c=cfgGet();c.driveOn=true;cfgSet(c);$('#c_driveConnect').textContent='Google account connected';toast('Google Drive connected',2500)}catch(e){toast('Google connect failed: '+e.message,4000)}};
-$('#c_driveDisconnect').onclick=()=>{const c=cfgGet();c.driveOn=false;cfgSet(c);$('#c_driveConnect').textContent='Connect Google account';toast('Google Drive disconnected',2500)};
-$('#c_save').onclick=()=>{const c=cfgGet();F.forEach(f=>{c[f]=$('#c_'+f).value.trim()});cfgSet(c);$('#cfg').classList.remove('on');toast('Saved')};
-$('#c_tgDet').onclick=async()=>{const tk=$('#c_tgToken').value.trim();if(!tk)return toast('Pehle bot token daalein');try{$('#c_tgChat').value=await native('tgchat',{token:tk})}catch(e){toast(e.message,3000)}};
-async function doBackup(pw,quiet=false){if(!pw)return quiet?false:toast('Password chahiye');const c=cfgGet(),t=targets(c);if(!t.length)return quiet?false:toast('Pehle Settings me cloud bharein',2500);
- if(!quiet)toast('Encrypt karke bhej raha hu…',5000);
- try{if(c.driveOn){const token=await native('driveauth',{});const gt=t.find(x=>x.type==='drive');if(gt)gt.token=token}const r=JSON.parse(await native('backup',{pw,data:JSON.stringify({version:2,exportedAt:new Date().toISOString(),msgs,topics}),targets:t}));const successes=Number(r.successCount||0),failures=Number(r.failureCount||0);if(successes<1)throw new Error(r.msg||'Kisi bhi backup destination par upload nahi hua');if(r.fid){c.tgFid=r.fid;cfgSet(c);try{const h=tgHistory().filter(x=>x.fid!==r.fid);h.unshift({fid:r.fid,at:new Date().toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}),notes:msgs.length});localStorage.setItem('notes-tg-history',JSON.stringify(h.slice(0,30)))}catch(_){}}const stamp=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});try{localStorage.setItem('notes-last-backup',stamp)}catch(_){}if(!quiet)toast((failures?'Partial backup · ':'')+r.msg+' · '+msgs.length+' notes',5000);return successes>0}catch(e){if(!quiet)toast('Backup fail: '+e.message,5000);return false}}
-function scheduleAutoBackup(){if(suppressAutoBackup)return;clearTimeout(autoBackupTimer);if(!targets(cfgGet()).length||!pwSaved())return;autoBackupTimer=setTimeout(async()=>{if(autoBackupBusy){autoBackupAgain=true;return}autoBackupBusy=true;try{const pw=await native('pwget',{});if(pw)await doBackup(pw,true)}catch(_){}finally{autoBackupBusy=false;if(autoBackupAgain){autoBackupAgain=false;scheduleAutoBackup()}}},3500)}
-let pendFid='',pendDriveId='';async function doRestore(pw){if(!pw)return toast('Password chahiye');const t=targets(cfgGet()).find(x=>x.type===pendSrc);if(!t)return;if(pendSrc==='tg'&&pendFid)t.fid=pendFid;if(pendSrc==='drive'){try{t.token=await native('driveauth',{});t.id=pendDriveId}catch(e){return toast('Google Drive: '+e.message,4000)}}
- toast('Restore ho raha hai…',5000);
- try{const d=JSON.parse(await native('restore',{pw,source:t}));if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){suppressAutoBackup=true;msgs=d.msgs;topics=d.topics;cur='all';lastSnapshot=snapshot();undoStack=[];redoStack=[];try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(_){}mirror();render();suppressAutoBackup=false;toast('Restored')}else toast('Backup sahi nahi hai')}catch(e){suppressAutoBackup=false;toast(e.message,4000)}}
+$('#c_driveConnect').onclick=async()=>{
+ try{toast('Google account connect ho raha hai…',3500);await ensureDriveKey();
+  const c=cfgGet();c.driveOn=true;cfgSet(c);openCfg();toast('Google account connected · passwordless backup ready',3000);
+ }catch(e){toast('Google connect failed: '+e.message,4500)}
+};
+$('#c_driveDisconnect').onclick=()=>{const c=cfgGet();c.driveOn=false;cfgSet(c);openCfg();toast('Google Drive auto-sync paused',2500)};
+$('#c_save').onclick=async()=>{if(await saveTelegramSettings())$('#cfg').classList.remove('on')};
+$('#c_tgNow').onclick=async()=>{
+ const c=cfgGet();c.tgToken=$('#c_tgToken').value.trim();c.tgChat=$('#c_tgChat').value.trim();cfgSet(c);
+ if(!c.tgToken||!c.tgChat){toast('Bot token aur chat ID enter karo');return}
+ await native('tgconfigure',{token:c.tgToken,chat:c.tgChat,interval:c.tgSchedule||'manual'}).catch(()=>{});
+ doTelegramBackup();
+};
+$('#c_tgDet').onclick=async()=>{
+ const tk=$('#c_tgToken').value.trim();
+ if(!tk)return toast('Pehle bot token daalein');
+ try{$('#c_tgChat').value=await native('tgchat',{token:tk})}catch(e){toast(e.message,3500)}
+};
+let pendDriveId='',legacyRestoreId='';
+function applyCloudRestore(raw){
+ const d=JSON.parse(raw);
+ if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){
+  suppressAutoBackup=true;msgs=d.msgs;topics=d.topics;cur='all';lastSnapshot=snapshot();undoStack=[];redoStack=[];
+  try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(_){}
+  mirror();render();suppressAutoBackup=false;toast('Restore complete · '+msgs.length+' notes',3500);return true;
+ }
+ suppressAutoBackup=false;toast('Backup data format valid nahi hai');return false;
+}
+async function doDriveRestore(id){
+ pendDriveId=id;toast('Google Drive backup restore ho raha hai…',4500);
+ try{const {token,key}=await ensureDriveKey();const raw=await native('restore',{key,source:{type:'drive',token,id}});applyCloudRestore(raw)}
+ catch(e){suppressAutoBackup=false;if((e.message||'').includes('LEGACY_PASSWORD_BACKUP')){legacyRestoreId=id;ask('legacyrestore','Purane backup ka password');return}toast('Restore failed: '+e.message,4500)}
+}
+async function restoreLegacyWithPassword(pw){
+ if(!pw)return toast('Password enter karo');
+ try{const token=await native('driveauth',{});const raw=await native('restore',{pw,source:{type:'drive',token,id:legacyRestoreId}});applyCloudRestore(raw)}
+ catch(e){toast('Old backup restore failed: '+e.message,4500)}
+}
 try{const th=localStorage.getItem('notes-theme');document.documentElement.dataset.theme=th||'dark'}catch(e){}
 function renderTop(){const pn=msgs.filter(m=>m.p&&inView(m)).pop(),pb=$('#pin');pb.classList.toggle('on',!!pn);
  if(pn){pb.dataset.id=pn.id;pb.querySelector('span').textContent=plain(pn.h)||'Photo'}
@@ -613,7 +782,18 @@ $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
 $('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
-$('#hm').onclick=()=>{const ico={search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Backup to file','Save all notes to device (.json)')+item('rs','Restore backup file','Import a previous FZ Notes backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Appearance','Light / dark theme')+item('hidden','Hidden notes','Password-protected notes')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
+$('#hm').onclick=()=>{const ico={
+search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',
+cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',
+backup:'<path d="M12 3v12m-4-4 4 4 4-4"></path><path d="M5 17v3h14v-3"></path>',
+restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"></path><path d="M3 3v4h4m5-1v6l4 2"></path>',
+file:'<path d="M4 4h7l2 2h7v14H4z"></path><path d="M8 13h8m-8 3h6"></path>',
+theme:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path>',
+undo:'<path d="M9 14 4 9l5-5"></path><path d="M4 9h9a7 7 0 0 1 7 7v2"></path>',
+redo:'<path d="m15 4 5 5-5 5"></path><path d="M20 9h-9a7 7 0 0 0-7 7v2"></path>',
+hidden:'<rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>',
+cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'
+};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Backup to file','Save all notes to device (.json)')+item('rs','Restore backup file','Import a previous FZ Notes backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Appearance','Light / dark theme')+item('hidden','Hidden notes','Password-protected notes')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 $('#selbar').onclick=e=>{const btn=e.target.closest('[data-s]');if(!btn)return;const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
@@ -639,13 +819,14 @@ $('#fab').onclick=()=>{$('#qk').classList.add('on');$('#qkt').value='';$('#qkt')
 $('#qkx').onclick=()=>$('#qk').classList.remove('on');
 $('#qks').onclick=()=>{const t=$('#qkt').value.trim();if(!t)return;msgs.push({id:Date.now(),t:Date.now(),h:esc(t).replace(/\n/g,'<br>'),k:'quick'});save();$('#qk').classList.remove('on');toast('⚡ Quick me save hua');render()};
 let mt;
-function mirror(){if(!window.Android)return;clearTimeout(mt);mt=setTimeout(()=>{native('mirrorsave',{text:JSON.stringify({msgs,topics})}).catch(()=>{})},1500)}
+function mirror(){if(!window.Android)return;clearTimeout(mt);mt=setTimeout(()=>{const text=JSON.stringify({msgs,topics});native('mirrorsave',{text}).catch(()=>{});native('tgsnapshot',{data:backupPayload()}).catch(()=>{})},900)}
 function applyFile(t){let d;try{d=JSON.parse(t)}catch(_){throw new Error('FZ Notes ki .json backup file chuno')}if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics)||!d.topics.length)return false;if(d.format&&d.format!=='FZ-NOTES-BACKUP')return false;if(!d.msgs.every(m=>m&&typeof m==='object'&&m.id!==undefined&&typeof m.h==='string'))return false;if(!d.topics.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))return false;msgs=d.msgs;topics=d.topics;cur='all';save();saveT();render();return true}
 async function pickFile(){try{if(window.Android){toast('Pehle FZ Notes se banayi backup file select karo',2200);const raw=await native('pickfile',{});if(applyFile(raw))toast('Restore complete · '+msgs.length+' notes',3000);else toast('Ye FZ Notes backup nahi lagti; original data safe hai',3500)}else{const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=async()=>{const f=input.files&&input.files[0];if(!f)return;try{const raw=await f.text();if(applyFile(raw))toast('Restore complete · '+msgs.length+' notes',3000);else toast('Valid FZ Notes backup select karo',3500)}catch(e){toast(e.message||'Backup import nahi hua',3500)}};input.click()}}catch(e){toast(e.message||'Backup import nahi hua',3500)}}
 async function exportBackupFile(){const payload=JSON.stringify({format:'FZ-NOTES-BACKUP',version:3,exportedAt:new Date().toISOString(),msgs,topics},null,2);const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.json';try{if(window.Android){toast('Backup save karne ke liye location choose karo',2200);const result=await native('savefile',{filename,text:payload});toast(result||'Backup file save ho gayi',3000);return true}const blob=new Blob([payload],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup download start ho gaya',3000);return true}catch(e){toast(e.message||'Backup save nahi hua',3500);return false}}
 msgs.filter(m=>m.due>Date.now()&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
 render();restoreDraft();updateComposerControls();lastSnapshot=snapshot();
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!ed.contains(document.activeElement)){e.preventDefault();e.shiftKey?redoChange():undoChange()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'&&!ed.contains(document.activeElement)){e.preventDefault();redoChange()}});
+if(window.Android)native('tgstatus',{}).then(v=>{const n=Number(v);if(n>0){try{localStorage.setItem('notes-last-telegram-backup',new Date(n).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}))}catch(_){}}}).catch(()=>{});
 (async()=>{if(!window.Android||msgs.length||topics.length>1||topics[0].name!=='General')return;try{const t=await native('mirrorload',{});if(t&&applyFile(t))toast('Phone storage se data wapas aaya',3000)}catch(e){}})();
 </script>
 </body>
