@@ -201,12 +201,14 @@ public class MainActivity extends Activity {
 
         @Override
         public ActionMode startActionMode(ActionMode.Callback callback) {
-            return super.startActionMode(wrapSelectionCallback(callback));
+            // Use the floating selection toolbar anchored to selected text, not
+            // the legacy primary action bar at the top of the window.
+            return super.startActionMode(wrapSelectionCallback(callback), ActionMode.TYPE_FLOATING);
         }
 
         @Override
         public ActionMode startActionMode(ActionMode.Callback callback, int type) {
-            return super.startActionMode(wrapSelectionCallback(callback), type);
+            return super.startActionMode(wrapSelectionCallback(callback), ActionMode.TYPE_FLOATING);
         }
 
         private boolean hasMenuTitle(Menu menu, String title) {
@@ -218,7 +220,16 @@ public class MainActivity extends Activity {
         }
 
         private void addSelectionMenuItem(Menu menu, int id, int order, String title, int showAsAction) {
-            if (hasMenuTitle(menu, title)) return;
+            for (int i = 0; i < menu.size(); i++) {
+                MenuItem existing = menu.getItem(i);
+                CharSequence current = existing.getTitle();
+                if (current != null && title.equalsIgnoreCase(current.toString())) {
+                    // Promote platform-provided Cut/Copy actions too, so Mono
+                    // can sit beside them rather than being buried in overflow.
+                    existing.setShowAsAction(showAsAction);
+                    return;
+                }
+            }
             MenuItem item = menu.add(Menu.NONE, id, order, title);
             item.setShowAsAction(showAsAction);
         }
@@ -264,11 +275,11 @@ public class MainActivity extends Activity {
                 public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                     boolean created = original.onCreateActionMode(mode, menu);
                     if (created) {
-                        addSelectionMenuItem(menu, MENU_COPY, 100, "Copy", MenuItem.SHOW_AS_ACTION_IF_ROOM);
-                        addSelectionMenuItem(menu, MENU_CUT, 101, "Cut", MenuItem.SHOW_AS_ACTION_IF_ROOM);
-                        addSelectionMenuItem(menu, MENU_BOLD, 102, "Bold", MenuItem.SHOW_AS_ACTION_IF_ROOM);
-                        addSelectionMenuItem(menu, MENU_ITALIC, 103, "Italic", MenuItem.SHOW_AS_ACTION_IF_ROOM);
-                        addSelectionMenuItem(menu, MENU_MONO, 104, "Mono", MenuItem.SHOW_AS_ACTION_IF_ROOM);
+                        addSelectionMenuItem(menu, MENU_COPY, 100, "Copy", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                        addSelectionMenuItem(menu, MENU_CUT, 101, "Cut", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                        addSelectionMenuItem(menu, MENU_MONO, 102, "Mono", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                        addSelectionMenuItem(menu, MENU_BOLD, 103, "Bold", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_ITALIC, 104, "Italic", MenuItem.SHOW_AS_ACTION_NEVER);
                         addSelectionMenuItem(menu, MENU_CODE, 105, "Code", MenuItem.SHOW_AS_ACTION_NEVER);
                         addSelectionMenuItem(menu, MENU_STRIKE, 106, "Strikethrough", MenuItem.SHOW_AS_ACTION_NEVER);
                         addSelectionMenuItem(menu, MENU_UNDERLINE, 107, "Underline", MenuItem.SHOW_AS_ACTION_NEVER);
