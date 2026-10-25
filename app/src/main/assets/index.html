@@ -732,7 +732,7 @@ function keepSelectedVisible(id){chat.classList.add('sheet-open');const adjust=(
 function openSheet(id){
   shStack=[];const m=msgs.find(m=>m.id==id);if(!m)return;const txt=noteCopyText(m);
   const preview=(plain(m.h)||(m.i?'Photo attachment':'Empty note')).replace(/\s+/g,' ').slice(0,96);
-  sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-head-line"><span class="context-eyebrow">FZ NOTES · MESSAGE</span>'+contextMenuRow('x','Close',contextIcons.close,'context-close')+'</div><div class="context-title">Message options</div><div class="context-preview">'+esc(preview)+'</div></div>'+
+  sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-head-line"><span class="context-eyebrow">FZ NOTES · MESSAGE</span><button type="button" class="context-close" data-k="x" aria-label="Close menu">×</button></div><div class="context-title">Message options</div><div class="context-preview">'+esc(preview)+'</div></div>'+
    '<div class="context-actions">'+
    contextMenuRow('reply','Reply',contextIcons.reply)+
    contextMenuRow('edit','Edit',contextIcons.edit)+
@@ -764,7 +764,7 @@ chat.addEventListener('touchmove',e=>{const t=e.touches&&e.touches[0];if(pressTa
 chat.addEventListener('contextmenu',e=>{if(e.target.closest('.b')){e.preventDefault();e.stopPropagation()}});
 chatwSelectTimestampGuard();
 function openPhotoViewer(src){if(!src)return;let viewer=document.getElementById('photoViewer');if(!viewer){viewer=document.createElement('div');viewer.id='photoViewer';viewer.innerHTML='<button type="button" aria-label="Close photo">×</button><img alt="Full size photo">';document.body.appendChild(viewer);viewer.addEventListener('click',()=>viewer.classList.remove('on'));viewer.querySelector('img').addEventListener('click',e=>e.stopPropagation());viewer.querySelector('button').addEventListener('click',()=>viewer.classList.remove('on'))}viewer.querySelector('img').src=src;viewer.classList.add('on')}
-chat.addEventListener('click',e=>{if(Date.now()-pressed<650){e.preventDefault();e.stopPropagation();return}
+chat.addEventListener('click',e=>{if(Date.now()-pressed<650&&!e.target.closest('.ci')){e.preventDefault();e.stopPropagation();return}
  const ci=e.target.closest('.ci');if(ci){const bb=ci.closest('.b'),m=msgs.find(x=>x.id==bb.dataset.id);if(m&&m.c){const it=m.c[+ci.dataset.i];it.s=(it.s+1)%3;ci.className='ci s'+it.s;bb.querySelector('.cnt').textContent=cntText(m);if(m.due)scheduleReminder(m);save()}return}
  const sbx=e.target.closest('.b');if(selMode){if(sbx){const i=+sbx.dataset.id;if(sel.has(i))sel.delete(i);else sel.add(i);sbx.classList.toggle('sel',sel.has(i));if(!sel.size)selMode=false;renderTop()}return}
  const mn=e.target.closest('.mn');if(mn){openSheet(mn.closest('.b').dataset.id);return}
