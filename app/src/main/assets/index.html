@@ -467,7 +467,11 @@ body{min-height:100dvh}
 /* Notes use Telegram-style message actions, not Android text selection handles. */
 #chat .b,#chat .b *,#sh,#sh *,#chatw>#fab,#chatw>#listfab,#shBackdrop{ -webkit-user-select:none!important; user-select:none!important; -webkit-touch-callout:none!important; }
 #chat .b .msgtext,#chat .b .msgtext *{ -webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important}
-#chat .b .im,#chat .b .tg,#chat .b .tm,#chat .b .mn,#chat .b .due,#chat .b .ci,#chat .b .cnt{ -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
+#chat .b .im,#chat .b .tg,#chat .b .tm,#chat .b .mn,#chat .b .due,#chat .b .ci,#chat .b .cnt,
+#cmp button,#cmp #att,#cmp #send,#chatw>#fab,#chatw>#listfab,#chat .b .im{ -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;touch-action:manipulation}
+#chat .b .msgtext{position:relative;z-index:0}
+#chat .b .msgtext ::selection{background:rgba(88,153,255,.42);color:inherit}
+#chat .b .msgtext ::-moz-selection{background:rgba(88,153,255,.42);color:inherit}
 #chat .b .msgtext ::selection{background:rgba(88,153,255,.42);color:inherit}
 #chat .b .msgtext ::-moz-selection{background:rgba(88,153,255,.42);color:inherit}
 #chat .b,#sh button,#chatw>#fab,#chatw>#listfab{ -webkit-tap-highlight-color:transparent; }
@@ -720,7 +724,7 @@ window.nativeSelectionAction=function(action){
  if(sel){sel.removeAllRanges();sel.addRange(range)}
  act(action);updateComposerControls();saveDraft();return true;
 };
-$('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
+$('#lkok').onclick=()=>{const submittedMode=mode,v=lki.value.trim();lk.classList.remove('on');
  if(mode==='savepw'){savePw(v);return}
  if(mode==='bkpw'){doGoogleBackup();return}
  if(mode==='rspw'){doDriveRestore(pendDriveId);return}
@@ -736,7 +740,20 @@ $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
   else document.execCommand('insertHTML',false,'<a href="'+esc(u)+'">'+esc(v)+'</a>&nbsp;')}
  else document.execCommand('insertHTML',false,'<span class="mention">'+esc(v.startsWith('@')?v:'@'+v)+'</span>&nbsp;')};
 lki.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#lkok').click()}});
-function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(!t)return;if(t.closest('#chat .b .msgtext'))return;if(t.closest('#chat .b, #sh, #chatw>#fab, #chatw>#listfab')){e.preventDefault();e.stopPropagation()}},true);root.addEventListener('contextmenu',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(!t)return;if(t.closest('#chat .b .msgtext'))return;if(t.closest('#chat .b, #sh, #chatw>#fab, #chatw>#listfab')){e.preventDefault();e.stopPropagation()}},true)}
+function chatwSelectTimestampGuard(){
+ const root=$('#chatw');
+ const nonTextTargets='#chat .b .im,#chat .b .tg,#chat .b .tm,#chat .b .mn,#chat .b .due,#chat .b .ci,#chat .b .cnt,#sh,#chatw>#fab,#chatw>#listfab,#cmp button,#cmp #att,#cmp #send,#cmp #fi';
+ root.addEventListener('selectstart',e=>{
+  const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(!t)return;
+  if(t.closest('#chat .b .msgtext'))return;
+  if(t.closest(nonTextTargets)){e.preventDefault();e.stopPropagation()}
+ },true);
+ root.addEventListener('contextmenu',e=>{
+  const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(!t)return;
+  if(t.closest('#chat .b .msgtext'))return;
+  if(t.closest(nonTextTargets)){e.preventDefault();e.stopPropagation()}
+ },true)
+}
 function contextMenuRow(key,title,path,extra=''){
  return '<button type="button" class="context-menu-row'+(extra?' '+extra:'')+'" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+path+'</svg></span><span class="mt">'+esc(title)+'</span></button>';
 }
