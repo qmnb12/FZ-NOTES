@@ -520,6 +520,94 @@ body{min-height:100dvh}
 #chat .b.sel{transform:translateX(-2px) scale(.993)!important;transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease,background .22s ease!important}
 #chat .b.sel::before{animation:telegramCheckIn .2s cubic-bezier(.18,.82,.22,1.25) both}
 
+
+/* Telegram-like formatting visibility inside saved message bubbles */
+#chat .msgtext{font-size:15px;line-height:1.42;overflow-wrap:anywhere}
+#chat .msgtext b,#chat .msgtext strong{font-weight:800!important;color:#fff;text-shadow:0 0 .01px currentColor}
+#chat .msgtext i,#chat .msgtext em{font-style:italic!important}
+#chat .msgtext u{text-decoration:underline!important;text-decoration-thickness:1.2px;text-underline-offset:2px}
+#chat .msgtext s,#chat .msgtext strike,#chat .msgtext del{text-decoration:line-through!important;text-decoration-thickness:1.2px}
+#chat .msgtext .mono,#ed .mono{
+ display:inline!important;
+ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+ font-size:.88em!important;
+ font-weight:550;
+ color:#f3f7ff!important;
+ background:rgba(7,15,29,.72)!important;
+ border:1px solid rgba(188,211,248,.22);
+ border-radius:5px!important;
+ padding:2px 6px!important;
+ line-height:1.65;
+ -webkit-box-decoration-break:clone;
+ box-decoration-break:clone;
+ overflow-wrap:anywhere;
+}
+#chat .msgtext .mono:active{background:rgba(7,15,29,.92)!important}
+#chat .msgtext .code,#ed .code{
+ display:block!important;
+ position:relative;
+ width:100%;
+ max-width:100%;
+ box-sizing:border-box;
+ margin:7px 0 5px!important;
+ padding:28px 11px 11px!important;
+ border:1px solid rgba(174,202,242,.2)!important;
+ border-left:3px solid #8ab8ff!important;
+ border-radius:10px!important;
+ background:linear-gradient(145deg,rgba(7,15,29,.84),rgba(12,23,40,.92))!important;
+ color:#f1f6ff!important;
+ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+ font-size:.82em!important;
+ font-weight:450;
+ line-height:1.5!important;
+ white-space:pre-wrap!important;
+ overflow-wrap:anywhere!important;
+ word-break:break-word!important;
+ text-indent:0;
+}
+#chat .msgtext .code::before,#ed .code::before{
+ content:"CODE";
+ position:absolute;
+ top:8px;
+ left:10px;
+ color:#8fbcff;
+ font:800 9px/1.2 system-ui,-apple-system,sans-serif;
+ letter-spacing:1.35px;
+}
+#chat .msgtext .code::after{
+ display:block!important;
+ content:"COPY";
+ position:absolute;
+ top:7px;
+ right:9px;
+ float:none!important;
+ margin:0!important;
+ color:#a9caff!important;
+ font:800 9px/1.4 system-ui,-apple-system,sans-serif!important;
+ letter-spacing:1px;
+ padding:3px 6px;
+ border:1px solid rgba(141,185,255,.24);
+ border-radius:5px;
+ background:rgba(94,147,231,.12);
+ pointer-events:none;
+}
+#chat .msgtext .code:active{border-color:rgba(141,185,255,.55)!important;background:rgba(6,14,27,.98)!important}
+#chat .msgtext .quote,#ed .quote{
+ display:block!important;
+ box-sizing:border-box;
+ margin:5px 0!important;
+ padding:5px 10px!important;
+ border-left:3px solid #a2c7ff!important;
+ border-radius:0 8px 8px 0!important;
+ background:rgba(8,18,34,.36)!important;
+ color:#f3f7ff!important;
+ line-height:1.4;
+}
+#chat .msgtext .spoiler{border-radius:4px;padding:0 3px}
+:root[data-theme="light"] #chat .msgtext .mono,:root[data-theme="light"] #ed .mono{color:#f6f9ff!important;background:#35465d!important}
+:root[data-theme="light"] #chat .msgtext .code,:root[data-theme="light"] #ed .code{color:#f1f6ff!important;background:#152236!important}
+@media(max-width:420px){#chat .msgtext .code,#ed .code{font-size:.78em!important;padding:26px 9px 9px!important}}
+
 </style>
 </head>
 <body>
@@ -605,7 +693,7 @@ function redoChange(){if(!redoStack.length){toast('Redo ke liye kuch nahi hai');
 
 const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),ms||1100)}
-function copy(t){const ok=()=>toast('Copied');const fb=()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');ok()}catch(e){}a.remove()};
+function copy(t,feedback='Copied'){const ok=()=>toast(feedback);const fb=()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');ok()}catch(e){}a.remove()};
 try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}}
 const KINDS=['mono','code','spoiler','mention','quote','date'];
 function clean(n){let o='';n.childNodes.forEach(c=>{
@@ -878,7 +966,7 @@ chat.addEventListener('click',e=>{if(Date.now()-pressed<650&&!e.target.closest('
  const rp=e.target.closest('.rp');if(rp){jump(+rp.dataset.r);return}
  const photo=e.target.closest('.im');if(photo&&photo.getAttribute('src')){openPhotoViewer(photo.getAttribute('src'));return}
  const sp=e.target.closest('.spoiler');if(sp){sp.classList.toggle('on');return}
- const m=e.target.closest('.mono,.code');if(m)copy(m.textContent)});
+ const m=e.target.closest('.mono,.code');if(m)copy(m.textContent,m.classList.contains('code')?'Code copied':'Mono copied')});
 let blankTouchStart=null,blankPointerStart=null,lastBlankMenuId=null,lastBlankMenuAt=0;
 function nearestBubbleAt(x,y){
  const a=[...chat.querySelectorAll('.b')];if(!a.length)return null;
