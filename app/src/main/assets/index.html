@@ -661,6 +661,16 @@ function ask(m,ph,v){
  lki.autocomplete=(m==='hidepinset'||m==='hidepwset')?'new-password':(isPin||isHiddenPassword||m==='legacyrestore')?'current-password':'off';
  lki.placeholder=ph;
  lki.value=v!==undefined?v:(m==='link'?'https://':m==='mention'?'@':'');
+ const actionLabels={
+  hidepinset:'Set PIN',hidepwset:'Set password',
+  hidepinconfirm:'Hide note',hidepwconfirm:'Hide note',
+  hidepinunlock:'Unlock',hidepwunlock:'Unlock',
+  hidepwcheck:'Continue',legacyrestore:'Restore',
+  savepw:'Save',bkpw:'Back up',rspw:'Restore',
+  topic:'Create topic',rename:'Save',listtitle:'Create list',
+  link:'Insert link',mention:'Insert'
+ };
+ $('#lkok').textContent=actionLabels[m]||'Add';
  lk.classList.add('on');lki.focus()
 }
 function act(a){restore();
