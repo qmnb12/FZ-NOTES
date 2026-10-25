@@ -243,6 +243,49 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
     }
 
+    boolean hasSelection() {
+        return !selectedIds.isEmpty();
+    }
+
+    String idAt(float x, float y) {
+        if (recyclerView == null) return null;
+        View child = recyclerView.findChildViewUnder(x, y);
+        if (!(child instanceof NoteRow)) return null;
+        RecyclerView.ViewHolder holder = recyclerView.getChildViewHolder(child);
+        int position = holder.getBindingAdapterPosition();
+        if (position == RecyclerView.NO_POSITION || position >= items.size()) return null;
+        return items.get(position).id;
+    }
+
+    void setSwipeOffset(String id, float offset) {
+        NoteRow row = findVisibleRow(id);
+        if (row == null) return;
+        row.bubble.animate().cancel();
+        row.bubble.setTranslationX(Math.max(-dp(70), Math.min(dp(70), offset)));
+    }
+
+    void finishSwipe(String id, float offset, boolean commit) {
+        NoteRow row = findVisibleRow(id);
+        if (row != null) {
+            row.bubble.animate().cancel();
+            row.bubble.animate().translationX(0f).setDuration(160)
+                    .setInterpolator(new DecelerateInterpolator()).start();
+        }
+        if (!commit || id == null || Math.abs(offset) < dp(55) || listener == null) return;
+        listener.onAction(id, offset < 0 ? "swipeReply" : "pinToggle", 0);
+    }
+
+    private NoteRow findVisibleRow(String id) {
+        if (recyclerView == null || id == null) return null;
+        for (int i = 0; i < recyclerView.getChildCount(); i++) {
+            View child = recyclerView.getChildAt(i);
+            if (!(child instanceof NoteRow)) continue;
+            NoteRow row = (NoteRow) child;
+            if (id.equals(row.boundId)) return row;
+        }
+        return null;
+    }
+
     @Override public long getItemId(int position) {
         if (items.isEmpty()) return Long.MIN_VALUE;
         return stableId(items.get(position).id);
@@ -621,6 +664,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 indicator.setChecked(false, false, true);
             }
             bubble.animate().cancel();
+            bubble.setTranslationX(0f);
             bubble.setScaleX(selected ? 0.998f : 1f);
             bubble.setScaleY(selected ? 0.998f : 1f);
             if (selected) {
