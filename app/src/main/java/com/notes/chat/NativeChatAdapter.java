@@ -610,10 +610,17 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             clock.setTextColor(muted);
             menu.setTextColor(muted);
             menu.setVisibility(selectionMode ? GONE : VISIBLE);
-            indicator.setVisibility(selectionMode ? VISIBLE : INVISIBLE);
-            indicator.setChecked(selected, true);
             indicator.setColors(light ? LIGHT_ACCENT : 0xff3390ec, muted);
-            bubble.setAlpha(selected ? 1f : 1f);
+            if (selectionMode) {
+                indicator.setVisibility(VISIBLE);
+                indicator.setChecked(selected, true);
+            } else if (indicator.getVisibility() == VISIBLE) {
+                indicator.setChecked(false, true, true);
+            } else {
+                indicator.setVisibility(INVISIBLE);
+                indicator.setChecked(false, false, true);
+            }
+            bubble.animate().cancel();
             bubble.setScaleX(selected ? 0.998f : 1f);
             bubble.setScaleY(selected ? 0.998f : 1f);
             if (selected) {
@@ -637,10 +644,20 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
 
         void updateSelection(boolean selected, boolean selectionMode, boolean light) {
-            indicator.setVisibility(selectionMode ? VISIBLE : INVISIBLE);
             indicator.setColors(light ? LIGHT_ACCENT : 0xff3390ec, light ? LIGHT_MUTED : DARK_MUTED);
-            indicator.setChecked(selected, true);
+            if (selectionMode) {
+                indicator.setVisibility(VISIBLE);
+                indicator.setChecked(selected, true);
+            } else if (indicator.getVisibility() == VISIBLE) {
+                indicator.setChecked(false, true, true);
+            } else {
+                indicator.setVisibility(INVISIBLE);
+                indicator.setChecked(false, false, true);
+            }
             menu.setVisibility(selectionMode ? GONE : VISIBLE);
+            bubble.animate().cancel();
+            bubble.animate().scaleX(selected ? 0.998f : 1f).scaleY(selected ? 0.998f : 1f)
+                    .setDuration(180).setInterpolator(new DecelerateInterpolator()).start();
             if (selected) {
                 GradientDrawable background = new GradientDrawable();
                 background.setColor(light ? LIGHT_BUBBLE : DARK_BUBBLE);
@@ -686,15 +703,32 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         }
         void setColors(int accent, int outline) { this.accent = accent; this.outline = outline; invalidate(); }
-        void setChecked(boolean checked, boolean animated) {
+        void setChecked(boolean checked, boolean animated) { setChecked(checked, animated, false); }
+        void setChecked(boolean checked, boolean animated, boolean hideWhenDone) {
             float target = checked ? 1f : 0f;
-            if (Math.abs(progress - target) < 0.001f) return;
-            if (animator != null) animator.cancel();
-            if (!animated || !isAttachedToWindow()) { progress = target; invalidate(); return; }
+            if (checked) setVisibility(VISIBLE);
+            if (animator != null) { animator.cancel(); animator = null; }
+            if (Math.abs(progress - target) < 0.001f) {
+                if (hideWhenDone && !checked) setVisibility(INVISIBLE);
+                invalidate();
+                return;
+            }
+            if (!animated || !isAttachedToWindow()) {
+                progress = target;
+                invalidate();
+                if (hideWhenDone && !checked) setVisibility(INVISIBLE);
+                return;
+            }
             animator = ValueAnimator.ofFloat(progress, target);
             animator.setDuration(190);
             animator.setInterpolator(new DecelerateInterpolator());
             animator.addUpdateListener(a -> { progress = (float) a.getAnimatedValue(); invalidate(); });
+            animator.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(android.animation.Animator animation) {
+                    if (animator == animation) animator = null;
+                    if (hideWhenDone && !checked && progress <= 0.001f) setVisibility(INVISIBLE);
+                }
+            });
             animator.start();
         }
         @Override protected void onDraw(Canvas canvas) {
