@@ -523,7 +523,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bubble.setOnLongClickListener(v -> longPress());
             body.setOnLongClickListener(v -> longPress());
             imageView.setOnClickListener(v -> {
-                if (boundId != null && listener != null) listener.onAction(boundId, "photo", 0);
+                if (boundId == null || listener == null) return;
+                if (!selectedIds.isEmpty()) toggleSelection(boundId);
+                else listener.onAction(boundId, "photo", 0);
             });
             imageView.setOnLongClickListener(v -> longPress());
             bubble.setOnClickListener(v -> {
@@ -584,7 +586,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             replyBg.setCornerRadius(dp(5));
             replyView.setBackground(replyBg);
             replyView.setOnClickListener(v -> {
-                if (!TextUtils.isEmpty(note.id) && listener != null) listener.onAction(note.id, "reply", 0);
+                if (TextUtils.isEmpty(note.id) || listener == null) return;
+                if (!selectedIds.isEmpty()) toggleSelection(note.id);
+                else listener.onAction(note.id, "reply", 0);
             });
 
             if (!TextUtils.isEmpty(note.image)) {
@@ -643,7 +647,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                     checkRow.addView(label, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
                     final int taskIndex = i;
                     checkRow.setOnClickListener(v -> {
-                        if (listener != null) listener.onAction(note.id, "check", taskIndex);
+                        if (listener == null) return;
+                        if (!selectedIds.isEmpty()) toggleSelection(note.id);
+                        else listener.onAction(note.id, "check", taskIndex);
                     });
                     checks.addView(checkRow, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
                 }
