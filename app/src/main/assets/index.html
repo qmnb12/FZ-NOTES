@@ -629,7 +629,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='cset'){openCfg();return}
   if(k==='cbk'){if(!cfgGet().driveOn){openCfg();toast('Connect Google account first',2600);return}doGoogleBackup();return}
   if(k==='crs'){openDriveHistory();return}
-  if(k==='tgNow'){doTelegramBackup();return}
+  if(k==='tgNow'){openTgCfg();return}
   if(k==='tgstatus'){toast(lastTelegramBackup()?'Last Telegram backup: '+lastTelegramBackup():'No successful Telegram backup recorded',3000);return}
   if(k==='tgcfg'){openTgCfg();return}
   if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Drive backup nahi mila');return}doDriveRestore(driveHistoryItems[i].id);return}
@@ -776,7 +776,7 @@ async function doGoogleBackup(quiet=false,automatic=false,cachedOnly=false){
 }
 async function doTelegramBackup(quiet=false){
  const c=cfgGet();
- if(!c.tgToken||!c.tgChat){if(!quiet){openCfg();toast('Pehle Telegram bot token aur chat ID save karo',3000)}return false}
+ if(!c.tgToken||!c.tgChat){if(!quiet){openTgCfg();toast('Telegram archive ke liye bot token aur chat ID set karo',3000)}return false}
  if(!quiet)toast('Encrypted Telegram archive bana raha hoon…',4500);
  try{
   const {key}=await ensureDriveKey();
@@ -826,6 +826,7 @@ $('#c_save').onclick=async()=>{if(await saveTelegramSettings())$('#tgcfg').class
 $('#c_tgClose').onclick=()=>$('#tgcfg').classList.remove('on');
 $('#c_tgNow').onclick=async()=>{
  if(!(await saveTelegramSettings()))return;
+ $('#tgcfg').classList.remove('on');
  await doTelegramBackup();
 };
 $('#c_tgDet').onclick=async()=>{
