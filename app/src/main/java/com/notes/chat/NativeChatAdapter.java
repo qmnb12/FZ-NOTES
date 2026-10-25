@@ -16,6 +16,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.style.BackgroundColorSpan;
+import android.text.style.ClickableSpan;
 import android.text.style.QuoteSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TypefaceSpan;
@@ -248,6 +249,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
     }
 
+    private void toggleSelectionById(String id) {
+        if (id == null) return;
+        if (selectedIds.contains(id)) selectedIds.remove(id); else selectedIds.add(id);
+        notifyIdChanged(id, true);
+        if (listener != null) listener.onSelectionChanged(new ArrayList<>(selectedIds));
+    }
+
     void scrollToId(String id) {
         if (recyclerView == null) return;
         for (int i = 0; i < items.size(); i++) {
@@ -414,7 +422,6 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private final TextView clock;
         private final TextView menu;
         private String boundId;
-        private boolean suppressClick;
         private final int[] colors = new int[4];
 
         NoteRow(Context context) {
@@ -549,25 +556,20 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             });
             imageView.setOnLongClickListener(v -> longPress());
             bubble.setOnClickListener(v -> {
-                if (suppressClick) { suppressClick = false; return; }
                 if (!selectedIds.isEmpty()) toggleSelection(boundId);
             });
         }
 
         private boolean longPress() {
             if (boundId == null || listener == null) return true;
-            suppressClick = true;
-            postDelayed(() -> suppressClick = false, 550);
+            // Returning true consumes this long-press gesture; don't block the next
+            // independent tap with a timeout (that made quick selection taps feel dead).
             toggleSelection(boundId);
             return true;
         }
 
         private void toggleSelection(String id) {
-            if (id == null) return;
-            int index = indexOf(id);
-            if (selectedIds.contains(id)) selectedIds.remove(id); else selectedIds.add(id);
-            if (index >= 0) notifyItemChanged(index, "selection");
-            if (listener != null) listener.onSelectionChanged(new ArrayList<>(selectedIds));
+            toggleSelectionById(id);
         }
 
         private int indexOf(String id) {
@@ -621,11 +623,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
 
             String rich = note.html == null ? "" : note.html;
-            rich = rich.replaceAll("(?is)<span\\s+class=[\"']mono[\"']\\s*>(.*?)</span>", "<tt>$1</tt>");
+            rich = rich.replaceAll("(?is)<span\\s+class=[\"']mono[\"']\\s*>(.*?)</span>", "<monospan>$1</monospan>");
             rich = rich.replaceAll("(?is)<span\\s+class=[\"']code[\"']\\s*>(.*?)</span>", "<codeblock>$1</codeblock>");
             rich = rich.replaceAll("(?is)<span\\s+class=[\"']quote[\"']\\s*>(.*?)</span>", "<quoteblock>$1</quoteblock>");
             Spanned parsed = Html.fromHtml(rich, Html.FROM_HTML_MODE_COMPACT, null,
-                    new NativeRichTagHandler(context, accent, light ? Color.rgb(238, 243, 251) : Color.rgb(22, 34, 49), dp(3), dp(8)));
+                    new NativeRichTagHandler(context, accent, light ? Color.rgb(238, 243, 251) : Color.rgb(22, 34, 49), dp(3), dp(8), NativeChatAdapter.this, note.id));
             body.setText(parsed);
             body.setTextColor(fg);
             body.setLinkTextColor(accent);
@@ -655,15 +657,23 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                     checkRow.setOrientation(HORIZONTAL);
                     checkRow.setPadding(0, dp(2), 0, dp(2));
                     TextView mark = new TextView(context);
-                    mark.setText(check.state == 1 ? "☑" : check.state == 2 ? "◉" : "□");
-                    mark.setTextColor(check.state == 1 ? (light ? Color.rgb(24,134,75) : Color.rgb(95,212,122)) : accent);
+                    mark.setText(check.state == 1 ? "☑" : check.state == 2 ? "✕" : "□");
+                    int stateColor = check.state == 1
+                            ? (light ? Color.rgb(24,134,75) : Color.rgb(95,212,122))
+                            : check.state == 2
+                                    ? (light ? Color.rgb(207,54,66) : Color.rgb(255,105,116))
+                                    : accent;
+                    mark.setTextColor(stateColor);
                     mark.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
                     checkRow.addView(mark, new LinearLayout.LayoutParams(dp(24), LayoutParams.WRAP_CONTENT));
                     TextView label = new TextView(context);
                     label.setText(check.text);
-                    label.setTextColor(fg);
+                    label.setTextColor(check.state == 0 ? fg : stateColor);
                     label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
                     label.setMaxLines(5);
+                    if (check.state == 1) {
+                        label.setPaintFlags(label.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+                    }
                     checkRow.addView(label, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
                     final int taskIndex = i;
                     checkRow.setOnClickListener(v -> {
@@ -691,13 +701,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
             bubble.animate().cancel();
             bubble.setTranslationX(0f);
-            bubble.setScaleX(selected ? 0.998f : 1f);
-            bubble.setScaleY(selected ? 0.998f : 1f);
+            bubble.setScaleX(selected ? 0.985f : 1f);
+            bubble.setScaleY(selected ? 0.985f : 1f);
             if (selected) {
                 GradientDrawable selectedBg = new GradientDrawable();
-                selectedBg.setColor(bg);
+                selectedBg.setColor(light ? Color.rgb(222, 236, 255) : Color.rgb(37, 66, 99));
                 selectedBg.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
-                selectedBg.setStroke(dp(1), light ? Color.rgb(112, 166, 245) : Color.rgb(57, 136, 245));
+                selectedBg.setStroke(dp(1), light ? Color.rgb(53, 122, 225) : Color.rgb(100, 167, 255));
                 bubble.setBackground(selectedBg);
                 bubble.setElevation(dp(2));
             } else {
@@ -726,20 +736,17 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
             menu.setVisibility(selectionMode ? GONE : VISIBLE);
             bubble.animate().cancel();
-            bubble.animate().scaleX(selected ? 0.998f : 1f).scaleY(selected ? 0.998f : 1f)
-                    .setDuration(180).setInterpolator(new DecelerateInterpolator()).start();
+            bubble.animate().scaleX(selected ? 0.985f : 1f).scaleY(selected ? 0.985f : 1f)
+                    .setDuration(150).setInterpolator(new DecelerateInterpolator()).start();
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(selected
+                    ? (light ? Color.rgb(222, 236, 255) : Color.rgb(37, 66, 99))
+                    : (light ? LIGHT_BUBBLE : DARK_BUBBLE));
+            background.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
             if (selected) {
-                GradientDrawable background = new GradientDrawable();
-                background.setColor(light ? LIGHT_BUBBLE : DARK_BUBBLE);
-                background.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
-                background.setStroke(dp(1), light ? Color.rgb(112, 166, 245) : Color.rgb(57, 136, 245));
-                bubble.setBackground(background);
-            } else {
-                GradientDrawable background = new GradientDrawable();
-                background.setColor(light ? LIGHT_BUBBLE : DARK_BUBBLE);
-                background.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
-                bubble.setBackground(background);
+                background.setStroke(dp(1), light ? Color.rgb(53, 122, 225) : Color.rgb(100, 167, 255));
             }
+            bubble.setBackground(background);
         }
     }
 
@@ -832,33 +839,52 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     }
 
     private static final class NativeRichTagHandler implements Html.TagHandler {
-        private static final class Mark { final int start; final String tag; Mark(int start, String tag) { this.start = start; this.tag = tag; } }
+        private static final class Mark {
+            final int start;
+            final String tag;
+            final int index;
+            Mark(int start, String tag, int index) { this.start = start; this.tag = tag; this.index = index; }
+        }
         private final Stack<Mark> marks = new Stack<>();
         private final Context context;
         private final int accent, codeBackground, stripeWidth, gapWidth;
-        NativeRichTagHandler(Context context, int accent, int codeBackground, int stripeWidth, int gapWidth) {
+        private final NativeChatAdapter adapter;
+        private final String noteId;
+        private int monoIndex;
+        private int codeIndex;
+
+        NativeRichTagHandler(Context context, int accent, int codeBackground, int stripeWidth, int gapWidth,
+                             NativeChatAdapter adapter, String noteId) {
             this.context = context; this.accent = accent; this.codeBackground = codeBackground;
-            this.stripeWidth = stripeWidth; this.gapWidth = gapWidth;
+            this.stripeWidth = stripeWidth; this.gapWidth = gapWidth; this.adapter = adapter; this.noteId = noteId;
         }
         @Override public void handleTag(boolean opening, String tag, Editable output, XMLReader xmlReader) {
-            if (!"codeblock".equalsIgnoreCase(tag) && !"quoteblock".equalsIgnoreCase(tag)) return;
+            boolean code = "codeblock".equalsIgnoreCase(tag);
+            boolean quote = "quoteblock".equalsIgnoreCase(tag);
+            boolean mono = "monospan".equalsIgnoreCase(tag);
+            if (!code && !quote && !mono) return;
             if (opening) {
-                marks.push(new Mark(output.length(), tag.toLowerCase(Locale.ROOT)));
-                if ("codeblock".equalsIgnoreCase(tag) && output.length() > 0 && output.charAt(output.length() - 1) != '\n') output.append('\n');
+                int index = code ? codeIndex++ : mono ? monoIndex++ : -1;
+                marks.push(new Mark(output.length(), tag.toLowerCase(Locale.ROOT), index));
+                if (code && output.length() > 0 && output.charAt(output.length() - 1) != '\n') output.append('\n');
+                return;
+            }
+            Mark mark = findMark(tag);
+            if (mark == null) return;
+            int start = Math.min(mark.start, output.length());
+            int end = output.length();
+            if (start >= end) return;
+            if ("codeblock".equals(mark.tag)) {
+                output.setSpan(new TypefaceSpan("monospace"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new BackgroundColorSpan(codeBackground), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new LeadingCodeIndent(dpStatic(context, 7), accent), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new InlineCopySpan(adapter, noteId, "code", mark.index), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            } else if ("monospan".equals(mark.tag)) {
+                output.setSpan(new TypefaceSpan("monospace"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new InlineCopySpan(adapter, noteId, "mono", mark.index), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             } else {
-                Mark mark = findMark(tag);
-                if (mark == null) return;
-                int start = Math.min(mark.start, output.length());
-                int end = output.length();
-                if (start >= end) return;
-                if ("codeblock".equals(mark.tag)) {
-                    output.setSpan(new TypefaceSpan("monospace"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    output.setSpan(new BackgroundColorSpan(codeBackground), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    output.setSpan(new LeadingCodeIndent(dpStatic(context, 7), accent), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                } else {
-                    output.setSpan(new QuoteSpan(accent, stripeWidth, gapWidth), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    output.setSpan(new BackgroundColorSpan(codeBackground), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                }
+                output.setSpan(new QuoteSpan(accent, stripeWidth, gapWidth), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new BackgroundColorSpan(codeBackground), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
         private Mark findMark(String tag) {
@@ -869,6 +895,24 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 }
             }
             return null;
+        }
+    }
+
+    private static final class InlineCopySpan extends ClickableSpan {
+        private final NativeChatAdapter adapter;
+        private final String noteId;
+        private final String action;
+        private final int index;
+        InlineCopySpan(NativeChatAdapter adapter, String noteId, String action, int index) {
+            this.adapter = adapter; this.noteId = noteId; this.action = action; this.index = index;
+        }
+        @Override public void onClick(View widget) {
+            if (adapter == null || noteId == null) return;
+            if (!adapter.selectedIds.isEmpty()) adapter.toggleSelectionById(noteId);
+            else if (adapter.listener != null) adapter.listener.onAction(noteId, action, index);
+        }
+        @Override public void updateDrawState(TextPaint ds) {
+            ds.setUnderlineText(false);
         }
     }
 
