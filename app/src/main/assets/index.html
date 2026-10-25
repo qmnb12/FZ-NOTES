@@ -608,6 +608,64 @@ body{min-height:100dvh}
 :root[data-theme="light"] #chat .msgtext .code,:root[data-theme="light"] #ed .code{color:#f1f6ff!important;background:#152236!important}
 @media(max-width:420px){#chat .msgtext .code,#ed .code{font-size:.78em!important;padding:26px 9px 9px!important}}
 
+
+/* Telegram-inspired message selection: stable check rail and reversible transitions */
+header{max-height:80px;overflow:hidden;transition:max-height .19s cubic-bezier(.2,.8,.2,1),opacity .16s ease,transform .19s cubic-bezier(.2,.8,.2,1),padding .19s ease,border-color .19s ease}
+body.selection-mode header{max-height:0!important;padding-top:0!important;padding-bottom:0!important;opacity:0;transform:translateY(-8px);border-bottom-color:transparent!important;pointer-events:none}
+body.selection-mode #sq,body.selection-mode #filters,body.selection-mode #pin{display:none!important}
+#selbar.on{animation:telegramSelectBarIn .19s cubic-bezier(.2,.8,.2,1) both}
+#selbar.leaving{animation:telegramSelectBarOut .17s cubic-bezier(.4,0,1,1) both;pointer-events:none}
+@keyframes telegramSelectBarIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes telegramSelectBarOut{to{opacity:0;transform:translateY(-8px)}}
+#chat .b{transition:background-color .2s ease,border-color .2s ease,box-shadow .22s cubic-bezier(.2,.8,.2,1),transform .22s cubic-bezier(.2,.8,.2,1),color .18s ease}
+body.selection-mode #chat .b::before,body.selection-mode-out #chat .b::before{
+ content:''!important;position:absolute!important;left:-31px!important;top:50%!important;
+ width:25px!important;height:25px!important;box-sizing:border-box!important;border-radius:50%!important;
+ display:grid!important;place-items:center!important;background:transparent!important;
+ border:2px solid rgba(147,169,196,.78)!important;color:transparent!important;
+ font:800 14px/1 system-ui,-apple-system,sans-serif!important;
+ box-shadow:0 1px 5px rgba(0,0,0,.16)!important;opacity:1;transform:translateY(-50%) scale(1);
+ transition:opacity .16s ease,transform .2s cubic-bezier(.2,.8,.2,1),background-color .16s ease,border-color .16s ease,color .14s ease,box-shadow .16s ease!important;
+}
+body.selection-mode #chat .b.sel::before{
+ content:'✓'!important;background:#3390ec!important;border-color:#3390ec!important;color:#fff!important;
+ box-shadow:0 2px 8px rgba(51,144,236,.32)!important;transform:translateY(-50%) scale(1)!important;
+}
+body.selection-mode #chat .b.sel{
+ position:relative!important;background:var(--bub)!important;color:var(--text)!important;
+ border-color:rgba(91,160,255,.84)!important;
+ box-shadow:inset 0 0 0 999px rgba(51,144,236,.19),0 0 0 2px rgba(51,144,236,.18),0 4px 13px rgba(0,0,0,.12)!important;
+ filter:none!important;transform:scale(1.008)!important;z-index:2!important;
+}
+body.selection-mode-out #chat .b::before{opacity:0!important;transform:translateY(-50%) scale(.55)!important}
+body.selection-mode-out #chat .b.sel{box-shadow:inset 0 0 0 999px rgba(51,144,236,0),0 0 0 0 rgba(51,144,236,0)!important;transform:scale(1)!important}
+@media(prefers-reduced-motion:reduce){header,#selbar,#chat .b,#chat .b::before{transition:none!important;animation:none!important}}
+/* Telegram-like readable rich text */
+#chat .msgtext .mono,#ed .mono{
+ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-size:.9em!important;font-weight:500!important;
+ color:#d9eaff!important;background:rgba(12,20,32,.48)!important;border:1px solid rgba(151,185,232,.12)!important;
+ border-radius:4px!important;padding:1px 4px!important;line-height:1.55!important;
+}
+#chat .msgtext .code,#ed .code{
+ background:rgba(7,14,24,.3)!important;border:0!important;border-left:2px solid var(--acc)!important;
+ border-radius:0 6px 6px 0!important;padding:25px 9px 8px!important;box-shadow:none!important;
+}
+#chat .msgtext .code::before,#ed .code::before{color:#8dbbff!important;letter-spacing:.7px!important;font-size:9px!important}
+#chat .msgtext .code::after{
+ content:'Copy'!important;text-transform:none!important;letter-spacing:0!important;font-size:11px!important;font-weight:600!important;
+ color:#d5e8ff!important;padding:2px 7px!important;border:1px solid rgba(151,185,232,.17)!important;
+ background:rgba(35,57,85,.45)!important;border-radius:5px!important;top:7px!important;right:8px!important;
+}
+#chat .msgtext .quote,#ed .quote{
+ border-left:3px solid var(--acc)!important;background:rgba(10,20,34,.23)!important;
+ padding:4px 9px!important;margin:5px 0!important;border-radius:0 5px 5px 0!important;
+ color:inherit!important;line-height:1.42!important;
+}
+#chat .msgtext b,#chat .msgtext strong{font-weight:800!important;color:inherit!important;text-shadow:none!important}
+:root[data-theme="light"] #chat .msgtext .mono,:root[data-theme="light"] #ed .mono{color:#233c5c!important;background:rgba(64,111,175,.1)!important;border-color:rgba(44,80,130,.12)!important}
+:root[data-theme="light"] #chat .msgtext .code,:root[data-theme="light"] #ed .code{background:rgba(45,73,110,.07)!important;color:inherit!important}
+:root[data-theme="light"] #chat .msgtext .quote,:root[data-theme="light"] #ed .quote{background:rgba(44,97,160,.07)!important}
+
 </style>
 </head>
 <body>
@@ -725,7 +783,7 @@ function saveDraft(){try{const value={text:ed.innerHTML,plain:ed.innerText,listM
 function clearDraft(){try{localStorage.removeItem('notes-chat-draft')}catch(e){}}
 ed.addEventListener('input',()=>{updateComposerControls();clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,180);});$('#taskdue').addEventListener('change',saveDraft);
 function restoreDraft(){try{const d=JSON.parse(localStorage.getItem('notes-chat-draft')||'null');if(!d)return;if(d.text)ed.innerHTML=d.text;if(d.listMode){listMode=true;listTitle=d.listTitle||'';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.dataset.ph='Add list items, one per line'}if(d.due)$('#taskdue').value=d.due;if(d.topic==='hidden'){cur='all';hiddenUnlocked=false}else if(d.topic&&((d.topic==='all')||d.topic==='quick'||topics.some(t=>t.id===d.topic)))cur=d.topic;replyId=d.replyId||null;editId=d.editId||null;if(replyId||editId)setCtx();if(d.plain&&d.plain.trim())toast('Draft restored',1800)}catch(e){}}
-function clearSelection(){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));$('#selbar').classList.remove('on')}
+function clearSelection(){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop()}
 function handleAppBack(){
  // Close the top-most dedicated modal first; the cloud action sheet may still sit underneath.
  if($('#tgcfg').classList.contains('on')){$('#tgcfg').classList.remove('on');return true}
@@ -1064,7 +1122,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  const id=+sh.dataset.id;sh.classList.remove('on');
  if(k==='pin'){const m=msgs.find(m=>m.id===id);if(m){const was=m.p;msgs.forEach(x=>{if((x.k||'gen')===(m.k||'gen'))x.p=0});m.p=was?0:1;save();render()}}
  if(k==='hide'){const m=msgs.find(m=>m.id===id);if(m){sh.classList.remove('on');if(m.hidden){if(!hiddenUnlocked){requestHiddenNotesAccess();return}m.hidden=false;save();render();toast('Note unhidden')}else{requestHideNoteAuth(id)}}}
- if(k==='sel'){selMode=true;sel.clear();sel.add(id);render()}
+ if(k==='sel'){sh.classList.remove('on');selMode=true;sel.clear();selectNote(id)}
  if(k==='mv'){
    const topicRows=[{id:'quick',name:'Quick'}].concat(topics).map(t=>contextMenuRow('to:'+t.id,t.name,contextIcons.folder)).join('');
    sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · ORGANIZE</div><div class="context-title">Move to topic</div><div class="context-preview">Choose where this message belongs</div></div><div class="context-actions">'+topicRows+contextMenuRow('x','Cancel',contextIcons.close,'cancel')+'</div>';
@@ -1330,9 +1388,7 @@ window.flushCloudBackupBeforeClose=()=>{
   doGoogleBackup(true,true,true);
 };
 try{const th=localStorage.getItem('notes-theme');document.documentElement.dataset.theme=th||'dark'}catch(e){}
-function renderTop(){const pn=msgs.filter(m=>m.p&&inView(m)).pop(),pb=$('#pin');pb.classList.toggle('on',!!pn);
- if(pn){pb.dataset.id=pn.id;pb.querySelector('span').textContent=plain(pn.h)||'Photo'}
- $('#selbar').classList.toggle('on',selMode);$('#selc').textContent=sel.size+' selected'}
+let selectionExitTimer=0;function updateSelectionModeUI(active){const bar=$('#selbar');if(active){if(selectionExitTimer){clearTimeout(selectionExitTimer);selectionExitTimer=0}document.body.classList.remove('selection-mode-out');document.body.classList.add('selection-mode');bar.classList.remove('leaving');bar.classList.add('on');return}if(document.body.classList.contains('selection-mode')){document.body.classList.remove('selection-mode');document.body.classList.add('selection-mode-out');bar.classList.add('leaving');if(selectionExitTimer)clearTimeout(selectionExitTimer);selectionExitTimer=setTimeout(()=>{document.body.classList.remove('selection-mode-out');bar.classList.remove('leaving','on');selectionExitTimer=0},190);return}if(!document.body.classList.contains('selection-mode-out'))bar.classList.remove('leaving','on')} function renderTop(){const pn=msgs.filter(m=>m.p&&inView(m)).pop(),pb=$('#pin');pb.classList.toggle('on',!!pn);if(pn){pb.dataset.id=pn.id;pb.querySelector('span').textContent=plain(pn.h)||'Photo'}updateSelectionModeUI(selMode&&sel.size>0);$('#selc').textContent=sel.size+' selected'}
 $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
