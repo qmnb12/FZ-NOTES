@@ -4,12 +4,14 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.graphics.Rect;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.app.Activity;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -255,7 +257,10 @@ public class MainActivity extends Activity {
         }
 
         private ActionMode.Callback wrapSelectionCallback(ActionMode.Callback original) {
-            return new ActionMode.Callback() {
+            // Keep Callback2 so WebView's exact selection rectangle is preserved.
+            // Wrapping it as a plain Callback loses that rectangle and pins the
+            // floating toolbar near the top of the screen instead of the text.
+            return new ActionMode.Callback2() {
                 private static final int MENU_COPY = 0x435059;
                 private static final int MENU_CUT = 0x435554;
                 private static final int MENU_BOLD = 0x424F4C;
@@ -296,7 +301,36 @@ public class MainActivity extends Activity {
 
                 @Override
                 public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                    return original.onPrepareActionMode(mode, menu);
+                    boolean prepared = original.onPrepareActionMode(mode, menu);
+                    if (prepared) {
+                        // WebView/platform may refresh the menu during prepare;
+                        // restore our actions every time and keep Mono visible.
+                        addSelectionMenuItem(menu, MENU_COPY, 100, "Copy", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                        addSelectionMenuItem(menu, MENU_CUT, 101, "Cut", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                        addSelectionMenuItem(menu, 0x53454C, 102, "Select all", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_MONO, 103, "Mono", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                        addSelectionMenuItem(menu, MENU_BOLD, 104, "Bold", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_ITALIC, 105, "Italic", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_CODE, 106, "Code", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_STRIKE, 107, "Strikethrough", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_UNDERLINE, 108, "Underline", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_QUOTE, 109, "Quote", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_SPOILER, 110, "Spoiler", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_LINK, 111, "Create link", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_MENTION, 112, "Create mention", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_DATE, 113, "Date", MenuItem.SHOW_AS_ACTION_NEVER);
+                        addSelectionMenuItem(menu, MENU_REGULAR, 114, "Regular", MenuItem.SHOW_AS_ACTION_NEVER);
+                    }
+                    return prepared;
+                }
+
+                @Override
+                public void onGetContentRect(View view, ActionMode mode, Rect outRect) {
+                    if (original instanceof ActionMode.Callback2) {
+                        ((ActionMode.Callback2) original).onGetContentRect(view, mode, outRect);
+                    } else {
+                        outRect.set(0, 0, view.getWidth(), view.getHeight());
+                    }
                 }
 
                 @Override
