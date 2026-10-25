@@ -196,7 +196,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         if (lastThemeWasLight != lightTheme || lastShowTopics != showTopics) {
             lastThemeWasLight = lightTheme;
             lastShowTopics = showTopics;
-            notifyItemRangeChanged(0, getItemCount(), "theme");
+            notifyItemRangeChanged(0, getItemCount());
         }
     }
 
@@ -429,6 +429,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setTextIsSelectable(false);
             body.setLinksClickable(true);
             body.setMovementMethod(LinkMovementMethod.getInstance());
+            body.setOnClickListener(v -> {
+                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+            });
             LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             bodyLp.bottomMargin = dp(2);
             bubble.addView(body, bodyLp);
