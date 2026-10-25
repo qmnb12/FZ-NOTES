@@ -58,6 +58,8 @@ public class Cloud {
             case "pwdel":
                 ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE).edit().remove("pw").apply();
                 return "ok";
+            case "drivehistory":
+                return driveHistory(a.getString("token")).toString();
             case "backup": {
                 byte[] enc = encrypt(a.getString("data"), a.getString("pw"));
                 JSONArray ts = a.getJSONArray("targets");
@@ -107,6 +109,7 @@ public class Cloud {
 
     static String name(String type) {
         switch (type) {
+            case "drive": return "Google Drive";
             case "webdav": return "Nextcloud";
             case "tg": return "Telegram";
             default: return "GitHub";
@@ -231,6 +234,27 @@ public class Cloud {
     // ---------- upload / download per service ----------
     static String upload(JSONObject t, byte[] data) throws Exception {
         switch (t.getString("type")) {
+            case "drive": {
+                String token = t.getString("token");
+                String boundary = "----fzdrive" + System.currentTimeMillis();
+                JSONObject meta = new JSONObject();
+                meta.put("name", "FZ-Notes-" + System.currentTimeMillis() + ".ncb");
+                JSONArray parents = new JSONArray();
+                parents.put("appDataFolder");
+                meta.put("parents", parents);
+                meta.put("mimeType", "application/octet-stream");
+                ByteArrayOutputStream body = new ByteArrayOutputStream();
+                body.write(("--" + boundary + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
+                        + meta.toString() + "\r\n--" + boundary + "\r\nContent-Type: application/octet-stream\r\n\r\n")
+                        .getBytes(StandardCharsets.UTF_8));
+                body.write(data);
+                body.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+                Map<String, String> h = new HashMap<>();
+                h.put("Authorization", "Bearer " + token);
+                http("POST", "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,createdTime",
+                        h, body.toByteArray(), "multipart/related; boundary=" + boundary);
+                return "";
+            }
             case "webdav": {
                 Map<String, String> h = new HashMap<>();
                 h.put("Authorization", basic(t.getString("user"), t.optString("pass", "")));
@@ -273,6 +297,14 @@ public class Cloud {
 
     static byte[] download(JSONObject t) throws Exception {
         switch (t.getString("type")) {
+            case "drive": {
+                String token = t.getString("token");
+                String id = t.getString("id");
+                Map<String, String> h = new HashMap<>();
+                h.put("Authorization", "Bearer " + token);
+                return http("GET", "https://www.googleapis.com/drive/v3/files/" + URLEncoder.encode(id, "UTF-8") + "?alt=media",
+                        h, null, null);
+            }
             case "webdav": {
                 Map<String, String> h = new HashMap<>();
                 h.put("Authorization", basic(t.getString("user"), t.optString("pass", "")));
@@ -299,6 +331,17 @@ public class Cloud {
                 return http("GET", "https://api.telegram.org/file/bot" + token + "/" + path, null, null, null);
             }
         }
+    }
+
+    static JSONArray driveHistory(String token) throws Exception {
+        Map<String, String> h = new HashMap<>();
+        h.put("Authorization", "Bearer " + token);
+        byte[] raw = http("GET",
+                "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name,createdTime,size)&orderBy=createdTime%20desc&pageSize=30",
+                h, null, null);
+        JSONObject response = new JSONObject(new String(raw, StandardCharsets.UTF_8));
+        JSONArray files = response.optJSONArray("files");
+        return files == null ? new JSONArray() : files;
     }
 
     // ---------- helpers ----------
