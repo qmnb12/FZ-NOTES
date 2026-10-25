@@ -68,8 +68,7 @@ final class NativeChatAdapter extends RecyclerView.Adapter<NativeChatAdapter.Hol
     }
 
     private static final int TYPE_MESSAGE = 0;
-    private static final int TYPE_EMPTY = 1;
-    private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
+private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private static final int DARK_TEXT = Color.rgb(237, 244, 255);
     private static final int DARK_MUTED = Color.rgb(147, 164, 184);
     private static final int DARK_ACCENT = Color.rgb(117, 170, 255);
@@ -120,8 +119,6 @@ final class NativeChatAdapter extends RecyclerView.Adapter<NativeChatAdapter.Hol
                 if (!id.isEmpty()) newSelected.add(id);
             }
         }
-        setSelectedIds(newSelected, false);
-
         final JSONArray array = root.optJSONArray("items");
         final Map<String, Note> previousById = new HashMap<>();
         for (Note old : items) previousById.put(old.id, old);
@@ -175,14 +172,13 @@ final class NativeChatAdapter extends RecyclerView.Adapter<NativeChatAdapter.Hol
                 return items.get(oldPosition).id.equals(next.get(newPosition).id);
             }
             @Override public boolean areContentsTheSame(int oldPosition, int newPosition) {
-                return items.get(oldPosition).signature.equals(next.get(newPosition).signature)
-                        && selectedIds.contains(items.get(oldPosition).id) == newSelected.contains(next.get(newPosition).id)
-                        && lightTheme == "light".equals(root.optString("theme", "dark"));
+                return items.get(oldPosition).signature.equals(next.get(newPosition).signature);
             }
         }, true);
         items.clear();
         items.addAll(next);
         diff.dispatchUpdatesTo(this);
+        setSelectedIds(newSelected, true);
         notifyDataSetChangedThemeIfNeeded();
         if (recyclerView != null) {
             recyclerView.post(() -> {
@@ -258,33 +254,15 @@ final class NativeChatAdapter extends RecyclerView.Adapter<NativeChatAdapter.Hol
         return hash;
     }
 
-    @Override public int getItemCount() {
-        return items.isEmpty() ? 1 : items.size();
-    }
+    @Override public int getItemCount() { return items.size(); }
 
-    @Override public int getItemViewType(int position) {
-        return items.isEmpty() ? TYPE_EMPTY : TYPE_MESSAGE;
-    }
+    @Override public int getItemViewType(int position) { return TYPE_MESSAGE; }
 
     @Override public Holder onCreateViewHolder(ViewGroup parent, int viewType) {
-        if (viewType == TYPE_EMPTY) {
-            TextView empty = new TextView(context);
-            empty.setGravity(Gravity.CENTER);
-            empty.setText("Apna pehla note likho. Ye chat ki tarah send hoga.");
-            empty.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-            empty.setPadding(dp(30), dp(24), dp(30), dp(24));
-            empty.setTextColor(lightTheme ? LIGHT_MUTED : DARK_MUTED);
-            return new Holder(empty);
-        }
         return new Holder(new NoteRow(context));
     }
 
     @Override public void onBindViewHolder(Holder holder, int position) {
-        if (items.isEmpty()) {
-            TextView empty = (TextView) holder.itemView;
-            empty.setTextColor(lightTheme ? LIGHT_MUTED : DARK_MUTED);
-            return;
-        }
         Note note = items.get(position);
         ((NoteRow) holder.itemView).bind(note, selectedIds.contains(note.id), !selectedIds.isEmpty(),
                 lightTheme, showTopics, position > 0 ? items.get(position - 1).date : null, listener,
