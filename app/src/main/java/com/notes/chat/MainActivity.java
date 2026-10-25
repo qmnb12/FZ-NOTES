@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.graphics.Rect;
+import android.graphics.Color;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.app.Activity;
@@ -23,6 +24,11 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.TextView;
+import androidx.recyclerview.widget.DefaultItemAnimator;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import org.json.JSONObject;
 import com.google.android.gms.auth.api.identity.AuthorizationRequest;
@@ -46,6 +52,13 @@ public class MainActivity extends Activity {
     private int saveFileReplyId = -1;
     private String pendingSaveText;
     private WebView web;
+    private FrameLayout rootLayout;
+    private FrameLayout nativeChatLayer;
+    private RecyclerView nativeChatView;
+    private TextView nativeEmptyView;
+    private NativeChatAdapter nativeChatAdapter;
+    private boolean nativeChatRequestedVisible;
+    private boolean nativeChatBoundsReady;
     private ValueCallback<Uri[]> filePicker;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -63,7 +76,67 @@ public class MainActivity extends Activity {
             return type == WebView.HitTestResult.IMAGE_TYPE
                     || type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE;
         });
-        setContentView(web);
+        rootLayout = new FrameLayout(this);
+        rootLayout.setClipChildren(true);
+        rootLayout.addView(web, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        nativeChatLayer = new FrameLayout(this);
+        nativeChatLayer.setBackgroundColor(Color.TRANSPARENT);
+        nativeChatLayer.setClipChildren(true);
+        nativeChatLayer.setClipToPadding(true);
+        nativeChatLayer.setVisibility(View.GONE);
+
+        nativeChatView = new RecyclerView(this);
+        nativeChatView.setBackgroundColor(Color.TRANSPARENT);
+        nativeChatView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        nativeChatView.setClipToPadding(false);
+        nativeChatView.setPadding(dp(8), dp(7), dp(8), dp(54));
+        nativeChatView.setItemViewCacheSize(12);
+        nativeChatView.setNestedScrollingEnabled(false);
+        nativeChatView.setLayoutManager(new LinearLayoutManager(this, RecyclerView.VERTICAL, false));
+        DefaultItemAnimator itemAnimator = new DefaultItemAnimator();
+        itemAnimator.setAddDuration(170);
+        itemAnimator.setMoveDuration(180);
+        itemAnimator.setRemoveDuration(150);
+        itemAnimator.setChangeDuration(0);
+        itemAnimator.setSupportsChangeAnimations(false);
+        nativeChatView.setItemAnimator(itemAnimator);
+        nativeChatAdapter = new NativeChatAdapter(this, new NativeChatAdapter.Listener() {
+            @Override public void onSelectionChanged(java.util.List<String> selectedIds) {
+                JSONArray ids = new JSONArray();
+                for (String id : selectedIds) ids.put(id);
+                final String quoted = JSONObject.quote(ids.toString());
+                runOnUiThread(() -> {
+                    if (web != null) web.evaluateJavascript(
+                            "window.nativeChatSelectionChanged&&window.nativeChatSelectionChanged(" + quoted + ")", null);
+                });
+            }
+
+            @Override public void onAction(String id, String action, int index) {
+                final String js = "window.nativeChatAction&&window.nativeChatAction("
+                        + JSONObject.quote(id) + "," + JSONObject.quote(action) + "," + index + ")";
+                runOnUiThread(() -> {
+                    if (web != null) web.evaluateJavascript(js, null);
+                });
+            }
+        });
+        nativeChatAdapter.attachRecyclerView(nativeChatView);
+        nativeChatView.setAdapter(nativeChatAdapter);
+        nativeChatLayer.addView(nativeChatView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        nativeEmptyView = new TextView(this);
+        nativeEmptyView.setText("Apna pehla note likho. Ye chat ki tarah send hoga.");
+        nativeEmptyView.setTextSize(14);
+        nativeEmptyView.setGravity(android.view.Gravity.CENTER);
+        nativeEmptyView.setPadding(dp(28), dp(24), dp(28), dp(24));
+        nativeEmptyView.setVisibility(View.GONE);
+        nativeChatLayer.addView(nativeEmptyView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        rootLayout.addView(nativeChatLayer, new FrameLayout.LayoutParams(0, 0));
+        setContentView(rootLayout);
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -418,6 +491,63 @@ public class MainActivity extends Activity {
     /** JS -> Java bridge for encrypted cloud backup (runs on a background thread). */
     class Bridge {
         @JavascriptInterface
+        public void setNativeChatData(final String json) {
+            runOnUiThread(() -> {
+                if (nativeChatAdapter == null || nativeChatView == null) return;
+                nativeChatAdapter.submitJson(json == null ? "{}" : json);
+                boolean empty = nativeChatAdapter.getItemCount() == 0;
+                nativeEmptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
+                boolean light = false;
+                try { light = new JSONObject(json).optString("theme", "dark").equals("light"); }
+                catch (Exception ignored) { }
+                nativeEmptyView.setTextColor(light ? Color.rgb(99, 113, 137) : Color.rgb(147, 164, 184));
+            });
+        }
+
+        @JavascriptInterface
+        public void setNativeSelectionIds(final String json) {
+            runOnUiThread(() -> {
+                if (nativeChatAdapter != null) nativeChatAdapter.setSelectedIdsJson(json == null ? "[]" : json);
+            });
+        }
+
+        @JavascriptInterface
+        public void setNativeChatBounds(final int left, final int top, final int width, final int height) {
+            runOnUiThread(() -> {
+                if (nativeChatLayer == null || rootLayout == null) return;
+                float density = getResources().getDisplayMetrics().density;
+                int l = Math.max(0, Math.round(left * density));
+                int t = Math.max(0, Math.round(top * density));
+                int w = Math.max(0, Math.round(width * density));
+                int h = Math.max(0, Math.round(height * density));
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) nativeChatLayer.getLayoutParams();
+                if (lp == null) lp = new FrameLayout.LayoutParams(w, h);
+                lp.leftMargin = l;
+                lp.topMargin = t;
+                lp.width = w;
+                lp.height = h;
+                nativeChatLayer.setLayoutParams(lp);
+                nativeChatBoundsReady = w > 0 && h > 0;
+                updateNativeChatVisibility();
+            });
+        }
+
+        @JavascriptInterface
+        public void setNativeChatVisible(final boolean visible) {
+            runOnUiThread(() -> {
+                nativeChatRequestedVisible = visible;
+                updateNativeChatVisibility();
+            });
+        }
+
+        @JavascriptInterface
+        public void scrollNativeChatToId(final String id) {
+            runOnUiThread(() -> {
+                if (nativeChatAdapter != null && id != null) nativeChatAdapter.scrollToId(id);
+            });
+        }
+
+        @JavascriptInterface
         public void run(final int id, final String op, final String args) {
             if ("clipboardread".equals(op)) {
                 runOnUiThread(() -> {
@@ -499,6 +629,15 @@ public class MainActivity extends Activity {
                 }
             }).start();
         }
+    }
+
+    private int dp(float value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private void updateNativeChatVisibility() {
+        if (nativeChatLayer == null) return;
+        nativeChatLayer.setVisibility(nativeChatRequestedVisible && nativeChatBoundsReady ? View.VISIBLE : View.GONE);
     }
 
     private void reply(int id, boolean ok, String data) {
