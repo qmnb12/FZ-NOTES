@@ -465,8 +465,10 @@ body{min-height:100dvh}
 
 
 /* Notes use Telegram-style message actions, not Android text selection handles. */
-#chat .b,#chat .b *{ -webkit-user-select:none!important; user-select:none!important; -webkit-touch-callout:none!important; }
-#chat .b{ -webkit-tap-highlight-color:transparent; }
+#chat .b,#chat .b *,#sh,#sh *,#chatw>#fab,#chatw>#listfab,#shBackdrop{ -webkit-user-select:none!important; user-select:none!important; -webkit-touch-callout:none!important; }
+#chat .b,#sh button,#chatw>#fab,#chatw>#listfab{ -webkit-tap-highlight-color:transparent; }
+#sh{ -webkit-user-select:none!important; user-select:none!important; }
+#sh *{ -webkit-user-select:none!important; user-select:none!important; }
 #shBackdrop{background:rgba(2,7,15,.40)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 #sh{isolation:isolate}
 
@@ -716,7 +718,7 @@ $('#lkok').onclick=()=>{const v=lki.value.trim();lk.classList.remove('on');
   else document.execCommand('insertHTML',false,'<a href="'+esc(u)+'">'+esc(v)+'</a>&nbsp;')}
  else document.execCommand('insertHTML',false,'<span class="mention">'+esc(v.startsWith('@')?v:'@'+v)+'</span>&nbsp;')};
 lki.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#lkok').click()}});
-function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('#chat .b')){e.preventDefault();e.stopPropagation()}},true);root.addEventListener('contextmenu',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('#chat .b')){e.preventDefault();e.stopPropagation()}},true)}
+function chatwSelectTimestampGuard(){const root=$('#chatw');root.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('#chat .b, #sh, #chatw>#fab, #chatw>#listfab')){e.preventDefault();e.stopPropagation()}},true);root.addEventListener('contextmenu',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(t&&t.closest('#chat .b, #sh, #chatw>#fab, #chatw>#listfab')){e.preventDefault();e.stopPropagation()}},true)}
 function contextMenuRow(key,title,path,extra=''){
  return '<button type="button" class="context-menu-row'+(extra?' '+extra:'')+'" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+path+'</svg></span><span class="mt">'+esc(title)+'</span></button>';
 }
