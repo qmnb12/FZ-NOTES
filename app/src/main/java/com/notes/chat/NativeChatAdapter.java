@@ -17,6 +17,7 @@ import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.ClickableSpan;
+import android.text.style.ForegroundColorSpan;
 import android.text.style.QuoteSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TypefaceSpan;
@@ -256,6 +257,18 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         if (listener != null) listener.onSelectionChanged(new ArrayList<>(selectedIds));
     }
 
+    private void selectForContextMenu(String id) {
+        if (id == null) return;
+        if (!selectedIds.contains(id)) {
+            selectedIds.add(id);
+            notifyIdChanged(id, true);
+        }
+        if (listener != null) {
+            listener.onSelectionChanged(new ArrayList<>(selectedIds));
+            listener.onAction(id, "menu", 0);
+        }
+    }
+
     void scrollToId(String id) {
         if (recyclerView == null) return;
         for (int i = 0; i < items.size(); i++) {
@@ -422,6 +435,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private final TextView clock;
         private final TextView menu;
         private String boundId;
+        private boolean bodySelectionTouch;
+        private boolean bodyLongPressHandled;
+        private float bodyTouchDownX, bodyTouchDownY;
         private final int[] colors = new int[4];
 
         NoteRow(Context context) {
@@ -502,6 +518,34 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setOnClickListener(v -> {
                 if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
             });
+            // In selection mode a normal tap on message text must select/unselect the
+            // whole note, rather than being swallowed by LinkMovementMethod for spans.
+            // When selection mode is off, touches pass through unchanged so Mono copies
+            // and ordinary links keep their one-tap behaviour.
+            body.setOnTouchListener((v, event) -> {
+                switch (event.getActionMasked()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        bodySelectionTouch = !selectedIds.isEmpty();
+                        bodyLongPressHandled = false;
+                        bodyTouchDownX = event.getX();
+                        bodyTouchDownY = event.getY();
+                        return false;
+                    case android.view.MotionEvent.ACTION_UP:
+                        if (!bodySelectionTouch) return false;
+                        boolean isTap = Math.abs(event.getX() - bodyTouchDownX) <= dp(14)
+                                && Math.abs(event.getY() - bodyTouchDownY) <= dp(14);
+                        bodySelectionTouch = false;
+                        if (isTap && !bodyLongPressHandled && boundId != null) {
+                            toggleSelection(boundId);
+                        }
+                        return true;
+                    case android.view.MotionEvent.ACTION_CANCEL:
+                        bodySelectionTouch = false;
+                        return bodySelectionTouch;
+                    default:
+                        return bodySelectionTouch;
+                }
+            });
             LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             bodyLp.bottomMargin = dp(2);
             bubble.addView(body, bodyLp);
@@ -562,9 +606,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
         private boolean longPress() {
             if (boundId == null || listener == null) return true;
-            // Returning true consumes this long-press gesture; don't block the next
-            // independent tap with a timeout (that made quick selection taps feel dead).
-            toggleSelection(boundId);
+            bodyLongPressHandled = true;
+            bodySelectionTouch = false;
+            // Telegram-style: long-press selects the note and opens its message menu.
+            // If the note was already selected, keep it selected while opening the menu.
+            selectForContextMenu(boundId);
             return true;
         }
 
@@ -880,7 +926,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 output.setSpan(new LeadingCodeIndent(dpStatic(context, 7), accent), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new InlineCopySpan(adapter, noteId, "code", mark.index), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             } else if ("monospan".equals(mark.tag)) {
+                // Make inline code instantly distinguishable from prose, while keeping
+                // it as a real clickable span so one tap copies only this Mono value.
+                int monoBg = accent == Color.rgb(40, 111, 219)
+                        ? Color.rgb(226, 238, 255) : Color.rgb(12, 24, 40);
+                int monoFg = accent == Color.rgb(40, 111, 219)
+                        ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255);
                 output.setSpan(new TypefaceSpan("monospace"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new BackgroundColorSpan(monoBg), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new ForegroundColorSpan(monoFg), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new InlineCopySpan(adapter, noteId, "mono", mark.index), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             } else {
                 output.setSpan(new QuoteSpan(accent, stripeWidth, gapWidth), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
