@@ -54,6 +54,15 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         web = new SelectionWebView(this);
+        // Long-pressing an attached image should open its viewer on tap, not invoke
+        // WebView's image-selection/context action mode (Cut/Copy/Mono).
+        web.setOnLongClickListener(view -> {
+            WebView.HitTestResult hit = web.getHitTestResult();
+            if (hit == null) return false;
+            int type = hit.getType();
+            return type == WebView.HitTestResult.IMAGE_TYPE
+                    || type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE;
+        });
         setContentView(web);
 
         WebSettings s = web.getSettings();
