@@ -480,9 +480,16 @@ const $=s=>document.querySelector(s),ed=$('#ed'),chat=$('#chat'),sh=$('#sh'),lk=
 let shStack=[];
 function pushSheetState(){if(!sh.classList.contains('on'))return;shStack.push({html:sh.innerHTML,dataset:Object.assign({},sh.dataset)});}
 function restoreSheetState(){if(shStack.length){const state=shStack.pop();sh.innerHTML=state.html;Array.from(sh.attributes).forEach(a=>{if(a.name.indexOf('data-')===0)sh.removeAttribute(a.name)});Object.keys(state.dataset).forEach(k=>sh.dataset[k]=state.dataset[k]);sh.classList.add('on');return true;}sh.classList.remove('on');return true;}
-let nativeSelectionMenuOpen=false,lastAnySelectionRange=null;
+let nativeSelectionMenuOpen=false,lastAnySelectionRange=null,nativeSelectionSession=false;
 function updateComposerControls(){const hasText=!!ed.innerText.trim();$('#cmp').classList.toggle('has-text',hasText)}
-window.setNativeSelectionMenuOpen=function(open){nativeSelectionMenuOpen=!!open;const toolbar=$('#tb');toolbar.classList.toggle('native-selection-hidden',nativeSelectionMenuOpen);if(nativeSelectionMenuOpen)toolbar.classList.remove('on')};
+window.setNativeSelectionMenuOpen=function(open){
+ nativeSelectionMenuOpen=!!open;const toolbar=$('#tb');
+ if(nativeSelectionMenuOpen){nativeSelectionSession=true;toolbar.classList.add('native-selection-hidden');toolbar.classList.remove('on');return}
+ const s=window.getSelection(),stillSelected=!!(s&&s.rangeCount&&!s.isCollapsed&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode));
+ nativeSelectionSession=stillSelected;
+ toolbar.classList.toggle('native-selection-hidden',stillSelected);
+ if(stillSelected)toolbar.classList.remove('on')
+};
 let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',searchFilter='all',selMode=false,listMode=false,listTitle='',tt,replyId=null,editId=null,saved=null,mode='',pressed=0,hiddenUnlocked=false,draftTimer=null;
 let hadLocalNotesState=false;try{hadLocalNotesState=localStorage.getItem('notes-chat')!==null||localStorage.getItem('notes-topics')!==null}catch(e){}
 try{msgs=JSON.parse(localStorage.getItem('notes-chat')||'[]')}catch(e){}
@@ -560,7 +567,7 @@ function send(){const h=clean(ed);if(!ed.textContent.trim())return;
  ed.innerHTML='';updateComposerControls();clearDraft();setCtx();save();render()}$('#send').onclick=send;
 $('#listfab').onclick=()=>{if(listMode){listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';toast('Checklist mode off');return}ask('listtitle','List ka naam likhein');};
 ed.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'))});
-document.addEventListener('selectionchange',()=>{const s=getSelection();const selectedAny=s.rangeCount&&!s.isCollapsed;if(selectedAny)lastAnySelectionRange=s.getRangeAt(0).cloneRange();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;$('#tb').classList.toggle('on',selected&&!nativeSelectionMenuOpen);if(selected){$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',b.dataset.a==='mono'&&!!(s.anchorNode.parentElement&&s.anchorNode.parentElement.closest('.mono'))))}}else $('#tb').classList.remove('on')});
+document.addEventListener('selectionchange',()=>{const s=getSelection();const selectedAny=s.rangeCount&&!s.isCollapsed;if(selectedAny)lastAnySelectionRange=s.getRangeAt(0).cloneRange();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;if(!selected&&!nativeSelectionMenuOpen){nativeSelectionSession=false;$('#tb').classList.remove('native-selection-hidden')}$('#tb').classList.toggle('on',selected&&!nativeSelectionMenuOpen&&!nativeSelectionSession);if(selected){$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',b.dataset.a==='mono'&&!!(s.anchorNode.parentElement&&s.anchorNode.parentElement.closest('.mono'))))}}else{nativeSelectionSession=false;$('#tb').classList.remove('on','native-selection-hidden')}});
 function restore(){ed.focus();if(saved){const s=getSelection();s.removeAllRanges();s.addRange(saved)}}function placeCaretAtEnd(el){try{el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();s.removeAllRanges();s.addRange(r)}catch(_){}if(el===ed)updateComposerControls()}
 function wrap(cls){const s=getSelection();if(!s.rangeCount||s.isCollapsed)return false;
  const r=s.getRangeAt(0),sp=document.createElement('span');sp.className=cls;sp.appendChild(r.extractContents());r.insertNode(sp);
@@ -600,6 +607,10 @@ window.nativeSelectionAction=function(action){
  const text=live?sel.toString():range.toString();
  if(!text){toast('Pehle text select karo');return false}
  const inEditor=ed.contains(range.startContainer)&&ed.contains(range.endContainer);
+ if(action==='selectAll'){
+  if(!inEditor){toast('Select all sirf message box mein kaam karta hai',2500);return false}
+  const all=document.createRange();all.selectNodeContents(ed);if(sel){sel.removeAllRanges();sel.addRange(all)}saved=all.cloneRange();nativeSelectionSession=true;$('#tb').classList.add('native-selection-hidden');$('#tb').classList.remove('on');return true
+ }
  if(action==='copy'){copy(text);return true}
  if(action==='cut'){
   if(!inEditor){toast('Cut sirf message box ke selected text par kaam karta hai',2800);return false}
