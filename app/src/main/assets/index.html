@@ -638,15 +638,19 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(sh.dataset.type==='multi-select'){if(k==='x'){sh.classList.remove('on');return}const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);sh.classList.remove('on');if(k==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));return}if(k==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render()}return}
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='cloud'){
+  if(k==='tgNow'){
+   const c=cfgGet();
+   if(!c.tgToken||!c.tgChat){openTgCfg();toast('Pehle Telegram settings save karo',2600);return}
+   sh.classList.remove('on');doTelegramBackup();return
+  }
+  if(k==='tgcfg'){openTgCfg();return}
   sh.classList.remove('on');
   if(k==='x')return;
   if(k==='status'){toast(lastBackup()?'Last successful Drive backup: '+lastBackup():'No successful Drive backup recorded',3000);return}
   if(k==='cset'){openCfg();return}
   if(k==='cbk'){if(!cfgGet().driveOn){openCfg();toast('Connect Google account first',2600);return}doGoogleBackup();return}
   if(k==='crs'){openDriveHistory();return}
-  if(k==='tgNow'){openTgCfg();return}
   if(k==='tgstatus'){toast(lastTelegramBackup()?'Last Telegram backup: '+lastTelegramBackup():'No successful Telegram backup recorded',3000);return}
-  if(k==='tgcfg'){openTgCfg();return}
   if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Drive backup nahi mila');return}doDriveRestore(driveHistoryItems[i].id);return}
   return}
  if(sh.dataset.type==='menu'){sh.classList.remove('on');
@@ -732,7 +736,7 @@ function openCloud(){
   '<div class="cloud-divider"></div><div class="cloud-group-label">Telegram archive</div>'+
   cloudRow('tgNow',icons.telegram,'Save backup to Telegram','Send one encrypted archive now')+
   cloudRow('tgstatus',icons.status,'Last Telegram archive',lt||'No successful Telegram backup yet')+
-  cloudRow('tgcfg',icons.clock,'Backup schedule',({manual:'Manual only',daily:'Daily',weekly:'Weekly',monthly:'Monthly'}[c.tgSchedule||'manual'])+' · Change Telegram settings')+
+  cloudRow('tgcfg',icons.settings,'Telegram settings','Bot connection and automatic backup schedule')+
   cloudRow('x',icons.cancel,'Close','');
  sh.dataset.type='cloud';sh.classList.add('on');
 }
