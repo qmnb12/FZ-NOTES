@@ -307,6 +307,7 @@ body{min-height:100dvh}
 <div id="cmp"><button id="att" aria-label="Attach image">📎</button><input id="fi" type="file" accept="image/*" hidden><div id="ed" contenteditable="true" data-ph="Message in Notes"></div><button id="send" aria-label="Send" title="Send message">➤</button></div>
 </div>
 <div id="cfg"><div class="cfgb"><h3>Cloud backup</h3><p class="hint">Data phone par hi password se encrypt hoke jaata hai. Password kahin save nahi hota, bhool gaye to backup khul nahi sakta.</p>
+<h4>Google Drive</h4><div class="row"><button id="c_driveConnect">Connect Google account</button><button id="c_driveDisconnect" class="alt">Disconnect</button></div><p class="hint">Encrypted backups aapke Google account ke hidden app folder mein save honge. Google permission ek baar approve karni hogi.</p>
 <h4>Nextcloud / WebDAV</h4><input id="c_wdUrl" placeholder="https://host/remote.php/dav/files/USER/folder"><input id="c_wdUser" placeholder="Username"><input id="c_wdPass" type="password" placeholder="App password">
 <h4>Telegram bot</h4><input id="c_tgToken" placeholder="Bot token (@BotFather se)"><div class="row"><input id="c_tgChat" placeholder="Chat ID"><button id="c_tgDet">Detect</button></div><p class="hint">Pehle bot ko /start bhejein, phir Detect dabayein.</p>
 <h4>GitHub (private repo)</h4><input id="c_ghToken" placeholder="Personal access token"><input id="c_ghRepo" placeholder="username/repo"><input id="c_ghPath" placeholder="notes-backup.ncb">
@@ -506,7 +507,8 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='cpw')ask('savepw','Password jo save karna hai','');
   if(k==='cpd')delPw();
   if(k==='crs')openSrc();
-  if(k.startsWith('src:')){pendSrc=k.slice(4);if(pendSrc==='tg'){openTgHistory();return}pendFid='';needPw('rspw')}
+  if(k.startsWith('src:')){pendSrc=k.slice(4);if(pendSrc==='tg'){openTgHistory();return}if(pendSrc==='drive'){openDriveHistory();return}pendFid='';needPw('rspw')}
+  if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Google Drive backup nahi mila');return}pendSrc='drive';pendDriveId=driveHistoryItems[i].id;needPw('rspw')}
   if(k.startsWith('tgh:')){const i=Number(k.slice(4)),h=tgHistory();if(!Number.isInteger(i)||!h[i]){toast('Backup history nahi mili');return}pendSrc='tg';pendFid=h[i].fid;needPw('rspw')}
   return}
  if(sh.dataset.type==='menu'){sh.classList.remove('on');
@@ -562,31 +564,45 @@ function clearCtx(){if(editId){ed.innerHTML='';updateComposerControls()}editId=n
 $('#cxx').onclick=clearCtx;
 const sel=new Set();
 let pendSrc='';let autoBackupTimer=null,autoBackupBusy=false,autoBackupAgain=false,suppressAutoBackup=false;
-const NM={webdav:'Nextcloud',tg:'Telegram',gh:'GitHub'},F=['wdUrl','wdUser','wdPass','tgToken','tgChat','ghToken','ghRepo','ghPath'];
+const NM={drive:'Google Drive',webdav:'Nextcloud',tg:'Telegram',gh:'GitHub'},F=['wdUrl','wdUser','wdPass','tgToken','tgChat','ghToken','ghRepo','ghPath'];
 const cfgGet=()=>{try{return JSON.parse(localStorage.getItem('notes-sync')||'{}')}catch(e){return{}}};
 const cfgSet=c=>{try{localStorage.setItem('notes-sync',JSON.stringify(c))}catch(e){}};
-function targets(c){const t=[];if(c.wdUrl&&c.wdUser)t.push({type:'webdav',url:c.wdUrl,user:c.wdUser,pass:c.wdPass||''});if(c.tgToken&&c.tgChat)t.push({type:'tg',token:c.tgToken,chat:c.tgChat,fid:c.tgFid||''});if(c.ghToken&&c.ghRepo)t.push({type:'gh',token:c.ghToken,repo:c.ghRepo,path:c.ghPath||'notes-backup.ncb'});return t}
+function targets(c){const t=[];if(c.driveOn)t.push({type:'drive'});if(c.wdUrl&&c.wdUser)t.push({type:'webdav',url:c.wdUrl,user:c.wdUser,pass:c.wdPass||''});if(c.tgToken&&c.tgChat)t.push({type:'tg',token:c.tgToken,chat:c.tgChat,fid:c.tgFid||''});if(c.ghToken&&c.ghRepo)t.push({type:'gh',token:c.ghToken,repo:c.ghRepo,path:c.ghPath||'notes-backup.ncb'});return t}
 const pend={};let nid=0;
 function native(op,args){return new Promise((res,rej)=>{if(!window.Android||typeof window.Android.run!=='function'){rej(new Error('Android bridge available nahi hai'));return}const id=++nid;pend[id]={res,rej};try{window.Android.run(id,op,JSON.stringify(args))}catch(e){delete pend[id];rej(e)}})}
 window.onNative=(id,ok,d)=>{const p=pend[id];delete pend[id];if(p)ok?p.res(d):p.rej(new Error(d))};
 function openCloud(){const lb=lastBackup();sh.innerHTML='<button data-k="cbk">☁ Backup now</button><button data-k="status">ⓘ Last backup: '+esc(lb||'Not yet')+'</button><button data-k="crs">⬇ Restore</button><button data-k="cset">⚙ Settings (Nextcloud / Telegram / GitHub)</button><button data-k="'+(pwSaved()?'cpd':'cpw')+'">🔑 '+(pwSaved()?'Remove saved password':'Save password on phone')+'</button><button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
 function tgHistory(){let h=[];try{h=JSON.parse(localStorage.getItem('notes-tg-history')||'[]')}catch(_){}const c=cfgGet();if(c.tgFid&&!h.some(x=>x.fid===c.tgFid))h.unshift({fid:c.tgFid,at:'Previously saved backup'});return h.filter(x=>x&&x.fid).slice(0,30)}
 function openTgHistory(){const h=tgHistory();sh.innerHTML='<div style="padding:8px 14px;color:var(--mut);font-size:13px">Telegram backup history · newest first</div>'+(h.length?h.map((x,i)=>'<button data-k="tgh:'+i+'">📦 '+esc(x.at||'Telegram backup')+'<span class="ms">Encrypted backup'+(x.notes?' · '+x.notes+' notes':'')+'</span></button>').join(''):'<div style="padding:12px;color:var(--mut)">Abhi koi saved backup reference nahi hai. Naya Backup now karein.</div>')+'<button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
+let driveHistoryItems=[];
+async function openDriveHistory(){
+ try{
+  toast('Google Drive backups load ho rahe hain…',3000);
+  const token=await native('driveauth',{});
+  driveHistoryItems=JSON.parse(await native('drivehistory',{token}));
+  sh.innerHTML='<div style="padding:8px 14px;color:var(--mut);font-size:13px">Google Drive backup history · newest first</div>'+
+   (driveHistoryItems.length?driveHistoryItems.map((x,i)=>'<button data-k="drv:'+i+'">📦 '+esc(x.name||'FZ Notes backup')+'<span class="ms">'+esc(x.createdTime||'Google Drive backup')+'</span></button>').join(''):'<div style="padding:12px;color:var(--mut)">Koi Google Drive backup nahi mila. Pehle Backup now karein.</div>')+
+   '<button data-k="x">Cancel</button>';
+  sh.dataset.type='cloud';sh.classList.add('on');
+ }catch(e){toast('Google Drive: '+e.message,4000)}
+}
 function openSrc(){const t=targets(cfgGet());if(!t.length){toast('Pehle Settings me cloud bharein',2500);return}sh.innerHTML=t.map(x=>'<button data-k="src:'+x.type+'">Restore from '+NM[x.type]+(x.type==='tg'?' · backup history':'')+'</button>').join('')+'<button data-k="x">Cancel</button>';sh.dataset.type='cloud';sh.classList.add('on')}
-function openCfg(){const c=cfgGet();F.forEach(f=>{$('#c_'+f).value=c[f]||''});$('#cfg').classList.add('on')}
+function openCfg(){const c=cfgGet();F.forEach(f=>{$('#c_'+f).value=c[f]||''});$('#c_driveConnect').textContent=c.driveOn?'Google account connected':'Connect Google account';$('#cfg').classList.add('on')}
 const pwSaved=()=>{try{return localStorage.getItem('notes-pwsaved')==='1'}catch(e){return false}};
 const lastBackup=()=>{try{return localStorage.getItem('notes-last-backup')||''}catch(e){return ''}};
 async function needPw(m){if(pwSaved()){try{const p=await native('pwget',{});if(p){if(m==='bkpw')doBackup(p);else doRestore(p);return}}catch(e){}}ask(m,'Encryption password','')}
 async function savePw(v){if(!v)return toast('Password chahiye');try{await native('pwset',{pw:v});localStorage.setItem('notes-pwsaved','1');toast('Password phone ke secure storage me save ho gaya',3000)}catch(e){toast(e.message,3000)}}
 async function delPw(){try{await native('pwdel',{});localStorage.removeItem('notes-pwsaved');toast('Saved password hata diya',2500)}catch(e){toast(e.message,3000)}}
 $('#c_close').onclick=()=>$('#cfg').classList.remove('on');
+$('#c_driveConnect').onclick=async()=>{try{await native('driveauth',{});const c=cfgGet();c.driveOn=true;cfgSet(c);$('#c_driveConnect').textContent='Google account connected';toast('Google Drive connected',2500)}catch(e){toast('Google connect failed: '+e.message,4000)}};
+$('#c_driveDisconnect').onclick=()=>{const c=cfgGet();c.driveOn=false;cfgSet(c);$('#c_driveConnect').textContent='Connect Google account';toast('Google Drive disconnected',2500)};
 $('#c_save').onclick=()=>{const c=cfgGet();F.forEach(f=>{c[f]=$('#c_'+f).value.trim()});cfgSet(c);$('#cfg').classList.remove('on');toast('Saved')};
 $('#c_tgDet').onclick=async()=>{const tk=$('#c_tgToken').value.trim();if(!tk)return toast('Pehle bot token daalein');try{$('#c_tgChat').value=await native('tgchat',{token:tk})}catch(e){toast(e.message,3000)}};
 async function doBackup(pw,quiet=false){if(!pw)return quiet?false:toast('Password chahiye');const c=cfgGet(),t=targets(c);if(!t.length)return quiet?false:toast('Pehle Settings me cloud bharein',2500);
  if(!quiet)toast('Encrypt karke bhej raha hu…',5000);
- try{const r=JSON.parse(await native('backup',{pw,data:JSON.stringify({version:2,exportedAt:new Date().toISOString(),msgs,topics}),targets:t}));const successes=Number(r.successCount||0),failures=Number(r.failureCount||0);if(successes<1)throw new Error(r.msg||'Kisi bhi backup destination par upload nahi hua');if(r.fid){c.tgFid=r.fid;cfgSet(c);try{const h=tgHistory().filter(x=>x.fid!==r.fid);h.unshift({fid:r.fid,at:new Date().toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}),notes:msgs.length});localStorage.setItem('notes-tg-history',JSON.stringify(h.slice(0,30)))}catch(_){}}const stamp=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});try{localStorage.setItem('notes-last-backup',stamp)}catch(_){}if(!quiet)toast((failures?'Partial backup · ':'')+r.msg+' · '+msgs.length+' notes',5000);return successes>0}catch(e){if(!quiet)toast('Backup fail: '+e.message,5000);return false}}
+ try{if(c.driveOn){const token=await native('driveauth',{});const gt=t.find(x=>x.type==='drive');if(gt)gt.token=token}const r=JSON.parse(await native('backup',{pw,data:JSON.stringify({version:2,exportedAt:new Date().toISOString(),msgs,topics}),targets:t}));const successes=Number(r.successCount||0),failures=Number(r.failureCount||0);if(successes<1)throw new Error(r.msg||'Kisi bhi backup destination par upload nahi hua');if(r.fid){c.tgFid=r.fid;cfgSet(c);try{const h=tgHistory().filter(x=>x.fid!==r.fid);h.unshift({fid:r.fid,at:new Date().toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}),notes:msgs.length});localStorage.setItem('notes-tg-history',JSON.stringify(h.slice(0,30)))}catch(_){}}const stamp=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});try{localStorage.setItem('notes-last-backup',stamp)}catch(_){}if(!quiet)toast((failures?'Partial backup · ':'')+r.msg+' · '+msgs.length+' notes',5000);return successes>0}catch(e){if(!quiet)toast('Backup fail: '+e.message,5000);return false}}
 function scheduleAutoBackup(){if(suppressAutoBackup)return;clearTimeout(autoBackupTimer);if(!targets(cfgGet()).length||!pwSaved())return;autoBackupTimer=setTimeout(async()=>{if(autoBackupBusy){autoBackupAgain=true;return}autoBackupBusy=true;try{const pw=await native('pwget',{});if(pw)await doBackup(pw,true)}catch(_){}finally{autoBackupBusy=false;if(autoBackupAgain){autoBackupAgain=false;scheduleAutoBackup()}}},3500)}
-let pendFid='';async function doRestore(pw){if(!pw)return toast('Password chahiye');const t=targets(cfgGet()).find(x=>x.type===pendSrc);if(!t)return;if(pendSrc==='tg'&&pendFid)t.fid=pendFid;
+let pendFid='',pendDriveId='';async function doRestore(pw){if(!pw)return toast('Password chahiye');const t=targets(cfgGet()).find(x=>x.type===pendSrc);if(!t)return;if(pendSrc==='tg'&&pendFid)t.fid=pendFid;if(pendSrc==='drive'){try{t.token=await native('driveauth',{});t.id=pendDriveId}catch(e){return toast('Google Drive: '+e.message,4000)}}
  toast('Restore ho raha hai…',5000);
  try{const d=JSON.parse(await native('restore',{pw,source:t}));if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){suppressAutoBackup=true;msgs=d.msgs;topics=d.topics;cur='all';lastSnapshot=snapshot();undoStack=[];redoStack=[];try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(_){}mirror();render();suppressAutoBackup=false;toast('Restored')}else toast('Backup sahi nahi hai')}catch(e){suppressAutoBackup=false;toast(e.message,4000)}}
 try{const th=localStorage.getItem('notes-theme');document.documentElement.dataset.theme=th||'dark'}catch(e){}
