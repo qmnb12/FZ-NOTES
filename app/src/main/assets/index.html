@@ -569,6 +569,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='cbk'){if(!cfgGet().driveOn){openCfg();toast('Connect Google account first',2600);return}doGoogleBackup();return}
   if(k==='crs'){openDriveHistory();return}
   if(k==='tgNow'){doTelegramBackup();return}
+  if(k==='tgstatus'){toast(lastTelegramBackup()?'Last Telegram backup: '+lastTelegramBackup():'No successful Telegram backup recorded',3000);return}
   if(k==='tgcfg'){openCfg();setTimeout(()=>$('#c_tgToken').scrollIntoView({block:'center',behavior:'smooth'}),180);return}
   if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Drive backup nahi mila');return}doDriveRestore(driveHistoryItems[i].id);return}
   return}
@@ -636,7 +637,7 @@ function cloudRow(key, icon, title, sub) {
  return '<button type="button" class="cloud-row" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+icon+'</svg></span><span class="mt"><strong>'+title+'</strong><span class="ms">'+sub+'</span></span></button>';
 }
 function openCloud(){
- const lb=lastBackup(),c=cfgGet();
+ const lb=lastBackup(),lt=lastTelegramBackup(),c=cfgGet();
  const icons={
   drive:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"/><path d="M12 12v7m-3-3 3 3 3-3"/>',
   status:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',
@@ -654,6 +655,7 @@ function openCloud(){
   cloudRow('cset',icons.settings,'Google Drive settings',c.driveOn?'Account connected':'Connect or disconnect your account')+
   '<div class="cloud-divider"></div><div class="cloud-group-label">Telegram archive</div>'+
   cloudRow('tgNow',icons.telegram,'Save backup to Telegram','Send one encrypted archive now')+
+  cloudRow('tgstatus',icons.status,'Last Telegram archive',lt||'No successful Telegram backup yet')+
   cloudRow('tgcfg',icons.clock,'Backup schedule',({manual:'Manual only',daily:'Daily',weekly:'Weekly',monthly:'Monthly'}[c.tgSchedule||'manual'])+' · Change Telegram settings')+
   cloudRow('x',icons.cancel,'Close','');
  sh.dataset.type='cloud';sh.classList.add('on');
