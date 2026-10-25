@@ -120,6 +120,17 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
         }
         final JSONArray array = root.optJSONArray("items");
+        final int oldItemCount = items.size();
+        final String oldLastId = oldItemCount > 0 ? items.get(oldItemCount - 1).id : null;
+        boolean wasAtBottom = oldItemCount == 0;
+        if (recyclerView != null && oldItemCount > 0
+                && recyclerView.getLayoutManager() instanceof androidx.recyclerview.widget.LinearLayoutManager) {
+            androidx.recyclerview.widget.LinearLayoutManager lm =
+                    (androidx.recyclerview.widget.LinearLayoutManager) recyclerView.getLayoutManager();
+            int lastVisible = lm.findLastVisibleItemPosition();
+            // Only follow new messages when the user was already at the bottom.
+            wasAtBottom = lastVisible >= oldItemCount - 1;
+        }
         final Map<String, Note> previousById = new HashMap<>();
         for (Note old : items) previousById.put(old.id, old);
         final ArrayList<Note> next = new ArrayList<>();
@@ -180,10 +191,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         diff.dispatchUpdatesTo(this);
         setSelectedIds(newSelected, true);
         notifyDataSetChangedThemeIfNeeded();
-        if (recyclerView != null) {
+        final String newLastId = next.isEmpty() ? null : next.get(next.size() - 1).id;
+        final boolean appendedLatestMessage = next.size() > oldItemCount
+                && newLastId != null && !newLastId.equals(oldLastId);
+        final boolean shouldFollowLatest = oldItemCount == 0 && !next.isEmpty()
+                || wasAtBottom && appendedLatestMessage;
+        if (recyclerView != null && shouldFollowLatest) {
             recyclerView.post(() -> {
                 if (recyclerView != null && getItemCount() > 0) {
-                    // Keep the newest note visible, just like the existing chat view.
                     recyclerView.scrollToPosition(getItemCount() - 1);
                 }
             });
