@@ -213,42 +213,7 @@ public class MainActivity extends Activity {
             return super.startActionMode(wrapSelectionCallback(callback), ActionMode.TYPE_FLOATING);
         }
 
-        private boolean hasMenuTitle(Menu menu, String title) {
-            for (int i = 0; i < menu.size(); i++) {
-                CharSequence current = menu.getItem(i).getTitle();
-                if (current != null && title.equalsIgnoreCase(current.toString())) return true;
-            }
-            return false;
-        }
-
-        private void removeMenuItemsByTitle(Menu menu, String title) {
-            for (int i = menu.size() - 1; i >= 0; i--) {
-                CharSequence current = menu.getItem(i).getTitle();
-                if (current != null && title.equalsIgnoreCase(current.toString().trim())) {
-                    menu.removeItem(menu.getItem(i).getItemId());
-                }
-            }
-        }
-
-        private void pinMonoAndMoveSelectAllToOverflow(Menu menu, int monoId, int selectAllId) {
-            // Replace the platform Select all item so it cannot take a visible
-            // slot ahead of Mono. A custom Select all remains in the overflow.
-            removeMenuItemsByTitle(menu, "Select all");
-            addSelectionMenuItem(menu, monoId, 102, "Mono", MenuItem.SHOW_AS_ACTION_ALWAYS);
-            addSelectionMenuItem(menu, selectAllId, 103, "Select all", MenuItem.SHOW_AS_ACTION_NEVER);
-        }
-
         private void addSelectionMenuItem(Menu menu, int id, int order, String title, int showAsAction) {
-            for (int i = 0; i < menu.size(); i++) {
-                MenuItem existing = menu.getItem(i);
-                CharSequence current = existing.getTitle();
-                if (current != null && title.equalsIgnoreCase(current.toString())) {
-                    // Promote platform-provided Cut/Copy actions too, so Mono
-                    // can sit beside them rather than being buried in overflow.
-                    existing.setShowAsAction(showAsAction);
-                    return;
-                }
-            }
             MenuItem item = menu.add(Menu.NONE, id, order, title);
             item.setShowAsAction(showAsAction);
         }
@@ -293,25 +258,34 @@ public class MainActivity extends Activity {
                 private static final int MENU_MENTION = 0x4D454E;
                 private static final int MENU_DATE = 0x444154;
                 private static final int MENU_REGULAR = 0x524547;
+                private static final int MENU_SELECT_ALL = 0x53454C;
+
+                private void populateSelectionMenu(Menu menu) {
+                    // The WebView callback adds platform actions such as Copy more than once
+                    // on some Android builds. Rebuild the menu deterministically instead.
+                    menu.clear();
+                    addSelectionMenuItem(menu, MENU_CUT, 10, "Cut", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                    addSelectionMenuItem(menu, MENU_COPY, 20, "Copy", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                    addSelectionMenuItem(menu, MENU_MONO, 30, "Mono", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                    addSelectionMenuItem(menu, MENU_SELECT_ALL, 40, "Select all", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_BOLD, 50, "Bold", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_ITALIC, 60, "Italic", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_CODE, 70, "Code", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_STRIKE, 80, "Strikethrough", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_UNDERLINE, 90, "Underline", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_QUOTE, 100, "Quote", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_SPOILER, 110, "Spoiler", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_LINK, 120, "Create link", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_MENTION, 130, "Create mention", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_DATE, 140, "Date", MenuItem.SHOW_AS_ACTION_NEVER);
+                    addSelectionMenuItem(menu, MENU_REGULAR, 150, "Regular", MenuItem.SHOW_AS_ACTION_NEVER);
+                }
 
                 @Override
                 public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                     boolean created = original.onCreateActionMode(mode, menu);
                     if (created) {
-                        addSelectionMenuItem(menu, MENU_COPY, 100, "Copy", MenuItem.SHOW_AS_ACTION_ALWAYS);
-                        addSelectionMenuItem(menu, MENU_CUT, 101, "Cut", MenuItem.SHOW_AS_ACTION_ALWAYS);
-                        pinMonoAndMoveSelectAllToOverflow(menu, MENU_MONO, 0x53454C);
-                        addSelectionMenuItem(menu, MENU_BOLD, 104, "Bold", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_ITALIC, 104, "Italic", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_CODE, 105, "Code", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_STRIKE, 106, "Strikethrough", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_UNDERLINE, 107, "Underline", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_QUOTE, 108, "Quote", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_SPOILER, 109, "Spoiler", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_LINK, 110, "Create link", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_MENTION, 111, "Create mention", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_DATE, 112, "Date", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_REGULAR, 113, "Regular", MenuItem.SHOW_AS_ACTION_NEVER);
+                        populateSelectionMenu(menu);
                         evaluateJavascript("window.setNativeSelectionMenuOpen && window.setNativeSelectionMenuOpen(true)", null);
                     }
                     return created;
@@ -321,22 +295,7 @@ public class MainActivity extends Activity {
                 public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
                     boolean prepared = original.onPrepareActionMode(mode, menu);
                     if (prepared) {
-                        // WebView/platform may refresh the menu during prepare;
-                        // restore our actions every time and keep Mono visible.
-                        addSelectionMenuItem(menu, MENU_COPY, 100, "Copy", MenuItem.SHOW_AS_ACTION_ALWAYS);
-                        addSelectionMenuItem(menu, MENU_CUT, 101, "Cut", MenuItem.SHOW_AS_ACTION_ALWAYS);
-                        pinMonoAndMoveSelectAllToOverflow(menu, MENU_MONO, 0x53454C);
-                        addSelectionMenuItem(menu, MENU_BOLD, 104, "Bold", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_ITALIC, 105, "Italic", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_CODE, 106, "Code", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_STRIKE, 107, "Strikethrough", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_UNDERLINE, 108, "Underline", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_QUOTE, 109, "Quote", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_SPOILER, 110, "Spoiler", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_LINK, 111, "Create link", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_MENTION, 112, "Create mention", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_DATE, 113, "Date", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_REGULAR, 114, "Regular", MenuItem.SHOW_AS_ACTION_NEVER);
+                        populateSelectionMenu(menu);
                     }
                     return prepared;
                 }
