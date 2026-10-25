@@ -211,15 +211,25 @@ public class MainActivity extends Activity {
     private class SelectionWebView extends WebView {
         SelectionWebView(Activity context) { super(context); }
 
+        private boolean isImageHitTarget() {
+            WebView.HitTestResult hit = getHitTestResult();
+            if (hit == null) return false;
+            int hitType = hit.getType();
+            return hitType == WebView.HitTestResult.IMAGE_TYPE
+                    || hitType == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE;
+        }
+
         @Override
         public ActionMode startActionMode(ActionMode.Callback callback) {
-            // Use the floating selection toolbar anchored to selected text, not
-            // the legacy primary action bar at the top of the window.
+            // Never attach the text-selection toolbar to an image attachment.
+            if (isImageHitTarget()) return null;
+            // Keep Android's floating toolbar anchored to the selected text.
             return super.startActionMode(wrapSelectionCallback(callback), ActionMode.TYPE_FLOATING);
         }
 
         @Override
         public ActionMode startActionMode(ActionMode.Callback callback, int type) {
+            if (isImageHitTarget()) return null;
             return super.startActionMode(wrapSelectionCallback(callback), ActionMode.TYPE_FLOATING);
         }
 
