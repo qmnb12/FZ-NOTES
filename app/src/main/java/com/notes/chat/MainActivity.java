@@ -325,9 +325,9 @@ public class MainActivity extends Activity {
                 }
 
                 @Override
-                public void onGetContentRect(View view, ActionMode mode, Rect outRect) {
+                public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
                     if (original instanceof ActionMode.Callback2) {
-                        ((ActionMode.Callback2) original).onGetContentRect(view, mode, outRect);
+                        ((ActionMode.Callback2) original).onGetContentRect(mode, view, outRect);
                     } else {
                         outRect.set(0, 0, view.getWidth(), view.getHeight());
                     }
