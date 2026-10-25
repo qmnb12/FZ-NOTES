@@ -221,6 +221,23 @@ public class MainActivity extends Activity {
             return false;
         }
 
+        private void removeMenuItemsByTitle(Menu menu, String title) {
+            for (int i = menu.size() - 1; i >= 0; i--) {
+                CharSequence current = menu.getItem(i).getTitle();
+                if (current != null && title.equalsIgnoreCase(current.toString().trim())) {
+                    menu.removeItem(menu.getItem(i).getItemId());
+                }
+            }
+        }
+
+        private void pinMonoAndMoveSelectAllToOverflow(Menu menu, int monoId, int selectAllId) {
+            // Replace the platform Select all item so it cannot take a visible
+            // slot ahead of Mono. A custom Select all remains in the overflow.
+            removeMenuItemsByTitle(menu, "Select all");
+            addSelectionMenuItem(menu, monoId, 102, "Mono", MenuItem.SHOW_AS_ACTION_ALWAYS);
+            addSelectionMenuItem(menu, selectAllId, 103, "Select all", MenuItem.SHOW_AS_ACTION_NEVER);
+        }
+
         private void addSelectionMenuItem(Menu menu, int id, int order, String title, int showAsAction) {
             for (int i = 0; i < menu.size(); i++) {
                 MenuItem existing = menu.getItem(i);
@@ -243,6 +260,7 @@ public class MainActivity extends Activity {
                 case 0x424F4C: return "b";
                 case 0x495441: return "i";
                 case 0x4D4F: return "mono";
+                case 0x53454C: return "selectAll";
                 case 0x434F: return "code";
                 case 0x535452: return "s";
                 case 0x554E44: return "u";
@@ -282,8 +300,8 @@ public class MainActivity extends Activity {
                     if (created) {
                         addSelectionMenuItem(menu, MENU_COPY, 100, "Copy", MenuItem.SHOW_AS_ACTION_ALWAYS);
                         addSelectionMenuItem(menu, MENU_CUT, 101, "Cut", MenuItem.SHOW_AS_ACTION_ALWAYS);
-                        addSelectionMenuItem(menu, MENU_MONO, 102, "Mono", MenuItem.SHOW_AS_ACTION_ALWAYS);
-                        addSelectionMenuItem(menu, MENU_BOLD, 103, "Bold", MenuItem.SHOW_AS_ACTION_NEVER);
+                        pinMonoAndMoveSelectAllToOverflow(menu, MENU_MONO, 0x53454C);
+                        addSelectionMenuItem(menu, MENU_BOLD, 104, "Bold", MenuItem.SHOW_AS_ACTION_NEVER);
                         addSelectionMenuItem(menu, MENU_ITALIC, 104, "Italic", MenuItem.SHOW_AS_ACTION_NEVER);
                         addSelectionMenuItem(menu, MENU_CODE, 105, "Code", MenuItem.SHOW_AS_ACTION_NEVER);
                         addSelectionMenuItem(menu, MENU_STRIKE, 106, "Strikethrough", MenuItem.SHOW_AS_ACTION_NEVER);
@@ -307,8 +325,7 @@ public class MainActivity extends Activity {
                         // restore our actions every time and keep Mono visible.
                         addSelectionMenuItem(menu, MENU_COPY, 100, "Copy", MenuItem.SHOW_AS_ACTION_ALWAYS);
                         addSelectionMenuItem(menu, MENU_CUT, 101, "Cut", MenuItem.SHOW_AS_ACTION_ALWAYS);
-                        addSelectionMenuItem(menu, 0x53454C, 102, "Select all", MenuItem.SHOW_AS_ACTION_NEVER);
-                        addSelectionMenuItem(menu, MENU_MONO, 103, "Mono", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                        pinMonoAndMoveSelectAllToOverflow(menu, MENU_MONO, 0x53454C);
                         addSelectionMenuItem(menu, MENU_BOLD, 104, "Bold", MenuItem.SHOW_AS_ACTION_NEVER);
                         addSelectionMenuItem(menu, MENU_ITALIC, 105, "Italic", MenuItem.SHOW_AS_ACTION_NEVER);
                         addSelectionMenuItem(menu, MENU_CODE, 106, "Code", MenuItem.SHOW_AS_ACTION_NEVER);
