@@ -649,6 +649,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='status'){toast(lastBackup()?'Last successful Drive backup: '+lastBackup():'No successful Drive backup recorded',3000);return}
   if(k==='cset'){openCfg();return}
   if(k==='tgcfg'){openTgCfg();return}
+  if(k==='tgstatus'){toast(lastTelegramBackup()?'Last Telegram archive: '+lastTelegramBackup():'No successful Telegram archive recorded',3000);return}
   if(k==='tgNow'){
    const c=cfgGet();
    if(!c.tgToken||!c.tgChat){openTgCfg();toast('Telegram settings mein bot token aur chat ID save karo',2800);return}
@@ -657,12 +658,17 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='crs'){openDriveHistory();return}
   if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Drive backup nahi mila');return}restoreSheetState();doDriveRestore(driveHistoryItems[i].id);return}
   return}
+ if(sh.dataset.type==='localbackup'){
+  if(k==='x'){restoreSheetState();return}
+  if(k==='localExport'){restoreSheetState();exportBackupFile();return}
+  if(k==='localRestore'){restoreSheetState();pickFile();return}
+  return}
  if(sh.dataset.type==='menu'){
   if(k==='cl'){pushSheetState();openCloud();return}
+  if(k==='bk'){pushSheetState();sh.dataset.type='localbackup';sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · DEVICE</span><h3>Local backup</h3><p>Save a backup file on this device or restore an existing one</p></div>'+cloudRow('localExport',icons.drive,'Backup to file','Save all notes to device (.json)')+cloudRow('localRestore',icons.restore,'Restore backup file','Import a previous FZ Notes backup')+cloudRow('x',icons.cancel,'Back','');sh.classList.add('on');return}
+  if(k==='rs'||k==='pf'){sh.classList.remove('on');pickFile();return}
   sh.classList.remove('on');
   if(k==='srch'){$('#sq').classList.add('on');$('#sqi').focus()}
-  if(k==='bk'){exportBackupFile();return}
-  if(k==='rs'||k==='pf'){pickFile();return}
   if(k==='undo'){undoChange();return}if(k==='redo'){redoChange();return}
   if(k==='th'){const d=document.documentElement,n=(d.dataset.theme||'dark')==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('notes-theme',n)}catch(e){}toast(n==='light'?'Light appearance enabled':'Dark appearance enabled',1800);}
   if(k==='hidden'){if(localStorage.getItem('notes-hide-hash')){if(hiddenUnlocked){cur='hidden';render()}else ask('hidepwunlock','Hidden notes password')}else ask('hidepwset','Create hidden notes password (4+ chars)');return}
@@ -722,7 +728,7 @@ function cloudRow(key, icon, title, sub) {
  return '<button type="button" class="cloud-row" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+icon+'</svg></span><span class="mt"><strong>'+title+'</strong><span class="ms">'+sub+'</span></span></button>';
 }
 function openCloud(){
- const lb=lastBackup(),c=cfgGet();
+ const lb=lastBackup(),lt=lastTelegramBackup(),c=cfgGet();
  const icons={
   drive:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"/><path d="M12 12v7m-3-3 3 3 3-3"/>',
   status:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',
@@ -737,7 +743,7 @@ function openCloud(){
   cloudRow('status',icons.status,'Last Drive backup',lb||'No successful backup yet')+
   cloudRow('cset',icons.settings,'Google Drive settings',c.driveOn?'Account connected':'Connect your Google account')+
   '<div class="cloud-divider"></div><div class="cloud-group-label">Telegram archive</div>'+
-  cloudRow('tgNow',icons.telegram,'Save backup to Telegram','Send one encrypted archive now')+
+  cloudRow('tgstatus',icons.status,'Last Telegram archive',lt||'No successful archive yet')+
   cloudRow('tgcfg',icons.settings,'Telegram settings','Bot connection and automatic backup schedule')+
   cloudRow('x',icons.cancel,'Close','');
  sh.dataset.type='cloud';sh.classList.add('on');
