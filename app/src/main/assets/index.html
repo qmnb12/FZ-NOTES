@@ -708,6 +708,89 @@ body.selection-mode-out #chat .b.sel{box-shadow:inset 0 0 0 999px rgba(51,144,23
 /* Keep message text from invoking WebView's text-selection mode; long-press selects the message. */
 #chat .b .msgtext,#chat .b .msgtext *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
 #chat .b{transition:transform .22s cubic-bezier(.2,.8,.2,1),background .2s ease,border-color .2s ease,box-shadow .22s cubic-bezier(.2,.8,.2,1),color .18s ease!important}
+
+
+/* Selection animation fix: keep the checkbox pseudos mounted before selection so transitions can run. */
+#chat .b::before,#chat .b::after{
+ content:""!important;position:absolute!important;left:-31px!important;top:50%!important;
+ width:25px!important;height:25px!important;box-sizing:border-box!important;border-radius:50%!important;
+ display:grid!important;place-items:center!important;pointer-events:none!important;
+ opacity:0!important;transform:translateY(-50%) scale(.48)!important;
+ transition:opacity .18s ease,transform .22s cubic-bezier(.18,.8,.22,1),
+ background-color .18s ease,border-color .18s ease,box-shadow .18s ease!important;
+}
+#chat .b::before{
+ background:transparent!important;border:2px solid rgba(150,171,197,.82)!important;
+ box-shadow:0 1px 4px rgba(0,0,0,.14)!important;
+}
+#chat .b::after{
+ content:"✓"!important;background:transparent!important;border:0!important;
+ color:#fff!important;font:800 14px/1 system-ui,-apple-system,sans-serif!important;
+ box-shadow:none!important;
+}
+body.selection-mode #chat .b::before,body.selection-mode-out #chat .b::before{
+ opacity:1!important;transform:translateY(-50%) scale(1)!important;
+}
+body.selection-mode #chat .b.sel::before{
+ background:#3390ec!important;border-color:#3390ec!important;
+ box-shadow:0 2px 8px rgba(51,144,236,.27)!important;
+}
+body.selection-mode #chat .b.sel::after{
+ opacity:1!important;transform:translateY(-50%) scale(1)!important;
+}
+body.selection-mode-out #chat .b::before,body.selection-mode-out #chat .b::after{
+ opacity:0!important;transform:translateY(-50%) scale(.48)!important;
+}
+body.selection-mode #chat .b.sel{
+ background:var(--bub)!important;color:var(--text)!important;
+ border-color:rgba(51,144,236,.76)!important;
+ box-shadow:inset 0 0 0 999px rgba(51,144,236,.17),0 2px 10px rgba(0,0,0,.10)!important;
+ transform:translateX(-1px) scale(1.006)!important;filter:none!important;z-index:2!important;
+}
+body.selection-mode-out #chat .b.sel{
+ box-shadow:inset 0 0 0 999px rgba(51,144,236,0),0 0 0 0 rgba(51,144,236,0)!important;
+ transform:translateX(0) scale(1)!important;
+}
+#chat .b,#selbar,#selbar button{
+ -webkit-tap-highlight-color:transparent!important;
+}
+#selbar.on{animation:telegramSelectBarIn .2s cubic-bezier(.18,.8,.22,1) both!important}
+#selbar.leaving{animation:telegramSelectBarOut .17s ease-in both!important}
+@media(prefers-reduced-motion:reduce){
+ #chat .b::before,#chat .b::after,#chat .b,#selbar,#selbar button{transition:none!important;animation:none!important}
+}
+
+/* Telegram-inspired rich text styling: inline Mono stays light; Code and Quote have no oversized badges. */
+#chat .msgtext .mono,#ed .mono{
+ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+ font-size:.9em!important;font-weight:500!important;line-height:1.45!important;
+ color:inherit!important;background:rgba(6,14,25,.22)!important;
+ border:0!important;border-radius:4px!important;padding:1px 4px!important;
+}
+:root[data-theme="light"] #chat .msgtext .mono,:root[data-theme="light"] #ed .mono{background:rgba(20,45,80,.09)!important}
+#chat .msgtext .code,#ed .code{
+ display:block!important;position:relative!important;box-sizing:border-box!important;width:100%;max-width:100%;
+ margin:5px 0!important;padding:24px 9px 9px!important;
+ background:rgba(6,14,25,.24)!important;border:0!important;border-radius:0 5px 5px 0!important;
+ border-left:2px solid var(--acc)!important;box-shadow:none!important;color:inherit!important;
+ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+ font-size:.86em!important;font-weight:400!important;line-height:1.45!important;
+ white-space:pre-wrap!important;overflow-wrap:anywhere!important;word-break:break-word!important;
+}
+#chat .msgtext .code::before,#ed .code::before{display:none!important;content:none!important}
+#chat .msgtext .code::after{
+ display:block!important;content:"Copy"!important;position:absolute!important;top:5px!important;right:7px!important;
+ color:var(--acc)!important;background:transparent!important;border:0!important;border-radius:4px!important;
+ padding:3px 4px!important;margin:0!important;float:none!important;
+ font:600 11px/1.2 system-ui,-apple-system,sans-serif!important;letter-spacing:0!important;
+ pointer-events:none!important;
+}
+#chat .msgtext .quote,#ed .quote{
+ display:block!important;box-sizing:border-box;margin:5px 0!important;padding:4px 9px!important;
+ border:0!important;border-left:2px solid var(--acc)!important;border-radius:0 4px 4px 0!important;
+ background:rgba(255,255,255,.045)!important;color:inherit!important;line-height:1.4!important;
+}
+:root[data-theme="light"] #chat .msgtext .quote,:root[data-theme="light"] #ed .quote{background:rgba(20,45,80,.045)!important}
 </style>
 </head>
 <body>
