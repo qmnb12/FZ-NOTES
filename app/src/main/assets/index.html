@@ -1405,6 +1405,12 @@ function completeHiddenCredentialPrompt(authMode,v){
   enterHiddenNotes()
  }).catch(()=>{toast('Verification failed',2500);ask(authMode,isPin?'Enter PIN':'Enter password')})
 }
+function inView(m){
+ if(!m)return false;
+ if(m.hidden)return cur==='hidden'&&hiddenUnlocked;
+ if(cur==='hidden')return false;
+ return cur==='all'?(m.k||'gen')!=='quick':(m.k||'gen')===cur
+}
 function matchesFilter(m){const task=Array.isArray(m.c),done=task&&m.c.length>0&&m.c.every(i=>i.s===1),d=new Date(m.t),n=new Date();if(searchFilter==='focus')return task&&!done;if(searchFilter==='pinned')return !!m.p;if(searchFilter==='tasks')return task;if(searchFilter==='open')return task&&!done;if(searchFilter==='done')return task&&done;if(searchFilter==='overdue')return task&&m.due&&m.due<Date.now()&&!done;if(searchFilter==='today')return d.toDateString()===n.toDateString();return true}
 $('#filters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;searchFilter=b.dataset.filter;$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render()});
 const cntText=m=>{const n=m.c.length,d=m.c.filter(i=>i.s===1).length,r=m.c.filter(i=>i.s===2).length;return d+'/'+n+' ho gaya'+(r?' · '+r+' nahi mila':'')};
