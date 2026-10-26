@@ -94,6 +94,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private RecyclerView recyclerView;
     private boolean lightTheme;
     private boolean showTopics = true;
+    private String themeName = "dark";
+    private int themeBg = Color.rgb(11, 17, 27);
+    private int themeBar = Color.rgb(17, 27, 41);
+    private int themeBubble = DARK_BUBBLE;
+    private int themeText = DARK_TEXT;
+    private int themeMuted = DARK_MUTED;
+    private int themeAccent = DARK_ACCENT;
+    private int themeBorder = Color.rgb(43, 59, 79);
     private String lastSelectionChangedId = "";
 
     NativeChatAdapter(Context context, Listener listener) {
@@ -114,7 +122,16 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         } catch (Exception e) {
             return;
         }
-        lightTheme = "light".equals(root.optString("theme", "dark"));
+        themeName = root.optString("theme", "dark");
+        lightTheme = "light".equals(themeName);
+        JSONObject palette = root.optJSONObject("palette");
+        themeBg = paletteColor(palette, "bg", lightTheme ? Color.rgb(243, 246, 251) : Color.rgb(11, 17, 27));
+        themeBar = paletteColor(palette, "bar", lightTheme ? Color.WHITE : Color.rgb(17, 27, 41));
+        themeBubble = paletteColor(palette, "bub", lightTheme ? LIGHT_BUBBLE : DARK_BUBBLE);
+        themeText = paletteColor(palette, "text", lightTheme ? LIGHT_TEXT : DARK_TEXT);
+        themeMuted = paletteColor(palette, "mut", lightTheme ? LIGHT_MUTED : DARK_MUTED);
+        themeAccent = paletteColor(palette, "acc", lightTheme ? LIGHT_ACCENT : DARK_ACCENT);
+        themeBorder = blendColors(themeBar, themeText, lightTheme ? 0.13f : 0.12f);
         showTopics = root.optBoolean("showTopics", true);
         final JSONArray selected = root.optJSONArray("selectedIds");
         final Set<String> newSelected = new HashSet<>();
@@ -210,11 +227,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
     }
 
-    private boolean lastThemeWasLight;
+    private String lastBoundTheme = "dark";
     private boolean lastShowTopics = true;
     private void notifyDataSetChangedThemeIfNeeded() {
-        if (lastThemeWasLight != lightTheme || lastShowTopics != showTopics) {
-            lastThemeWasLight = lightTheme;
+        if (!lastBoundTheme.equals(themeName) || lastShowTopics != showTopics) {
+            lastBoundTheme = themeName;
             lastShowTopics = showTopics;
             notifyItemRangeChanged(0, getItemCount());
         }
@@ -357,6 +374,25 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (id.equals(row.boundId)) return row;
         }
         return null;
+    }
+
+    private static int paletteColor(JSONObject palette, String key, int fallback) {
+        if (palette == null) return fallback;
+        try {
+            String value = palette.optString(key, "");
+            if (!value.isEmpty()) return Color.parseColor(value);
+        } catch (Exception ignored) { }
+        return fallback;
+    }
+
+    private static int blendColors(int base, int overlay, float amount) {
+        float t = Math.max(0f, Math.min(1f, amount));
+        int a = Color.alpha(base), r = Color.red(base), g = Color.green(base), b = Color.blue(base);
+        return Color.argb(
+                Math.round(a + (Color.alpha(overlay) - a) * t),
+                Math.round(r + (Color.red(overlay) - r) * t),
+                Math.round(g + (Color.green(overlay) - g) * t),
+                Math.round(b + (Color.blue(overlay) - b) * t));
     }
 
     @Override public long getItemId(int position) {
@@ -717,20 +753,20 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             setBackgroundColor(Color.TRANSPARENT);
             dateHeader.setVisibility(!note.date.equals(previousDate) ? VISIBLE : GONE);
             dateHeader.setText(note.date);
-            dateHeader.setTextColor(light ? LIGHT_MUTED : DARK_MUTED);
-            ((GradientDrawable) dateHeader.getBackground()).setColor(light ? Color.rgb(224, 232, 243) : Color.rgb(40, 53, 70));
+            dateHeader.setTextColor(themeMuted);
+            ((GradientDrawable) dateHeader.getBackground()).setColor(themeBar);
 
-            int bg = light ? LIGHT_BUBBLE : DARK_BUBBLE;
-            int fg = light ? LIGHT_TEXT : DARK_TEXT;
-            int muted = light ? LIGHT_MUTED : DARK_MUTED;
-            int accent = light ? LIGHT_ACCENT : DARK_ACCENT;
+            int bg = themeBubble;
+            int fg = themeText;
+            int muted = themeMuted;
+            int accent = themeAccent;
             colors[0] = bg; colors[1] = fg; colors[2] = muted; colors[3] = accent;
 
             GradientDrawable bubbleBg = new GradientDrawable();
             bubbleBg.setColor(bg);
             bubbleBg.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
             // Matching border width keeps the drawable's inner content geometry identical when selected.
-            bubbleBg.setStroke(dp(1), light ? Color.rgb(219, 228, 240) : Color.rgb(43, 59, 79));
+            bubbleBg.setStroke(dp(1), themeBorder);
             bubble.setBackground(bubbleBg);
 
             topicLabel.setVisibility(topics && !TextUtils.isEmpty(note.topic) ? VISIBLE : GONE);
@@ -740,7 +776,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             replyView.setText("↪  " + note.reply);
             replyView.setTextColor(fg);
             GradientDrawable replyBg = new GradientDrawable();
-            replyBg.setColor(light ? Color.rgb(241, 246, 253) : Color.rgb(24, 37, 54));
+            replyBg.setColor(themeBar);
             replyBg.setCornerRadius(dp(5));
             replyView.setBackground(replyBg);
             replyView.setOnClickListener(v -> {
@@ -763,7 +799,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             rich = rich.replaceAll("(?is)<span\\s+class=[\"']code[\"']\\s*>(.*?)</span>", "<codeblock>$1</codeblock>");
             rich = rich.replaceAll("(?is)<span\\s+class=[\"']quote[\"']\\s*>(.*?)</span>", "<quoteblock>$1</quoteblock>");
             Spanned parsed = Html.fromHtml(rich, Html.FROM_HTML_MODE_COMPACT, null,
-                    new NativeRichTagHandler(context, accent, light ? Color.rgb(238, 243, 251) : Color.rgb(22, 34, 49), dp(3), dp(8), NativeChatAdapter.this, note.id));
+                    new NativeRichTagHandler(context, accent, themeBg, dp(3), dp(8), NativeChatAdapter.this, note.id));
             body.setText(parsed);
             body.setTextColor(fg);
             body.setLinkTextColor(accent);
@@ -830,7 +866,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             menu.setScaleY(1f);
             // Keep the footer's menu slot reserved; GONE changes bubble width/height on selection.
             menu.setVisibility(selectionMode ? INVISIBLE : VISIBLE);
-            indicator.setColors(light ? LIGHT_ACCENT : 0xff3390ec, muted);
+            indicator.setColors(accent, muted);
             if (selectionMode) {
                 indicator.setVisibility(VISIBLE);
                 indicator.setChecked(selected, true);
@@ -846,10 +882,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bubble.setScaleY(1f);
             if (selected) {
                 GradientDrawable selectedBg = new GradientDrawable();
-                selectedBg.setColor(light ? Color.rgb(222, 236, 255) : Color.rgb(37, 66, 99));
-                bubbleFillColor = light ? Color.rgb(222, 236, 255) : Color.rgb(37, 66, 99);
+                selectedBg.setColor(blendColors(bg, accent, light ? 0.14f : 0.26f));
+                bubbleFillColor = blendColors(bg, accent, light ? 0.14f : 0.26f);
                 selectedBg.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
-                selectedBg.setStroke(dp(1), light ? Color.rgb(53, 122, 225) : Color.rgb(100, 167, 255));
+                selectedBg.setStroke(dp(1), accent);
                 bubble.setBackground(selectedBg);
                 bubble.setElevation(dp(2));
             } else {
@@ -886,7 +922,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
 
         void updateSelection(boolean selected, boolean selectionMode, boolean light) {
-            indicator.setColors(light ? LIGHT_ACCENT : 0xff3390ec, light ? LIGHT_MUTED : DARK_MUTED);
+            indicator.setColors(themeAccent, themeMuted);
             if (selectionMode) {
                 indicator.setVisibility(VISIBLE);
                 indicator.setChecked(selected, true);
@@ -903,14 +939,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 selectionAnimator = null;
             }
             final int targetColor = selected
-                    ? (light ? Color.rgb(222, 236, 255) : Color.rgb(37, 66, 99))
-                    : (light ? LIGHT_BUBBLE : DARK_BUBBLE);
+                    ? blendColors(themeBubble, themeAccent, light ? 0.14f : 0.26f)
+                    : themeBubble;
             final int startColor = bubbleFillColor;
             GradientDrawable background = new GradientDrawable();
             background.setColor(startColor);
             background.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
             if (selected) {
-                background.setStroke(dp(1), light ? Color.rgb(53, 122, 225) : Color.rgb(100, 167, 255));
+                background.setStroke(dp(1), themeAccent);
             }
             bubble.setBackground(background);
             bubble.setElevation(dp(selected ? 2f : 1.5f));
