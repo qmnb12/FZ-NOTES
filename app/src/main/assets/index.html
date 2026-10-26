@@ -111,6 +111,19 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 .mn{border:0;background:none;color:var(--mut);font-size:18px;line-height:1;padding:0 0 0 10px;vertical-align:middle}
 .hb{border:0;background:none;color:var(--text);font-size:20px;padding:6px 8px}
 #sq,#selbar,#pin{display:none;align-items:center;gap:8px;padding:6px 12px;background:var(--bar);border-bottom:1px solid var(--ln)}
+#searchNav{display:none;flex-direction:column;gap:7px;padding:8px 12px;background:var(--bar);border-bottom:1px solid var(--ln)}
+#sq.on + #searchNav{display:flex}
+.search-scope-row{display:flex;gap:7px}
+#searchNav .search-scope{flex:1;min-width:0;padding:7px 10px;border:1px solid var(--ln);border-radius:12px;background:transparent;color:var(--mut);font:inherit;font-size:13px;font-weight:650}
+#searchNav .search-scope.active{background:var(--acc);border-color:var(--acc);color:#fff}
+#searchNav .search-scope:disabled{opacity:.45}
+.search-result-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px;color:var(--mut);font-size:12px}
+.search-result-buttons{display:flex;align-items:center;gap:7px}
+#searchNav .search-result-buttons button{width:34px;height:32px;padding:0;display:grid;place-items:center;border:1px solid var(--ln);border-radius:10px;background:var(--mono);color:var(--text)}
+#searchNav .search-result-buttons svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#searchNav .search-result-buttons button:disabled{opacity:.35}
+#chat .b.search-hit{outline:3px solid var(--acc)!important;outline-offset:2px;box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 22%,transparent)!important}
+
 #sq.on,#selbar.on,#pin.on{display:flex}
 #sq input{flex:1;min-width:0;padding:8px 12px;border-radius:16px;border:1px solid var(--ln);background:var(--bg);color:var(--text);font:inherit}
 #sq button,#selbar button{border:0;background:var(--mono);color:var(--text);border-radius:14px;padding:6px 12px;font:inherit;font-size:14px}
@@ -1208,7 +1221,20 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 </head>
 <body>
 <header><div class="av" id="av">N</div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
-<div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx">✕</button></div>
+<div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx" aria-label="Clear and close search">✕</button></div>
+<div id="searchNav" aria-label="Search scope and result navigation">
+ <div class="search-scope-row">
+  <button type="button" data-search-scope="current" class="search-scope active">Current topic</button>
+  <button type="button" data-search-scope="all" class="search-scope">All notes</button>
+ </div>
+ <div class="search-result-row">
+  <span id="searchResultCount" aria-live="polite">Type to search</span>
+  <span class="search-result-buttons">
+   <button type="button" data-search-move="-1" aria-label="Previous result" title="Previous result"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button>
+   <button type="button" data-search-move="1" aria-label="Next result" title="Next result"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg></button>
+  </span>
+ </div>
+</div>
 <div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
 <div id="selbar"><button data-s="x" aria-label="Exit selection" title="Cancel selection">✕</button><span id="selc">1 selected</span><button data-s="reply" aria-label="Reply" title="Reply">↩</button><button data-s="copy" aria-label="Copy selected" title="Copy">▢</button><button data-s="more" aria-label="More actions" title="More actions">⋮</button><button data-s="del" aria-label="Delete selected" title="Delete">🗑</button></div>
@@ -1274,7 +1300,7 @@ window.setNativeSelectionMenuOpen=function(open){
  toolbar.classList.toggle('native-selection-hidden',stillSelected);
  if(stillSelected)toolbar.classList.remove('on')
 };
-let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',searchFilter='all',selMode=false,listMode=false,listTitle='',tt,replyId=null,editId=null,saved=null,mode='',pressed=0,hiddenUnlocked=false,hiddenTopicFilter='',draftTimer=null;
+let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',searchFilter='all',searchScope='current',searchResultIds=[],searchResultIndex=-1,searchResultResetPending=false,searchHighlightedId='',selMode=false,listMode=false,listTitle='',tt,replyId=null,editId=null,saved=null,mode='',pressed=0,hiddenUnlocked=false,hiddenTopicFilter='',draftTimer=null;
 let hadLocalNotesState=false;try{hadLocalNotesState=localStorage.getItem('notes-chat')!==null||localStorage.getItem('notes-topics')!==null}catch(e){}
 try{msgs=JSON.parse(localStorage.getItem('notes-chat')||'[]')}catch(e){}
 try{const t=JSON.parse(localStorage.getItem('notes-topics')||'null');if(t&&t.length)topics=t}catch(e){}
@@ -1351,7 +1377,18 @@ function installNativeChatOverlayObservers(){
  document.addEventListener('visibilitychange',syncNativeChatOverlay);
 }
 function render(){syncHiddenCredentialLifecycle();if(cur!=='hidden'){try{localStorage.setItem('notes-last-topic',cur)}catch(e){}}renderSide();renderTop();
- const list=msgs.filter(m=>inView(m)&&(!q||(plain(m.h)+' '+(m.c||[]).map(i=>i.x).join(' ')).toLowerCase().includes(q))&&matchesFilter(m));if(searchFilter==='focus')list.sort((a,b)=>(a.due||Infinity)-(b.due||Infinity));
+ const list=msgs.filter(m=>(q.trim()?inSearchScope(m):inView(m))&&searchMatches(m)&&matchesFilter(m));
+ if(searchFilter==='focus')list.sort((a,b)=>(a.due||Infinity)-(b.due||Infinity));
+ if(q.trim()){
+  const oldId=searchResultIds[searchResultIndex];
+  const ids=list.map(m=>String(m.id));
+  if(searchResultResetPending)searchResultIndex=ids.length?0:-1;
+  else if(oldId&&ids.includes(oldId))searchResultIndex=ids.indexOf(oldId);
+  else searchResultIndex=ids.length?Math.min(Math.max(searchResultIndex,0),ids.length-1):-1;
+  searchResultIds=ids;
+ }else{searchResultIds=[];searchResultIndex=-1;searchHighlightedId=''}
+ searchResultResetPending=false;
+ updateSearchNavigation();
  if(hasNativeChat()){
   chat.innerHTML='';
   const visibleIds=new Set(list.map(m=>String(m.id)));
@@ -1364,7 +1401,7 @@ function render(){syncHiddenCredentialLifecycle();if(cur!=='hidden'){try{localSt
    if(!image)nativeImagePayloadCache.delete(id);
    return item;
   });
-  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,showTopics:cur==='all'||cur==='hidden',selectedIds:[...sel].map(String),items}))}catch(_){}
+  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,searchHighlightId:searchHighlightedId,showTopics:cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'),selectedIds:[...sel].map(String),items}))}catch(_){}
   syncNativeChatOverlay();
   return
  }
@@ -1373,8 +1410,8 @@ function render(){syncHiddenCredentialLifecycle();if(cur!=='hidden'){try{localSt
  let last='';
  list.forEach(m=>{const d=new Date(m.t),ds=d.toDateString();
   if(ds!==last){last=ds;const c=document.createElement('div');c.className='chip';c.textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});fragment.appendChild(c)}
-  const b=document.createElement('div');b.className='b'+(m.h&&m.h.includes('class="code"')?' has-code':'')+(selMode&&sel.has(Number(m.id))?' sel':'');b.dataset.id=m.id;
-  b.innerHTML=((cur==='all'||cur==='hidden')?'<span class="tg">'+esc(tn(m.k))+'</span>':'')+(m.i?'<img class="im" src="'+m.i+'" alt="Photo">':'')+'<div class="msgtext">'+rq(m)+m.h+'</div>'+(m.due?'<span class="due '+(m.due<Date.now()&&!(m.c&&m.c.every(i=>i.s===1))?'late':'')+'">◷ '+esc(new Date(m.due).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}))+'</span>':'')+ckHtml(m)+'<span class="tm">'+(m.e?'edited · ':'')+d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'<button class="mn" aria-label="Options">⋮</button></span>';
+  const b=document.createElement('div');b.className='b'+(m.h&&m.h.includes('class="code"')?' has-code':'')+(selMode&&sel.has(Number(m.id))?' sel':'')+(String(m.id)===String(searchHighlightedId)?' search-hit':'');b.dataset.id=m.id;
+  b.innerHTML=((cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'))?'<span class="tg">'+esc(tn(m.k))+'</span>':'')+(m.i?'<img class="im" src="'+m.i+'" alt="Photo">':'')+'<div class="msgtext">'+rq(m)+m.h+'</div>'+(m.due?'<span class="due '+(m.due<Date.now()&&!(m.c&&m.c.every(i=>i.s===1))?'late':'')+'">◷ '+esc(new Date(m.due).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}))+'</span>':'')+ckHtml(m)+'<span class="tm">'+(m.e?'edited · ':'')+d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'<button class="mn" aria-label="Options">⋮</button></span>';
   const photo=b.querySelector('.im');if(photo)photo.addEventListener('error',()=>{photo.onerror=null;photo.classList.add('image-error');photo.alt='Photo preview could not be loaded';photo.removeAttribute('src')});
   fragment.appendChild(b)});
  chat.appendChild(fragment);chat.scrollTop=chat.scrollHeight}
@@ -2345,9 +2382,34 @@ $('#allNotesBtn').onclick=()=>{
  if(cur==='hidden'){hiddenUnlocked=false;hiddenTopicFilter=''}
  cur='all';clearSelection();clearCtx();lk.classList.remove('on');render()
 };
-$('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
-$('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
-$('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
+$('#hs').onclick=()=>{
+ const bar=$('#sq');bar.classList.toggle('on');
+ if(bar.classList.contains('on')){
+  $('#sqi').value=q;
+  updateSearchNavigation();
+  $('#sqi').focus()
+ }
+};
+$('#sqi').oninput=e=>{
+ q=e.target.value.trim().toLowerCase();
+ searchResultResetPending=true;searchHighlightedId='';
+ $('#filters').classList.toggle('on',!!q);
+ render()
+};
+$('#searchNav').addEventListener('click',e=>{
+ const scope=e.target.closest('[data-search-scope]');
+ if(scope&&!scope.disabled){
+  searchScope=scope.dataset.searchScope;searchResultResetPending=true;searchHighlightedId='';render();return
+ }
+ const move=e.target.closest('[data-search-move]');
+ if(move&&!move.disabled)moveSearchResult(Number(move.dataset.searchMove)||0)
+});
+$('#sqx').onclick=()=>{
+ q='';searchScope='current';searchResultIds=[];searchResultIndex=-1;searchHighlightedId='';searchResultResetPending=false;
+ searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');
+ $('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));
+ $('#sq').classList.remove('on');render()
+};
 $('#hm').onclick=()=>{shStack=[];const ico={
 search:'<circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path>',
 cloud:'<path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"></path><path d="M12 12v7m-3-3 3 3 3-3"></path>',
@@ -2529,6 +2591,59 @@ function inView(m){
  if(m.hidden)return cur==='hidden'&&hiddenUnlocked&&(!hiddenTopicFilter||(m.k||'gen')===hiddenTopicFilter);
  if(cur==='hidden')return false;
  return cur==='all'?(m.k||'gen')!=='quick':(m.k||'gen')===cur
+}
+function inSearchScope(m){
+ if(cur==='hidden'){
+  if(!m.hidden||!hiddenUnlocked)return false;
+  return searchScope==='all'||!hiddenTopicFilter||(m.k||'gen')===hiddenTopicFilter
+ }
+ if(m.hidden)return false;
+ if(searchScope==='all')return true;
+ return inView(m)
+}
+function searchMatches(m){
+ const query=q.trim().toLowerCase();
+ if(!query)return true;
+ const body=plain(m.h||'');
+ const tasks=Array.isArray(m.c)?m.c.map(i=>String(i.x||'')).join(' '):'';
+ const corpus=(body+' '+tasks+' '+tn(m.k||'gen')).toLowerCase();
+ const words=query.split(/\\s+/).filter(Boolean);
+ return words.every(word=>corpus.includes(word))
+}
+function updateSearchNavigation(){
+ const currentButton=$('#searchNav').querySelector('[data-search-scope="current"]');
+ const allButton=$('#searchNav').querySelector('[data-search-scope="all"]');
+ if(cur==='hidden'){
+  currentButton.textContent=hiddenTopicFilter?'This hidden topic':'All hidden';
+  allButton.textContent='All hidden';
+  allButton.disabled=!hiddenTopicFilter;
+ }else{
+  currentButton.textContent=cur==='all'?'Current view':cur==='quick'?'Quick only':'This topic';
+  allButton.textContent='All notes';
+  allButton.disabled=false;
+ }
+ currentButton.classList.toggle('active',searchScope==='current');
+ allButton.classList.toggle('active',searchScope==='all');
+ currentButton.setAttribute('aria-pressed',String(searchScope==='current'));
+ allButton.setAttribute('aria-pressed',String(searchScope==='all'));
+ const count=$('#searchResultCount'),previous=$('#searchNav').querySelector('[data-search-move="-1"]'),next=$('#searchNav').querySelector('[data-search-move="1"]');
+ if(!q.trim())count.textContent='Type to search';
+ else if(!searchResultIds.length)count.textContent='No results';
+ else count.textContent=(searchResultIndex+1)+' of '+searchResultIds.length+' results';
+ const disabled=!q.trim()||searchResultIds.length<2;
+ previous.disabled=disabled;next.disabled=disabled;
+}
+function moveSearchResult(delta){
+ if(!searchResultIds.length||!q.trim())return;
+ searchResultIndex=(searchResultIndex+delta+searchResultIds.length)%searchResultIds.length;
+ const id=String(searchResultIds[searchResultIndex]);
+ searchHighlightedId=id;
+ updateSearchNavigation();
+ render();
+ setTimeout(()=>jump(id),40);
+ setTimeout(()=>{
+  if(searchHighlightedId===id){searchHighlightedId='';render()}
+ },1300)
 }
 function matchesFilter(m){const task=Array.isArray(m.c),done=task&&m.c.length>0&&m.c.every(i=>i.s===1),d=new Date(m.t),n=new Date();if(searchFilter==='focus')return task&&!done;if(searchFilter==='pinned')return !!m.p;if(searchFilter==='tasks')return task;if(searchFilter==='open')return task&&!done;if(searchFilter==='done')return task&&done;if(searchFilter==='overdue')return task&&m.due&&m.due<Date.now()&&!done;if(searchFilter==='today')return d.toDateString()===n.toDateString();return true}
 $('#filters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;searchFilter=b.dataset.filter;$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render()});
