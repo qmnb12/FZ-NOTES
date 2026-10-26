@@ -1200,6 +1200,10 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 .theme-picker-footer{padding:8px 14px 14px;display:flex;justify-content:flex-end}
 #sh .theme-picker-footer button{min-width:84px;border-radius:10px;background:var(--mono);color:var(--text);border:1px solid var(--ln)}
 
+
+/* Final overrides for user-controlled message sizing and the custom-theme primary action. */
+#chat .msgtext{font-size:var(--msg-size,16px)!important}
+#sh .theme-custom-buttons button.primary{background:var(--acc)!important;border-color:var(--acc)!important;color:#fff!important}
 </style>
 </head>
 <body>
@@ -1957,7 +1961,7 @@ function renderSide(){const side=$('#side');side.innerHTML='';
   const hiddenTopics=topics.filter(t=>msgs.some(m=>m.hidden&&(m.k||'gen')===t.id));
   const allHiddenButton=document.createElement('button');
   allHiddenButton.className='tp'+(!hiddenTopicFilter?' on':'');
-  allHiddenButton.dataset.topic='hidden-all';
+  allHiddenButton.dataset.topic='hidden-all';allHiddenButton.setAttribute('aria-label','All hidden notes');allHiddenButton.title='All hidden notes';
   allHiddenButton.innerHTML='<i class="all-hidden-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7.5h11.5a2 2 0 0 1 2 2V19H6z"/><path d="M4.5 16.5V5h10"/><path d="M9 11h7M9 14h6"/><rect x="12.5" y="3.5" width="7" height="6" rx="1.4"/><path d="M14.3 3.5V2.8a1.7 1.7 0 0 1 3.4 0v.7"/></svg></i><span>All hidden</span>';
   allHiddenButton.onclick=()=>{hiddenTopicFilter='';clearSelection();clearCtx();render()};
   side.appendChild(allHiddenButton);
