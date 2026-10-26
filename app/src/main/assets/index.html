@@ -963,7 +963,7 @@ window.setNativeSelectionMenuOpen=function(open){
  toolbar.classList.toggle('native-selection-hidden',stillSelected);
  if(stillSelected)toolbar.classList.remove('on')
 };
-let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',searchFilter='all',selMode=false,listMode=false,listTitle='',tt,replyId=null,editId=null,saved=null,mode='',pressed=0,hiddenUnlocked=false,draftTimer=null;
+let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',searchFilter='all',selMode=false,listMode=false,listTitle='',tt,replyId=null,editId=null,saved=null,mode='',pressed=0,hiddenUnlocked=false,hiddenTopicFilter='',draftTimer=null;
 let hadLocalNotesState=false;try{hadLocalNotesState=localStorage.getItem('notes-chat')!==null||localStorage.getItem('notes-topics')!==null}catch(e){}
 try{msgs=JSON.parse(localStorage.getItem('notes-chat')||'[]')}catch(e){}
 try{const t=JSON.parse(localStorage.getItem('notes-topics')||'null');if(t&&t.length)topics=t}catch(e){}
@@ -1088,7 +1088,7 @@ function handleAppBack(){
  if($('#tb').classList.contains('on')){$('#tb').classList.remove('on');return true}
  if(sh.classList.contains('on')){restoreSheetState();return true}
  // Leaving the private view with Back must lock it and return to the normal notes screen.
- if(cur==='hidden'){hiddenUnlocked=false;cur='all';clearSelection();clearCtx();render();return true}
+ if(cur==='hidden'){hiddenUnlocked=false;hiddenTopicFilter='';cur='all';clearSelection();clearCtx();render();return true}
  if(selMode){clearSelection();return true}
  if(listMode){saveDraft();listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';return true}
  if(ed.innerText.trim()||$('#taskdue').value)saveDraft();
@@ -1464,11 +1464,18 @@ const tn=k=>{const t=topics.find(t=>t.id===(k||'gen'));return t?t.name:'General'
 const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return 'hsl('+h+' 55% 45%)'};
 const first=s=>[...s][0].toUpperCase();
 function renderSide(){const side=$('#side');side.innerHTML='';
- // Hidden Notes is a private, focused view: don't expose All/Quick/topic navigation beside it.
- side.style.display=cur==='hidden'?'none':'';
+ side.style.display='';
  if(cur==='hidden'){
   $('#ttl').textContent='🔒 Hidden notes';
   $('#av').textContent='🔒';
+  const hiddenTopics=topics.filter(t=>msgs.some(m=>m.hidden&&(m.k||'gen')===t.id));
+  [{id:'hidden-all',name:'All hidden'},...hiddenTopics.map(t=>({id:t.id,name:t.name}))].forEach(t=>{
+   const b=document.createElement('button'),all=t.id==='hidden-all';
+   b.className='tp'+((all?!hiddenTopicFilter:hiddenTopicFilter===t.id)?' on':'');b.dataset.topic=t.id;
+   b.innerHTML='<i style="background:'+(all?'transparent':hue(t.name))+';color:'+(all?'var(--mut)':'#fff')+'">'+(all?'🔒':esc(first(t.name)))+'</i><span>'+esc(t.name)+'</span>';
+   b.onclick=()=>{hiddenTopicFilter=all?'':t.id;clearSelection();clearCtx();render()};
+   side.appendChild(b)
+  });
   $('#sub').textContent=msgs.filter(inView).length+' hidden notes';
   return
  }
@@ -1971,7 +1978,7 @@ function completeHiddenCredentialPrompt(authMode,v){
 }
 function inView(m){
  if(!m)return false;
- if(m.hidden)return cur==='hidden'&&hiddenUnlocked;
+ if(m.hidden)return cur==='hidden'&&hiddenUnlocked&&(!hiddenTopicFilter||(m.k||'gen')===hiddenTopicFilter);
  if(cur==='hidden')return false;
  return cur==='all'?(m.k||'gen')!=='quick':(m.k||'gen')===cur
 }
