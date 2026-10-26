@@ -15,6 +15,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 import android.content.Intent;
 import android.content.ClipboardManager;
 import android.content.SharedPreferences;
@@ -65,6 +67,8 @@ public class MainActivity extends Activity {
     private boolean nativeChatRequestedVisible;
     private boolean nativeChatBoundsReady;
     private int nativeChatLeft = -1, nativeChatTop = -1, nativeChatWidth = -1, nativeChatHeight = -1;
+    private boolean nativeChatVisibilityTransitionRunning;
+    private boolean nativeChatTransitionTargetVisible;
     private ValueCallback<Uri[]> filePicker;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -819,8 +823,47 @@ public class MainActivity extends Activity {
 
     private void updateNativeChatVisibility() {
         if (nativeChatLayer == null) return;
-        int targetVisibility = nativeChatRequestedVisible && nativeChatBoundsReady ? View.VISIBLE : View.GONE;
-        if (nativeChatLayer.getVisibility() != targetVisibility) nativeChatLayer.setVisibility(targetVisibility);
+        final boolean shouldShow = nativeChatRequestedVisible && nativeChatBoundsReady;
+        if (shouldShow) {
+            if (nativeChatLayer.getVisibility() == View.VISIBLE
+                    && (!nativeChatVisibilityTransitionRunning || nativeChatTransitionTargetVisible)) return;
+            nativeChatLayer.animate().cancel();
+            nativeChatTransitionTargetVisible = true;
+            nativeChatVisibilityTransitionRunning = true;
+            if (nativeChatLayer.getVisibility() != View.VISIBLE) {
+                nativeChatLayer.setAlpha(0f);
+                nativeChatLayer.setTranslationY(dp(5));
+                nativeChatLayer.setVisibility(View.VISIBLE);
+            }
+            nativeChatLayer.animate()
+                    .alpha(1f).translationY(0f)
+                    .setDuration(190)
+                    .setInterpolator(new DecelerateInterpolator(1.4f))
+                    .withEndAction(() -> {
+                        if (nativeChatTransitionTargetVisible) nativeChatVisibilityTransitionRunning = false;
+                    })
+                    .start();
+            return;
+        }
+        if (nativeChatLayer.getVisibility() != View.VISIBLE
+                || (nativeChatVisibilityTransitionRunning && !nativeChatTransitionTargetVisible)) return;
+        nativeChatLayer.animate().cancel();
+        nativeChatTransitionTargetVisible = false;
+        nativeChatVisibilityTransitionRunning = true;
+        nativeChatLayer.animate()
+                .alpha(0f).translationY(dp(5))
+                .setDuration(135)
+                .setInterpolator(new AccelerateInterpolator(1.15f))
+                .withEndAction(() -> {
+                    nativeChatVisibilityTransitionRunning = false;
+                    if (!nativeChatTransitionTargetVisible
+                            && !(nativeChatRequestedVisible && nativeChatBoundsReady)) {
+                        nativeChatLayer.setVisibility(View.GONE);
+                        nativeChatLayer.setAlpha(1f);
+                        nativeChatLayer.setTranslationY(0f);
+                    }
+                })
+                .start();
     }
 
     private void reply(int id, boolean ok, String data) {
