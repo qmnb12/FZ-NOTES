@@ -65,6 +65,16 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 .all-notes-btn:active{background:var(--ln)!important}
 .all-notes-icon{width:25px;height:25px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .all-hidden-icon svg{width:25px;height:25px;display:block;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}
+#pin button{flex:none;width:31px;height:31px;display:grid;place-items:center;padding:0;border:1px solid var(--ln);border-radius:10px;background:var(--mono);color:var(--acc)}
+#pin button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#pin button:disabled{opacity:.3}
+.theme-customizer{max-height:52dvh;overflow-y:auto}
+.theme-custom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.theme-custom-grid .theme-control{min-width:0}
+.theme-custom-grid .theme-control-label{display:block;line-height:1.3}
+.theme-custom-grid input[type=color]{height:42px}
+.theme-custom-reset{margin-right:auto!important}
+
 #chat .msgtext{font-size:var(--msg-size,16px)!important}
 .theme-customizer{padding:10px 16px 15px;display:flex;flex-direction:column;gap:14px}
 .theme-control{display:flex;flex-direction:column;gap:7px}
@@ -1236,7 +1246,7 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
  </div>
 </div>
 <div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
-<div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
+<div id="pin"><div class="cx"><b id="pinTitle">Pinned note</b><span id="pinPreview"></span></div><button type="button" id="pinPrev" aria-label="Previous pinned note" title="Previous pin"><svg viewBox="0 0 24 24"><path d="m6 14 6-6 6 6"/></svg></button><button type="button" id="pinNext" aria-label="Next pinned note" title="Next pin"><svg viewBox="0 0 24 24"><path d="m6 10 6 6 6-6"/></svg></button></div>
 <div id="selbar"><button data-s="x" aria-label="Exit selection" title="Cancel selection">✕</button><span id="selc">1 selected</span><button data-s="reply" aria-label="Reply" title="Reply">↩</button><button data-s="copy" aria-label="Copy selected" title="Copy">▢</button><button data-s="more" aria-label="More actions" title="More actions">⋮</button><button data-s="del" aria-label="Delete selected" title="Delete">🗑</button></div>
 <div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Create task list">☑</button><button id="fab" aria-label="Quick note" title="Quick note">+</button></div></div></div>
 <div id="footer">
@@ -1442,8 +1452,9 @@ function handleAppBack(){
  if($('#tb').classList.contains('on')){$('#tb').classList.remove('on');return true}
  if(sh.classList.contains('on')){
   if(sh.dataset.type==='customize-theme'){
-   customTextColor=sh.dataset.customOriginalColor||'';
-   messageTextSize=Number(sh.dataset.customOriginalSize)||16;
+   const original=JSON.parse(sh.dataset.customOriginal||'{}');
+   customThemePalette=original.palette||{bg:'',bar:'',bub:'',text:'',mut:'',acc:''};
+   customTextColor=original.color||'';messageTextSize=Number(original.size)||16;messageCornerRadius=Number(original.radius)||17;
    applyCustomProperties();sh.classList.remove('on');render();return true
   }
   restoreSheetState();return true
@@ -1795,36 +1806,60 @@ const THEME_OPTIONS=[
  {id:'coffee',name:'Coffee',bg:'#1c140d',bar:'#2a2017',bub:'#423020',text:'#fff5e5',mut:'#c2a987',acc:'#eac182',mono:'rgba(234,193,130,.08)',ln:'rgba(234,193,130,.15)'},
  {id:'arctic',name:'Arctic',bg:'#08182b',bar:'#112b46',bub:'#1d3d60',text:'#eff8ff',mut:'#9dbad2',acc:'#7dc7ff',mono:'rgba(125,199,255,.08)',ln:'rgba(125,199,255,.15)'}
 ];
-let customTextColor='',messageTextSize=16;
+let customTextColor='',messageTextSize=16,messageCornerRadius=17,customThemePalette={bg:'',bar:'',bub:'',text:'',mut:'',acc:''};
 function applyCustomProperties(){
  const root=document.documentElement;
- if(customTextColor)root.style.setProperty('--text',customTextColor);
- else root.style.removeProperty('--text');
+ const keys=['bg','bar','bub','text','mut','acc'];
+ keys.forEach(key=>{
+  const value=customThemePalette[key]||(key==='text'?customTextColor:'');
+  if(value&&/^#[0-9a-f]{6}$/i.test(value))root.style.setProperty('--'+key,value);
+  else root.style.removeProperty('--'+key);
+ });
  root.style.setProperty('--msg-size',messageTextSize+'px');
+ root.style.setProperty('--msg-radius',messageCornerRadius+'px');
 }
 function saveCustomTheme(){
  try{
+  localStorage.setItem('notes-custom-theme',JSON.stringify(customThemePalette));
   if(customTextColor)localStorage.setItem('notes-custom-text-color',customTextColor);
   else localStorage.removeItem('notes-custom-text-color');
   localStorage.setItem('notes-message-text-size',String(messageTextSize));
+  localStorage.setItem('notes-message-corner-radius',String(messageCornerRadius));
  }catch(e){}
 }
 function openThemeCustomizer(){
  const root=document.documentElement;
- const originalColor=customTextColor;
- const originalSize=messageTextSize;
- let draftColor=customTextColor||getThemePalette().text||'#edf4ff';
- let draftSize=messageTextSize;
+ const original={palette:{...customThemePalette},color:customTextColor,size:messageTextSize,radius:messageCornerRadius};
+ const draft={palette:{...customThemePalette},size:messageTextSize,radius:messageCornerRadius};
+ const keys=[['bg','App background'],['bar','Header & panels'],['bub','Message bubble'],['text','Message text'],['mut','Secondary text'],['acc','Accent colour']];
  sh.dataset.type='customize-theme';
- sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · CUSTOMISE</div><div class="context-title">Your text settings</div><div class="context-preview">Choose how message text looks in your current theme</div></div><div class="theme-customizer"><label class="theme-control"><span class="theme-control-label">Message text colour <span id="customColorHex">'+draftColor.toUpperCase()+'</span></span><input type="color" id="customTextColour" value="'+draftColor+'"></label><label class="theme-control"><span class="theme-control-label">Message text size</span><span class="theme-size-range"><input type="range" id="customMessageSize" min="12" max="24" step="1" value="'+draftSize+'"><output id="customMessageSizeValue" class="theme-size-value">'+draftSize+' sp</output></span></label><div id="customThemePreview" class="theme-custom-preview">Message preview — text will look like this.</div></div><div class="theme-custom-buttons"><button type="button" data-k="custom-cancel">Cancel</button><button type="button" class="primary" data-k="custom-save">Save</button></div>';
- const colorInput=$('#customTextColour'),sizeInput=$('#customMessageSize'),preview=$('#customThemePreview'),hex=$('#customColorHex'),value=$('#customMessageSizeValue');
- const updatePreview=()=>{root.style.setProperty('--text',draftColor);root.style.setProperty('--msg-size',draftSize+'px');preview.style.color=draftColor;preview.style.fontSize=draftSize+'px';hex.textContent=draftColor.toUpperCase();value.textContent=draftSize+' sp'};
- colorInput.addEventListener('input',()=>{draftColor=colorInput.value;updatePreview()});
- sizeInput.addEventListener('input',()=>{draftSize=Math.max(12,Math.min(24,Number(sizeInput.value)||16));updatePreview()});
- sh.dataset.customOriginalColor=originalColor;
- sh.dataset.customOriginalSize=String(originalSize);
- sh.dataset.customDraftColor=draftColor;
- sh.dataset.customDraftSize=String(draftSize);
+ const controls=keys.map(([key,label])=>{
+  const value=draft.palette[key]||getThemePalette()[key]||'#edf4ff';
+  return '<label class="theme-control"><span class="theme-control-label">'+label+'</span><input type="color" data-theme-colour="'+key+'" value="'+value+'"></label>'
+ }).join('');
+ sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · CUSTOMISE</div><div class="context-title">Build your own theme</div><div class="context-preview">Set every main colour, message size and bubble shape</div></div><div class="theme-customizer"><div class="theme-custom-grid">'+controls+'</div><label class="theme-control"><span class="theme-control-label">Message text size <output id="customMessageSizeValue" class="theme-size-value">'+draft.size+' sp</output></span><span class="theme-size-range"><span>12</span><input type="range" id="customMessageSize" min="12" max="24" step="1" value="'+draft.size+'"><span>24</span></span></label><label class="theme-control"><span class="theme-control-label">Message corner roundness <output id="customRadiusValue" class="theme-size-value">'+draft.radius+' dp</output></span><span class="theme-size-range"><span>4</span><input type="range" id="customMessageRadius" min="4" max="28" step="1" value="'+draft.radius+'"><span>28</span></span></label><div id="customThemePreview" class="theme-custom-preview">A sample message preview · text, panel and bubble colours</div></div><div class="theme-custom-buttons"><button type="button" class="theme-custom-reset" data-k="custom-reset">Reset</button><button type="button" data-k="custom-cancel">Cancel</button><button type="button" class="primary" data-k="custom-save">Save</button></div>';
+ const preview=$('#customThemePreview');
+ const updatePreview=()=>{
+  const p=draft.palette;
+  preview.style.background=p.bub||getComputedStyle(root).getPropertyValue('--bub');
+  preview.style.color=p.text||customTextColor||getThemePalette().text;
+  preview.style.borderColor=p.acc||getThemePalette().acc;
+  preview.style.borderRadius=draft.radius+'px';
+  preview.style.fontSize=draft.size+'px';
+  $('#customMessageSizeValue').textContent=draft.size+' sp';
+  $('#customRadiusValue').textContent=draft.radius+' dp';
+  $('#sh').style.setProperty('--text',p.text||customTextColor||'');
+  $('#sh').style.setProperty('--msg-size',draft.size+'px');
+  $('#sh').style.setProperty('--acc',p.acc||'');
+ };
+ sh.querySelectorAll('[data-theme-colour]').forEach(input=>input.addEventListener('input',()=>{
+  draft.palette[input.dataset.themeColour]=input.value;
+  updatePreview()
+ }));
+ $('#customMessageSize').addEventListener('input',e=>{draft.size=Math.max(12,Math.min(24,Number(e.target.value)||16));updatePreview()});
+ $('#customMessageRadius').addEventListener('input',e=>{draft.radius=Math.max(4,Math.min(28,Number(e.target.value)||17));updatePreview()});
+ sh.dataset.customOriginal=JSON.stringify(original);
+ sh.dataset.customDraft=JSON.stringify(draft);
  updatePreview();
  sh.classList.add('on');
 }
@@ -1915,17 +1950,25 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   return
  }
  if(sh.dataset.type==='customize-theme'){
-  if(k==='custom-cancel'){
-   customTextColor=sh.dataset.customOriginalColor||'';
-   messageTextSize=Number(sh.dataset.customOriginalSize)||16;
-   applyCustomProperties();sh.classList.remove('on');render();return
+  const restoreOriginal=()=>{
+   const original=JSON.parse(sh.dataset.customOriginal||'{}');
+   customThemePalette=original.palette||{bg:'',bar:'',bub:'',text:'',mut:'',acc:''};
+   customTextColor=original.color||'';messageTextSize=Number(original.size)||16;messageCornerRadius=Number(original.radius)||17;
+   applyCustomProperties()
+  };
+  if(k==='custom-cancel'){restoreOriginal();sh.classList.remove('on');render();return}
+  if(k==='custom-reset'){
+   customThemePalette={bg:'',bar:'',bub:'',text:'',mut:'',acc:''};customTextColor='';messageTextSize=16;messageCornerRadius=17;
+   applyCustomProperties();saveCustomTheme();sh.classList.remove('on');render();toast('Custom colours reset',1800);return
   }
   if(k==='custom-save'){
-   const colour=$('#customTextColour').value;
-   customTextColor=/^#[0-9a-f]{6}$/i.test(colour)?colour:'';
+   customThemePalette={bg:'',bar:'',bub:'',text:'',mut:'',acc:''};
+   sh.querySelectorAll('[data-theme-colour]').forEach(input=>{customThemePalette[input.dataset.themeColour]=input.value});
+   customTextColor=customThemePalette.text||'';
    messageTextSize=Math.max(12,Math.min(24,Number($('#customMessageSize').value)||16));
+   messageCornerRadius=Math.max(4,Math.min(28,Number($('#customMessageRadius').value)||17));
    applyCustomProperties();saveCustomTheme();
-   sh.classList.remove('on');render();toast('Custom text settings saved',1800);return
+   sh.classList.remove('on');render();toast('Custom theme saved',1800);return
   }
   return
  }
@@ -2307,8 +2350,13 @@ try{
  const th=localStorage.getItem('notes-theme');document.documentElement.dataset.theme=th||'dark';
  const savedColour=localStorage.getItem('notes-custom-text-color')||'';
  customTextColor=/^#[0-9a-f]{6}$/i.test(savedColour)?savedColour:'';
+ const storedPalette=JSON.parse(localStorage.getItem('notes-custom-theme')||'{}');
+ ['bg','bar','bub','text','mut','acc'].forEach(key=>{const value=storedPalette[key]||'';customThemePalette[key]=/^#[0-9a-f]{6}$/i.test(value)?value:''});
+ if(!customThemePalette.text&&customTextColor)customThemePalette.text=customTextColor;
  const savedSize=Number(localStorage.getItem('notes-message-text-size')||16);
  messageTextSize=Number.isFinite(savedSize)?Math.max(12,Math.min(24,savedSize)):16;
+ const savedRadius=Number(localStorage.getItem('notes-message-corner-radius')||17);
+ messageCornerRadius=Number.isFinite(savedRadius)?Math.max(4,Math.min(28,savedRadius)):17;
  applyCustomProperties();
 }catch(e){}
 let selectionExitTimer=0,selectionReturnTimer=0;
