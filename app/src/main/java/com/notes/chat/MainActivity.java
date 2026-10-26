@@ -272,6 +272,10 @@ public class MainActivity extends Activity {
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
+        if (nativeMessagePopup != null && nativeMessagePopup.isShowing()) {
+            dismissNativeMessagePopup();
+            return;
+        }
         if (web != null) {
             web.evaluateJavascript(
                 "(function(){return window.handleAppBack ? window.handleAppBack() : false})()",
@@ -1033,10 +1037,10 @@ public class MainActivity extends Activity {
         });
         nativeMessagePopup = popup;
         nativeMessagePopupId = targetId;
-        int left = dp(66);
-        int top = dp(56);
+        // Bottom-anchored popup overlays the chat without changing WebView or RecyclerView bounds.
+        int bottomOffset = 0;
         try {
-            popup.showAtLocation(rootLayout, Gravity.TOP | Gravity.START, left, top);
+            popup.showAtLocation(rootLayout, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, bottomOffset);
             card.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
                     .setDuration(225)
                     .setInterpolator(new DecelerateInterpolator(1.5f))
