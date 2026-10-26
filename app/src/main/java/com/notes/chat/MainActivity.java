@@ -64,6 +64,7 @@ public class MainActivity extends Activity {
     private NativeChatAdapter nativeChatAdapter;
     private boolean nativeChatRequestedVisible;
     private boolean nativeChatBoundsReady;
+    private int nativeChatLeft = -1, nativeChatTop = -1, nativeChatWidth = -1, nativeChatHeight = -1;
     private ValueCallback<Uri[]> filePicker;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -101,9 +102,9 @@ public class MainActivity extends Activity {
         nativeChatView.setNestedScrollingEnabled(false);
         nativeChatView.setLayoutManager(new LinearLayoutManager(this, RecyclerView.VERTICAL, false));
         DefaultItemAnimator itemAnimator = new DefaultItemAnimator();
-        itemAnimator.setAddDuration(170);
-        itemAnimator.setMoveDuration(180);
-        itemAnimator.setRemoveDuration(150);
+        itemAnimator.setAddDuration(210);
+        itemAnimator.setMoveDuration(230);
+        itemAnimator.setRemoveDuration(190);
         itemAnimator.setChangeDuration(0);
         itemAnimator.setSupportsChangeAnimations(false);
         nativeChatView.setItemAnimator(itemAnimator);
@@ -674,14 +675,23 @@ public class MainActivity extends Activity {
                 int t = Math.max(0, Math.round(top * density));
                 int w = Math.max(0, Math.round(width * density));
                 int h = Math.max(0, Math.round(height * density));
-                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) nativeChatLayer.getLayoutParams();
-                if (lp == null) lp = new FrameLayout.LayoutParams(w, h);
-                lp.leftMargin = l;
-                lp.topMargin = t;
-                lp.width = w;
-                lp.height = h;
-                nativeChatLayer.setLayoutParams(lp);
                 nativeChatBoundsReady = w > 0 && h > 0;
+                // ResizeObserver can report the same bounds many times during toolbar/dialog
+                // transitions. Avoid forcing RecyclerView layout when its rectangle is unchanged.
+                if (l != nativeChatLeft || t != nativeChatTop
+                        || w != nativeChatWidth || h != nativeChatHeight) {
+                    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) nativeChatLayer.getLayoutParams();
+                    if (lp == null) lp = new FrameLayout.LayoutParams(w, h);
+                    lp.leftMargin = l;
+                    lp.topMargin = t;
+                    lp.width = w;
+                    lp.height = h;
+                    nativeChatLayer.setLayoutParams(lp);
+                    nativeChatLeft = l;
+                    nativeChatTop = t;
+                    nativeChatWidth = w;
+                    nativeChatHeight = h;
+                }
                 updateNativeChatVisibility();
             });
         }
@@ -809,7 +819,8 @@ public class MainActivity extends Activity {
 
     private void updateNativeChatVisibility() {
         if (nativeChatLayer == null) return;
-        nativeChatLayer.setVisibility(nativeChatRequestedVisible && nativeChatBoundsReady ? View.VISIBLE : View.GONE);
+        int targetVisibility = nativeChatRequestedVisible && nativeChatBoundsReady ? View.VISIBLE : View.GONE;
+        if (nativeChatLayer.getVisibility() != targetVisibility) nativeChatLayer.setVisibility(targetVisibility);
     }
 
     private void reply(int id, boolean ok, String data) {
