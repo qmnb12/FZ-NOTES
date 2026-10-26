@@ -2365,8 +2365,7 @@ try{
  messageCornerRadius=Number.isFinite(savedRadius)?Math.max(4,Math.min(28,savedRadius)):17;
  applyCustomProperties();
 }catch(e){}
-let selectionExitTimer=0,selectionReturnTimer=0;
-function updateSelectionModeUI(active){
+let selectionExitTimer=0,selectionReturnTimer=0,sfunction updateSelectionModeUI(active){
  const bar=$('#selbar'),body=document.body,wasActive=body.classList.contains('selection-mode');
  if(active){
   if(selectionExitTimer){clearTimeout(selectionExitTimer);selectionExitTimer=0}
@@ -2376,6 +2375,8 @@ function updateSelectionModeUI(active){
   bar.style.transformOrigin='50% 50%';
   bar.classList.remove('leaving');
   bar.classList.add('on');
+  if(selectionLayoutTimer)clearTimeout(selectionLayoutTimer);
+  selectionLayoutTimer=setTimeout(()=>{syncNativeChatOverlay();selectionLayoutTimer=0},230);
   return
  }
  if(wasActive){
@@ -2395,11 +2396,14 @@ function updateSelectionModeUI(active){
    selectionReturnTimer=setTimeout(()=>{
     body.classList.remove('selection-mode-return');
     selectionReturnTimer=0
-   },280)
+   },280);
+   if(selectionLayoutTimer)clearTimeout(selectionLayoutTimer);
+   selectionLayoutTimer=setTimeout(()=>{syncNativeChatOverlay();selectionLayoutTimer=0},30)
   },205);
   return
  }
  if(!body.classList.contains('selection-mode-out'))bar.classList.remove('leaving','on')
+}emove('leaving','on')
 }
 function renderTop(){
  const pins=msgs.filter(m=>m.p&&inView(m));
