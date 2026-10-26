@@ -126,9 +126,23 @@ public class MainActivity extends Activity {
                 JSONArray ids = new JSONArray();
                 for (String id : selectedIds) ids.put(id);
                 final String quoted = JSONObject.quote(ids.toString());
+                final float[] pocketOrigin = new float[]{Float.NaN, Float.NaN};
+                if (web != null && nativeChatAdapter != null) {
+                    String changedId = nativeChatAdapter.getLastSelectionChangedId();
+                    int[] anchor = nativeChatAdapter.getBubbleCenterOnScreen(changedId);
+                    if (anchor != null) {
+                        int[] webLocation = new int[2];
+                        web.getLocationOnScreen(webLocation);
+                        float density = getResources().getDisplayMetrics().density;
+                        pocketOrigin[0] = (anchor[0] - webLocation[0]) / density;
+                        pocketOrigin[1] = (anchor[1] - webLocation[1]) / density;
+                    }
+                }
+                final String originArgs = Float.isFinite(pocketOrigin[0]) && Float.isFinite(pocketOrigin[1])
+                        ? "," + pocketOrigin[0] + "," + pocketOrigin[1] : "";
                 runOnUiThread(() -> {
                     if (web != null) web.evaluateJavascript(
-                            "window.nativeChatSelectionChanged&&window.nativeChatSelectionChanged(" + quoted + ")", null);
+                            "window.nativeChatSelectionChanged&&window.nativeChatSelectionChanged(" + quoted + originArgs + ")", null);
                 });
             }
 
