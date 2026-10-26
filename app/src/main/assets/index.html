@@ -987,6 +987,7 @@ body.selection-mode header,body.selection-mode-out header{
  #selbar.on:not(.leaving),#selbar.leaving,#sh[data-type="msg"],#sh[data-type="multi-select"]{animation:none!important;transition:none!important}
 }
 
+body.action-sheet-open #selbar{z-index:12!important}
 /* Back navigation within stacked action sheets gets a quick, soft content handoff. */
 #sh.sheet-restoring > *{animation:sheetBackContent .22s cubic-bezier(.22,1,.36,1) both}
 @keyframes sheetBackContent{from{opacity:.4;transform:translate3d(0,7px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
@@ -1137,7 +1138,7 @@ body.selection-mode-return header{animation:selectionHeaderReturn .26s var(--mot
 const $=s=>document.querySelector(s),ed=$('#ed'),chat=$('#chat'),sh=$('#sh'),lk=$('#lk'),lki=$('#lki');
 let shStack=[];
 const shBackdrop=document.createElement('div');shBackdrop.id='shBackdrop';shBackdrop.setAttribute('aria-hidden','true');document.body.appendChild(shBackdrop);
-const shObserver=new MutationObserver(()=>shBackdrop.classList.toggle('on',sh.classList.contains('on')));
+const shObserver=new MutationObserver(()=>{const open=sh.classList.contains('on');shBackdrop.classList.toggle('on',open);document.body.classList.toggle('action-sheet-open',open)});
 shObserver.observe(sh,{attributes:true,attributeFilter:['class']});
 shBackdrop.addEventListener('click',()=>{shStack=[];sh.classList.remove('on');chat.classList.remove('sheet-open')});
 function pushSheetState(){if(!sh.classList.contains('on'))return;shStack.push({html:sh.innerHTML,dataset:Object.assign({},sh.dataset)});}
