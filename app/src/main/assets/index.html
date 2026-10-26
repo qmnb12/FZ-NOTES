@@ -681,7 +681,7 @@ body{min-height:100dvh}
 
 /* Telegram-inspired message selection: stable check rail and reversible transitions */
 header{max-height:80px;overflow:hidden;transition:max-height .19s cubic-bezier(.2,.8,.2,1),opacity .16s ease,transform .19s cubic-bezier(.2,.8,.2,1),padding .19s ease,border-color .19s ease}
-body.selection-mode header{max-height:0!important;padding-top:0!important;padding-bottom:0!important;opacity:0;transform:translateY(-8px);border-bottom-color:transparent!important;pointer-events:none}
+body.selection-mode header,body.selection-mode-out header{visibility:hidden!important;opacity:0!important;transform:none!important;pointer-events:none!important}
 body.selection-mode #sq,body.selection-mode #filters,body.selection-mode #pin{display:none!important}
 #selbar.on{animation:telegramSelectBarIn .19s cubic-bezier(.2,.8,.2,1) both}
 #selbar.leaving{animation:telegramSelectBarOut .17s cubic-bezier(.4,0,1,1) both;pointer-events:none}
