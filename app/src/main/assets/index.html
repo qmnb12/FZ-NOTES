@@ -1699,7 +1699,7 @@ window.nativeMessageMenuAction=function(rawId,action){
   if(action==='del'){if(replyId===id||editId===id)clearCtx();msgs=msgs.filter(x=>Number(x.id)!==id);save();render();return}
   if(action==='edit'){
    if(m.c){
-    ed.innerText=m.c.map(i=>i.x).join('\\n');listTitle=plain(m.h);listMode=true;
+    ed.innerText=m.c.map(i=>i.x).join('\n');listTitle=plain(m.h);listMode=true;
     ed.dataset.ph='Add list items, one per line';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');
     $('#taskdue').value=m.due?new Date(m.due-new Date(m.due).getTimezoneOffset()*60000).toISOString().slice(0,16):''
    }else ed.innerHTML=m.h;
