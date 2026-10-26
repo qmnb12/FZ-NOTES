@@ -1065,12 +1065,22 @@ public class MainActivity extends Activity {
         }
         scroll.addView(rowsLayout, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        int maxMenuHeight = Math.max(dp(150), rootLayout.getHeight() - dp(170));
-        card.addView(scroll, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Math.min(dp(400), maxMenuHeight)));
 
         int availableWidth = Math.max(dp(220), rootLayout.getWidth() - dp(24));
         int menuWidth = Math.min(dp(390), availableWidth);
+        int maxMenuHeight = Math.max(dp(150), rootLayout.getHeight() - dp(170));
+        int maxScrollHeight = Math.min(dp(400), maxMenuHeight);
+
+        // Measure the menu list against the maximum height instead of forcing
+        // every menu to occupy 400dp. Short menus now wrap their actual content;
+        // long menus still stop at the cap and scroll as before.
+        scroll.measure(
+                View.MeasureSpec.makeMeasureSpec(Math.max(dp(180), menuWidth - dp(16)),
+                        View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(maxScrollHeight, View.MeasureSpec.AT_MOST));
+        int scrollContentHeight = Math.min(maxScrollHeight, scroll.getMeasuredHeight());
+        card.addView(scroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, scrollContentHeight));
 
         // Use a transparent, full-window popup layer. The card can then travel
         // from the selected message to the bottom without being clipped by its own window.
