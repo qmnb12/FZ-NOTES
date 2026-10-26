@@ -944,18 +944,21 @@ public class MainActivity extends Activity {
         card.setScaleY(0.985f);
         card.setClipToPadding(false);
 
-        TextView eyebrow = new TextView(this);
-        eyebrow.setText("FZ NOTES  ·  " + ("topics".equals(config.optString("mode")) ? "ORGANIZE" : "MESSAGE"));
-        eyebrow.setTextColor(accent);
-        eyebrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-        eyebrow.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
-        eyebrow.setLetterSpacing(0.12f);
-        eyebrow.setPadding(dp(10), dp(5), dp(10), dp(4));
-        card.addView(eyebrow, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        boolean topicMenu = "topics".equals(config.optString("mode"));
+        if (topicMenu) {
+            TextView eyebrow = new TextView(this);
+            eyebrow.setText("FZ NOTES  ·  ORGANIZE");
+            eyebrow.setTextColor(accent);
+            eyebrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            eyebrow.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+            eyebrow.setLetterSpacing(0.12f);
+            eyebrow.setPadding(dp(10), dp(5), dp(10), dp(4));
+            card.addView(eyebrow, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
 
         TextView heading = new TextView(this);
-        heading.setText(config.optString("title", "Message options"));
+        heading.setText(config.optString("title", "Message"));
         heading.setTextColor(foreground);
         heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         heading.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
