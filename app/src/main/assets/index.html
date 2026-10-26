@@ -1595,8 +1595,8 @@ $('#c_driveConnect').onclick=async()=>{
  try{
   toast('Google account connect ho raha hai…',3500);
   const {token,key}=await ensureDriveKey();
-  await onGoogleConnected(token,key);
-  toast('Google account connected',2200);
+  const connected=await onGoogleConnected(token,key);
+  if(connected)toast('Google account connected',2200);
  }catch(e){toast('Google connect failed: '+e.message,4500)}
 };
 $('#c_driveDisconnect').onclick=()=>{const c=cfgGet();c.driveOn=false;cfgSet(c);cachedDriveAuth=null;try{clearTimeout(autoBackupTimer);autoBackupAgain=false}catch(_){}openCfg();toast('Google Drive disconnected · automatic backup stopped',2800)};
@@ -1662,13 +1662,13 @@ async function onGoogleConnected(token,key){
     $('#cfg').classList.remove('on');
     hadLocalNotesState=true;
     setTimeout(()=>doGoogleBackup(true,true),1200);
-    return;
+    return true;
    }
-   if(legacyRestoreId){c.driveOn=true;cfgSet(c);$('#cfg').classList.remove('on');return}
+   if(legacyRestoreId){c.driveOn=true;cfgSet(c);$('#cfg').classList.remove('on');return true}
    c.driveOn=true;cfgSet(c);
    openCfg();
    toast('Google account connected, lekin is account mein purana FZ NOTES backup nahi mila.',4500);
-   return;
+   return true;
   }
 
   // Test actual Drive listing before saying the account is connected. If backups
@@ -1679,14 +1679,16 @@ async function onGoogleConnected(token,key){
   if(backups.length){
    driveHistoryItems=backups;
    toast('Google connected · '+backups.length+' cloud backups mile. Restore dabakar backup choose karo; current notes auto-overwrite nahi hongi.',5000);
-   return;
+   return true;
   }
   toast('Google connected · cloud mein purana backup nahi mila. Current notes ka backup bana raha hoon.',4000);
   setTimeout(()=>doGoogleBackup(true,true,true),700);
+  return true;
  }catch(e){
   c.driveOn=false;cfgSet(c);cachedDriveAuth=null;
   openCfg();
   toast('Google Drive connect/test failed: '+e.message,5000);
+  return false;
  }
 }
 async function startupCloudSync(){
