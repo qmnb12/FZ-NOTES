@@ -2607,7 +2607,7 @@ function searchMatches(m){
  const body=plain(m.h||'');
  const tasks=Array.isArray(m.c)?m.c.map(i=>String(i.x||'')).join(' '):'';
  const corpus=(body+' '+tasks+' '+tn(m.k||'gen')).toLowerCase();
- const words=query.split(/\\s+/).filter(Boolean);
+ const words=query.split(/\s+/).filter(Boolean);
  return words.every(word=>corpus.includes(word))
 }
 function updateSearchNavigation(){
