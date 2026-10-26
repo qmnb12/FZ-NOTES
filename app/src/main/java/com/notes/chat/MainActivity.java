@@ -6,6 +6,8 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.graphics.Rect;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.app.Activity;
@@ -15,8 +17,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
+import android.view.Gravity;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
+import android.widget.PopupWindow;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.util.TypedValue;
 import android.content.Intent;
 import android.content.ClipboardManager;
 import android.content.SharedPreferences;
@@ -70,6 +77,8 @@ public class MainActivity extends Activity {
     private boolean nativeChatVisibilityTransitionRunning;
     private boolean nativeChatTransitionTargetVisible;
     private ValueCallback<Uri[]> filePicker;
+    private PopupWindow nativeMessagePopup;
+    private String nativeMessagePopupId = "";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -650,6 +659,16 @@ public class MainActivity extends Activity {
     /** JS -> Java bridge for encrypted cloud backup (runs on a background thread). */
     class Bridge {
         @JavascriptInterface
+        public void showNativeMessageMenu(final String id, final String json) {
+            runOnUiThread(() -> showNativeMessageMenuInternal(id, json));
+        }
+
+        @JavascriptInterface
+        public void dismissNativeMessageMenu() {
+            runOnUiThread(() -> dismissNativeMessagePopup());
+        }
+
+        @JavascriptInterface
         public void setNativeChatData(final String json) {
             runOnUiThread(() -> {
                 if (nativeChatAdapter == null || nativeChatView == null) return;
@@ -819,6 +838,213 @@ public class MainActivity extends Activity {
 
     private int dp(float value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private void dismissNativeMessagePopup() {
+        if (nativeMessagePopup != null) {
+            PopupWindow old = nativeMessagePopup;
+            nativeMessagePopup = null;
+            try { old.dismiss(); } catch (Exception ignored) { }
+        }
+        nativeMessagePopupId = "";
+    }
+
+    private void showNativeMessageMenuInternal(String id, String json) {
+        if (rootLayout == null || web == null) return;
+        final JSONObject config;
+        final JSONArray rows;
+        try {
+            config = new JSONObject(json == null ? "{}" : json);
+            rows = config.optJSONArray("items");
+            if (rows == null) return;
+        } catch (Exception e) {
+            return;
+        }
+        dismissNativeMessagePopup();
+        final boolean light = "light".equals(config.optString("theme", "dark"));
+        final int foreground = light ? Color.rgb(25, 35, 51) : Color.rgb(235, 243, 255);
+        final int muted = light ? Color.rgb(95, 112, 136) : Color.rgb(155, 174, 200);
+        final int accent = light ? Color.rgb(40, 111, 219) : Color.rgb(126, 180, 255);
+        final int panel = light ? Color.rgb(250, 252, 255) : Color.rgb(18, 29, 46);
+        final int border = light ? Color.rgb(223, 231, 243) : Color.rgb(47, 65, 89);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(8), dp(9), dp(8), dp(8));
+        GradientDrawable panelBackground = new GradientDrawable();
+        panelBackground.setColor(panel);
+        panelBackground.setCornerRadius(dp(20));
+        panelBackground.setStroke(dp(1), border);
+        card.setBackground(panelBackground);
+        card.setElevation(dp(16));
+        card.setAlpha(0f);
+        card.setTranslationY(-dp(7));
+        card.setScaleX(0.985f);
+        card.setScaleY(0.985f);
+        card.setClipToPadding(false);
+
+        TextView eyebrow = new TextView(this);
+        eyebrow.setText("FZ NOTES  ·  " + ("topics".equals(config.optString("mode")) ? "ORGANIZE" : "MESSAGE"));
+        eyebrow.setTextColor(accent);
+        eyebrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        eyebrow.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        eyebrow.setLetterSpacing(0.12f);
+        eyebrow.setPadding(dp(10), dp(5), dp(10), dp(4));
+        card.addView(eyebrow, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView heading = new TextView(this);
+        heading.setText(config.optString("title", "Message options"));
+        heading.setTextColor(foreground);
+        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        heading.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        heading.setPadding(dp(10), dp(1), dp(10), dp(2));
+        card.addView(heading);
+
+        String previewText = config.optString("preview", "");
+        if (!previewText.isEmpty()) {
+            TextView preview = new TextView(this);
+            preview.setText(previewText);
+            preview.setTextColor(muted);
+            preview.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            preview.setSingleLine(true);
+            preview.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            preview.setPadding(dp(10), 0, dp(10), dp(8));
+            card.addView(preview);
+        }
+        View separator = new View(this);
+        separator.setBackgroundColor(border);
+        LinearLayout.LayoutParams sepLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
+        sepLp.setMargins(dp(7), dp(3), dp(7), dp(5));
+        card.addView(separator, sepLp);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(false);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout rowsLayout = new LinearLayout(this);
+        rowsLayout.setOrientation(LinearLayout.VERTICAL);
+
+        final String targetId = id == null ? "" : id;
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject rowData = rows.optJSONObject(i);
+            if (rowData == null) continue;
+            final String key = rowData.optString("key", "");
+            if (key.isEmpty()) continue;
+            if ("divider".equals(key)) {
+                View divider = new View(this);
+                divider.setBackgroundColor(border);
+                LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
+                dlp.setMargins(dp(10), dp(4), dp(10), dp(4));
+                rowsLayout.addView(divider, dlp);
+                continue;
+            }
+            final boolean danger = rowData.optBoolean("danger", false);
+            LinearLayout action = new LinearLayout(this);
+            action.setOrientation(LinearLayout.HORIZONTAL);
+            action.setGravity(Gravity.CENTER_VERTICAL);
+            action.setMinimumHeight(dp(42));
+            action.setPadding(dp(8), dp(4), dp(10), dp(4));
+            GradientDrawable actionBg = new GradientDrawable();
+            actionBg.setColor(Color.TRANSPARENT);
+            actionBg.setCornerRadius(dp(12));
+            android.content.res.ColorStateList rippleColor =
+                    android.content.res.ColorStateList.valueOf(light
+                            ? Color.rgb(226, 237, 253) : Color.rgb(38, 56, 80));
+            action.setBackground(new android.graphics.drawable.RippleDrawable(
+                    rippleColor, actionBg, null));
+            action.setClickable(true);
+            action.setFocusable(true);
+
+            TextView icon = new TextView(this);
+            icon.setText(rowData.optString("icon", "•"));
+            icon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+            icon.setGravity(Gravity.CENTER);
+            icon.setTextColor(danger ? (light ? Color.rgb(190, 46, 60) : Color.rgb(255, 129, 143)) : accent);
+            GradientDrawable iconBg = new GradientDrawable();
+            iconBg.setColor(danger
+                    ? (light ? Color.rgb(255, 239, 240) : Color.rgb(64, 35, 48))
+                    : (light ? Color.rgb(236, 243, 253) : Color.rgb(29, 44, 65)));
+            iconBg.setCornerRadius(dp(10));
+            iconBg.setStroke(dp(1), danger
+                    ? (light ? Color.rgb(244, 213, 217) : Color.rgb(86, 49, 62)) : border);
+            icon.setBackground(iconBg);
+            action.addView(icon, new LinearLayout.LayoutParams(dp(32), dp(32)));
+
+            TextView label = new TextView(this);
+            label.setText(rowData.optString("title", key));
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            label.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.MEDIUM);
+            label.setTextColor(danger ? (light ? Color.rgb(190, 46, 60) : Color.rgb(255, 129, 143)) : foreground);
+            LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            textLp.leftMargin = dp(11);
+            action.addView(label, textLp);
+            action.setContentDescription(label.getText());
+            action.setOnClickListener(v -> {
+                PopupWindow popup = nativeMessagePopup;
+                nativeMessagePopup = null;
+                nativeMessagePopupId = "";
+                Runnable invoke = () -> {
+                    if (web == null) return;
+                    String js = "window.nativeMessageMenuAction&&window.nativeMessageMenuAction("
+                            + JSONObject.quote(targetId) + "," + JSONObject.quote(key) + ")";
+                    web.evaluateJavascript(js, null);
+                };
+                if (popup != null && popup.isShowing()) {
+                    View content = popup.getContentView();
+                    content.animate().cancel();
+                    content.animate().alpha(0f).translationY(-dp(5)).scaleX(0.99f).scaleY(0.99f)
+                            .setDuration(105)
+                            .setInterpolator(new android.view.animation.AccelerateInterpolator(1.1f))
+                            .withEndAction(() -> {
+                                try { popup.dismiss(); } catch (Exception ignored) { }
+                                invoke.run();
+                            }).start();
+                } else invoke.run();
+            });
+            LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            actionLp.setMargins(dp(2), dp(1), dp(2), dp(1));
+            rowsLayout.addView(action, actionLp);
+        }
+        scroll.addView(rowsLayout, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        int maxMenuHeight = Math.max(dp(180), rootLayout.getHeight() - dp(128));
+        card.addView(scroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Math.min(dp(430), maxMenuHeight)));
+
+        int availableWidth = Math.max(dp(220), rootLayout.getWidth() - dp(80));
+        int menuWidth = Math.min(dp(390), availableWidth);
+        PopupWindow popup = new PopupWindow(card, menuWidth, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        popup.setOutsideTouchable(true);
+        popup.setTouchable(true);
+        popup.setClippingEnabled(true);
+        popup.setElevation(dp(18));
+        popup.setOnDismissListener(() -> {
+            if (nativeMessagePopup == popup) {
+                nativeMessagePopup = null;
+                nativeMessagePopupId = "";
+            }
+            card.animate().cancel();
+        });
+        nativeMessagePopup = popup;
+        nativeMessagePopupId = targetId;
+        int left = dp(66);
+        int top = dp(56);
+        try {
+            popup.showAtLocation(rootLayout, Gravity.TOP | Gravity.START, left, top);
+            card.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                    .setDuration(225)
+                    .setInterpolator(new DecelerateInterpolator(1.5f))
+                    .withLayer()
+                    .start();
+        } catch (Exception e) {
+            dismissNativeMessagePopup();
+        }
     }
 
     private void updateNativeChatVisibility() {
