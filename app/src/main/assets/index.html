@@ -1013,7 +1013,7 @@ body.selection-mode header,body.selection-mode-out header{
  padding:6px 8px!important;gap:4px!important;
  background:var(--bar)!important;border-bottom:1px solid var(--ln)!important;
  box-shadow:0 4px 14px rgba(0,0,0,.16)!important;
- transform:translate3d(0,-14px,0)!important;opacity:0;
+ transform:translate3d(0,-14px,0);opacity:0;
  transition:opacity .24s ease,transform .30s var(--motion-in)!important;
  backface-visibility:hidden;
 }
@@ -1114,9 +1114,9 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 
 /* Selection toolbar feels like it unfolds out of the selected message, then returns on deselect. */
 #selbar{
- transform-origin:50% 100%!important;
- backface-visibility:hidden!important;
- will-change:transform,opacity!important;
+ transform-origin:50% 100%;
+ backface-visibility:hidden;
+ will-change:transform,opacity;
 }
 #selbar.on:not(.leaving){
  animation:selectionPocketOpen .34s cubic-bezier(.16,1,.3,1) both!important;
