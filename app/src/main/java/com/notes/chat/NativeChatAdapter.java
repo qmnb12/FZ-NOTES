@@ -259,15 +259,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         if (listener != null) listener.onSelectionChanged(new ArrayList<>(selectedIds));
     }
 
-    private void beginSelection(String id) {
+    private void selectForContextMenu(String id) {
         if (id == null) return;
         if (!selectedIds.contains(id)) {
             selectedIds.add(id);
             notifyIdChanged(id, true);
         }
         if (listener != null) {
-            // Notify the web selection toolbar, but don't open the message menu.
             listener.onSelectionChanged(new ArrayList<>(selectedIds));
+            listener.onAction(id, "menu", 0);
         }
     }
 
@@ -614,16 +614,18 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                         bodyTouchDownY = event.getY();
                         return false;
                     case android.view.MotionEvent.ACTION_UP:
-                        if (!bodySelectionTouch) return false;
+                        boolean wasSelectionTouch = bodySelectionTouch;
                         boolean isTap = Math.abs(event.getX() - bodyTouchDownX) <= dp(14)
                                 && Math.abs(event.getY() - bodyTouchDownY) <= dp(14);
                         bodySelectionTouch = false;
-                        if (isTap && !bodyLongPressHandled && boundId != null) {
+                        // Read selection state again on ACTION_UP: the first long-press
+                        // may have entered selection mode after ACTION_DOWN.
+                        if ((wasSelectionTouch || !selectedIds.isEmpty())
+                                && isTap && !bodyLongPressHandled && boundId != null) {
                             toggleSelection(boundId);
+                            return true;
                         }
-                        // Consume the up event to prevent a child click handler from
-                        // triggering the same action twice after our selection toggle.
-                        return true;
+                        return false;
                     case android.view.MotionEvent.ACTION_CANCEL:
                         bodySelectionTouch = false;
                         return false;
@@ -644,14 +646,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bodyLongPressHandled = true;
             bodySelectionTouch = false;
 
-            // Telegram-style multi-select: the first long-press enters selection
-            // mode without opening a message sheet. After that, a normal tap on
-            // any message toggles it in the selection; long-press never reopens
-            // a separate menu over the message list.
+            // First long-press selects the note and opens its message menu.
+            // Once selection is active, a further long-press only toggles the
+            // target note; it must not reopen the message menu.
             if (!selectedIds.isEmpty()) {
                 toggleSelection(boundId);
             } else {
-                beginSelection(boundId);
+                selectForContextMenu(boundId);
             }
             return true;
         }
