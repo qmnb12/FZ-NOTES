@@ -17,6 +17,7 @@ import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.content.Intent;
 import android.content.ClipboardManager;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.JavascriptInterface;
@@ -324,14 +325,26 @@ public class MainActivity extends Activity {
         } else if (requestCode == REQ_DRIVE_AUTH) {
             int id = pendingDriveAuthId;
             pendingDriveAuthId = -1;
+            setDriveAuthDebug("Google authorization returned to app (resultCode=" + resultCode
+                    + ", data=" + (data != null) + ").");
             try {
-                if (resultCode != RESULT_OK || data == null) throw new Exception("Google authorization cancel hua");
+                // Read the Play Services result before interpreting RESULT_CANCELED;
+                // otherwise the specific OAuth/API error gets hidden as a cancellation.
+                if (data == null) {
+                    throw new Exception("Google authorization returned no result data (resultCode="
+                            + resultCode + ")");
+                }
                 AuthorizationResult result = Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(data);
                 String token = result.getAccessToken();
                 if (token == null || token.isEmpty()) throw new Exception("Google se access token nahi mila");
-                reply(id, true, token);
+                setDriveAuthDebug("Google authorization returned an access token. Checking Drive access.");
+                if (id >= 0) reply(id, true, token);
+                else savePendingDriveAuthResult(true, token);
             } catch (Exception e) {
-                reply(id, false, driveAuthorizationError(e));
+                String message = driveAuthorizationError(e);
+                setDriveAuthDebug("Google authorization failed: " + message);
+                if (id >= 0) reply(id, false, message);
+                else savePendingDriveAuthResult(false, message);
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
@@ -487,6 +500,53 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static final String DRIVE_AUTH_PREFS = "fz_drive_authorization";
+
+    private void setDriveAuthDebug(String message) {
+        try {
+            getSharedPreferences(DRIVE_AUTH_PREFS, MODE_PRIVATE).edit()
+                    .putString("last_status", message == null ? "Unknown authorization status" : message)
+                    .putLong("last_status_at", System.currentTimeMillis()).apply();
+        } catch (Exception ignored) { }
+    }
+
+    private String getDriveAuthDebug() {
+        return getSharedPreferences(DRIVE_AUTH_PREFS, MODE_PRIVATE)
+                .getString("last_status", "No Google authorization attempt recorded yet");
+    }
+
+    private void savePendingDriveAuthResult(boolean ok, String data) {
+        try {
+            JSONObject result = new JSONObject();
+            result.put("ok", ok);
+            result.put("data", data == null ? "" : data);
+            result.put("timestamp", System.currentTimeMillis());
+            getSharedPreferences(DRIVE_AUTH_PREFS, MODE_PRIVATE).edit()
+                    .putString("pending_result", result.toString()).apply();
+        } catch (Exception e) {
+            setDriveAuthDebug("Could not save returned authorization result: " + e.getMessage());
+        }
+    }
+
+    private String takePendingDriveAuthResult() {
+        SharedPreferences sp = getSharedPreferences(DRIVE_AUTH_PREFS, MODE_PRIVATE);
+        String raw = sp.getString("pending_result", "");
+        if (raw.isEmpty()) return "";
+        sp.edit().remove("pending_result").apply();
+        try {
+            JSONObject result = new JSONObject(raw);
+            long timestamp = result.optLong("timestamp", 0L);
+            if (timestamp <= 0 || System.currentTimeMillis() - timestamp > 10 * 60 * 1000L) {
+                setDriveAuthDebug("Previous Google authorization result expired. Tap Connect again.");
+                return "";
+            }
+        } catch (Exception e) {
+            setDriveAuthDebug("Saved Google authorization result was invalid.");
+            return "";
+        }
+        return raw;
+    }
+
     private String driveAuthorizationError(Exception error) {
         if (error instanceof ApiException) {
             int status = ((ApiException) error).getStatusCode();
@@ -504,6 +564,7 @@ public class MainActivity extends Activity {
 
     private void authorizeDrive(int callbackId) {
         try {
+            setDriveAuthDebug("Starting Google authorization request.");
             AuthorizationRequest request = AuthorizationRequest.builder()
                     .setRequestedScopes(Collections.singletonList(
                             new Scope("https://www.googleapis.com/auth/drive.appdata")))
@@ -511,23 +572,38 @@ public class MainActivity extends Activity {
             Identity.getAuthorizationClient(this).authorize(request)
                     .addOnSuccessListener(result -> {
                         if (result.hasResolution()) {
+                            setDriveAuthDebug("Google account/permission chooser opened; waiting for result.");
                             pendingDriveAuthId = callbackId;
                             try {
                                 startIntentSenderForResult(result.getPendingIntent().getIntentSender(),
                                         REQ_DRIVE_AUTH, null, 0, 0, 0);
                             } catch (Exception e) {
                                 pendingDriveAuthId = -1;
-                                reply(callbackId, false, "Google permission screen nahi khul saki: " + e.getMessage());
+                                String message = "Google permission screen nahi khul saki: " + e.getMessage();
+                                setDriveAuthDebug(message);
+                                reply(callbackId, false, message);
                             }
                         } else {
                             String token = result.getAccessToken();
-                            if (token == null || token.isEmpty()) reply(callbackId, false, "Google access token nahi mila");
-                            else reply(callbackId, true, token);
+                            if (token == null || token.isEmpty()) {
+                                String message = "Google access token nahi mila";
+                                setDriveAuthDebug(message);
+                                reply(callbackId, false, message);
+                            } else {
+                                setDriveAuthDebug("Google authorization returned an access token; checking Drive access.");
+                                reply(callbackId, true, token);
+                            }
                         }
                     })
-                    .addOnFailureListener(e -> reply(callbackId, false, driveAuthorizationError(e)));
+                    .addOnFailureListener(e -> {
+                        String message = driveAuthorizationError(e);
+                        setDriveAuthDebug("Google authorization request failed: " + message);
+                        reply(callbackId, false, message);
+                    });
         } catch (Exception e) {
-            reply(callbackId, false, e.getMessage() == null ? "Google authorization failed" : e.getMessage());
+            String message = e.getMessage() == null ? "Google authorization failed" : e.getMessage();
+            setDriveAuthDebug("Google authorization request failed: " + message);
+            reply(callbackId, false, message);
         }
     }
 
@@ -646,6 +722,14 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> authorizeDrive(id));
                 return;
             }
+            if ("driveauthdebug".equals(op)) {
+                reply(id, true, getDriveAuthDebug());
+                return;
+            }
+            if ("driveauthrecover".equals(op)) {
+                reply(id, true, takePendingDriveAuthResult());
+                return;
+            }
             if ("reminder".equals(op)) {
                 runOnUiThread(() -> handleReminder(id, args));
                 return;
@@ -697,10 +781,20 @@ public class MainActivity extends Activity {
             }
             new Thread(() -> {
                 try {
-                    reply(id, true, Cloud.handle(MainActivity.this, op, new JSONObject(args)));
+                    String result = Cloud.handle(MainActivity.this, op, new JSONObject(args));
+                    if ("drivekey".equals(op)) {
+                        setDriveAuthDebug("Google authorization passed; Drive appData access succeeded.");
+                    } else if ("drivehistory".equals(op)) {
+                        setDriveAuthDebug("Google Drive API access verified; backup listing succeeded.");
+                    }
+                    reply(id, true, result);
                 } catch (Exception e) {
-                    String m = e.getMessage();
-                    reply(id, false, m == null ? e.toString() : m);
+                    String message = e.getMessage();
+                    if (message == null) message = e.toString();
+                    if ("drivekey".equals(op) || "drivehistory".equals(op)) {
+                        setDriveAuthDebug("Google Drive API failed during " + op + ": " + message);
+                    }
+                    reply(id, false, message);
                 }
             }).start();
         }
