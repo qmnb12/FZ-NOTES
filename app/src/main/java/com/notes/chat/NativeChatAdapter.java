@@ -94,6 +94,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private RecyclerView recyclerView;
     private boolean lightTheme;
     private boolean showTopics = true;
+    private String lastSelectionChangedId = "";
 
     NativeChatAdapter(Context context, Listener listener) {
         this.context = context;
@@ -261,6 +262,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     private void toggleSelectionById(String id) {
         if (id == null) return;
+        lastSelectionChangedId = id;
         boolean wasSelecting = !selectedIds.isEmpty();
         if (selectedIds.contains(id)) selectedIds.remove(id); else selectedIds.add(id);
         boolean isSelecting = !selectedIds.isEmpty();
@@ -274,6 +276,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     private void selectForContextMenu(String id) {
         if (id == null) return;
+        lastSelectionChangedId = id;
         if (!selectedIds.contains(id)) {
             boolean wasSelecting = !selectedIds.isEmpty();
             selectedIds.add(id);
@@ -329,6 +332,20 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
         if (!commit || id == null || Math.abs(offset) < dp(55) || listener == null) return;
         listener.onAction(id, offset < 0 ? "swipeReply" : "pinToggle", 0);
+    }
+
+    String getLastSelectionChangedId() {
+        return lastSelectionChangedId;
+    }
+
+    int[] getBubbleCenterOnScreen(String id) {
+        NoteRow row = findVisibleRow(id);
+        if (row == null || row.bubble == null
+                || row.bubble.getWidth() <= 0 || row.bubble.getHeight() <= 0) return null;
+        int[] loc = new int[2];
+        row.bubble.getLocationOnScreen(loc);
+        return new int[]{loc[0] + row.bubble.getWidth() / 2,
+                loc[1] + row.bubble.getHeight() / 2};
     }
 
     private NoteRow findVisibleRow(String id) {
