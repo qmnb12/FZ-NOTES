@@ -1045,25 +1045,14 @@ public class MainActivity extends Activity {
             action.addView(label, textLp);
             action.setContentDescription(label.getText());
             action.setOnClickListener(v -> {
-                PopupWindow popup = nativeMessagePopup;
-                nativeMessagePopup = null;
-                nativeMessagePopupId = "";
                 Runnable invoke = () -> {
                     if (web == null) return;
                     String js = "window.nativeMessageMenuAction&&window.nativeMessageMenuAction("
                             + JSONObject.quote(targetId) + "," + JSONObject.quote(key) + ")";
                     web.evaluateJavascript(js, null);
                 };
-                if (popup != null && popup.isShowing()) {
-                    View content = popup.getContentView();
-                    content.animate().cancel();
-                    content.animate().alpha(0f).translationY(-dp(5)).scaleX(0.99f).scaleY(0.99f)
-                            .setDuration(105)
-                            .setInterpolator(new android.view.animation.AccelerateInterpolator(1.1f))
-                            .withEndAction(() -> {
-                                try { popup.dismiss(); } catch (Exception ignored) { }
-                                invoke.run();
-                            }).start();
+                if (nativeMessagePopup != null && nativeMessagePopup.isShowing()) {
+                    dismissNativeMessagePopup(invoke);
                 } else invoke.run();
             });
             LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(
@@ -1077,34 +1066,82 @@ public class MainActivity extends Activity {
         card.addView(scroll, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Math.min(dp(430), maxMenuHeight)));
 
-        int availableWidth = Math.max(dp(220), rootLayout.getWidth() - dp(80));
+        int availableWidth = Math.max(dp(220), rootLayout.getWidth() - dp(24));
         int menuWidth = Math.min(dp(390), availableWidth);
-        PopupWindow popup = new PopupWindow(card, menuWidth, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+
+        // Use a transparent, full-window popup layer. The card can then travel
+        // from the selected message to the bottom without being clipped by its own window.
+        FrameLayout overlay = new FrameLayout(this);
+        overlay.setClipChildren(false);
+        overlay.setClipToPadding(false);
+        overlay.setBackgroundColor(Color.TRANSPARENT);
+        overlay.setClickable(true);
+        overlay.setFocusableInTouchMode(true);
+        overlay.setOnClickListener(v -> dismissNativeMessagePopup());
+
+        card.setClickable(true);
+        card.setPivotX(menuWidth / 2f);
+        card.setPivotY(Math.max(dp(1), card.getHeight() / 2f));
+        FrameLayout.LayoutParams cardLp = new FrameLayout.LayoutParams(
+                menuWidth, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        cardLp.bottomMargin = dp(8);
+        overlay.addView(card, cardLp);
+
+        PopupWindow popup = new PopupWindow(overlay,
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, true);
         popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        popup.setOutsideTouchable(true);
+        popup.setOutsideTouchable(false);
         popup.setTouchable(true);
+        popup.setFocusable(true);
         popup.setClippingEnabled(true);
-        popup.setElevation(dp(18));
+        popup.setElevation(0);
         popup.setOnDismissListener(() -> {
             if (nativeMessagePopup == popup) {
                 nativeMessagePopup = null;
+                nativeMessagePopupCard = null;
                 nativeMessagePopupId = "";
             }
+            nativeMessagePopupClosing = false;
             card.animate().cancel();
         });
         nativeMessagePopup = popup;
+        nativeMessagePopupCard = card;
         nativeMessagePopupId = targetId;
-        // Bottom-anchored popup overlays the chat without changing WebView or RecyclerView bounds.
-        int bottomOffset = 0;
         try {
-            popup.showAtLocation(rootLayout, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, bottomOffset);
-            card.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
-                    .setDuration(225)
-                    .setInterpolator(new DecelerateInterpolator(1.5f))
-                    .withLayer()
-                    .start();
+            popup.showAtLocation(rootLayout, Gravity.TOP | Gravity.START, 0, 0);
+            card.post(() -> {
+                if (nativeMessagePopup != popup || !popup.isShowing()) return;
+                int[] cardLocation = new int[2];
+                card.getLocationOnScreen(cardLocation);
+                int[] anchor = nativeChatAdapter == null
+                        ? null : nativeChatAdapter.getBubbleCenterOnScreen(targetId);
+                float dx = 0f;
+                float dy = dp(36);
+                if (anchor != null) {
+                    dx = anchor[0] - (cardLocation[0] + card.getWidth() / 2f);
+                    dy = anchor[1] - (cardLocation[1] + card.getHeight() / 2f);
+                }
+                nativeMessagePopupStartDx = dx;
+                nativeMessagePopupStartDy = dy;
+                card.setPivotX(card.getWidth() / 2f);
+                card.setPivotY(card.getHeight() / 2f);
+                card.setTranslationX(dx);
+                card.setTranslationY(dy);
+                card.setScaleX(0.045f);
+                card.setScaleY(0.045f);
+                card.setAlpha(0f);
+                card.animate().cancel();
+                card.animate()
+                        .alpha(1f).translationX(0f).translationY(0f)
+                        .scaleX(1f).scaleY(1f)
+                        .setDuration(390)
+                        .setInterpolator(new DecelerateInterpolator(1.35f))
+                        .withLayer()
+                        .start();
+            });
         } catch (Exception e) {
-            dismissNativeMessagePopup();
+            dismissNativeMessagePopupImmediately();
         }
     }
 
