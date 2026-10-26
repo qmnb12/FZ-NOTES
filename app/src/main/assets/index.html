@@ -58,6 +58,12 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 #sh .del{color:#e5484d}
 #toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#222;color:#fff;padding:6px 14px;border-radius:14px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 #toast.on{opacity:1}
+.topic-title-block{display:block;min-width:0;flex:0 1 auto}
+.topic-title-block b{display:block;max-width:195px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px;line-height:1.35}
+.topic-title-block small{display:block;color:var(--mut);font-size:13px;white-space:nowrap}
+.all-notes-btn{flex:none;width:36px;height:38px;padding:5px!important;border-radius:11px!important;background:var(--mono)!important;display:grid;place-items:center;color:var(--acc)!important}
+.all-notes-btn:active{background:var(--ln)!important}
+.all-notes-icon{width:25px;height:25px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .topic-switcher{border:0;background:transparent;color:inherit;padding:0;display:flex;align-items:center;gap:7px;min-width:0;text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .topic-switcher-text{display:block;min-width:0}
 .topic-switcher b{display:block;font-size:17px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1151,10 +1157,38 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
  #selbar.on:not(.leaving),#selbar.leaving{animation:none!important}
 }
 
+
+/* Twelve selectable FZ NOTES color palettes. */
+:root[data-theme="dark"]{--bg:#0b111b;--bar:#111b29;--bub:#1b2b40;--text:#edf4ff;--mut:#93a4b8;--acc:#75aaff;--mono:rgba(255,255,255,.075);--ln:rgba(255,255,255,.09);--ok:#5fd47a;--no:#ff7b83;color-scheme:dark}
+:root[data-theme="light"]{--bg:#f3f6fb;--bar:#ffffff;--bub:#e5edf8;--text:#172235;--mut:#637189;--acc:#286fdb;--mono:rgba(28,48,80,.07);--ln:rgba(27,48,78,.13);--ok:#18864b;--no:#c52838;color-scheme:light}
+:root[data-theme="midnight"]{--bg:#05070b;--bar:#0b0f16;--bub:#151b26;--text:#f0f3fa;--mut:#8b96a8;--acc:#a4b9ff;--mono:rgba(255,255,255,.07);--ln:rgba(180,196,225,.12);--ok:#65d98c;--no:#ff7b83;color-scheme:dark}
+:root[data-theme="ocean"]{--bg:#061720;--bar:#0c2633;--bub:#12394a;--text:#e4f8ff;--mut:#87b7c4;--acc:#43d2f2;--mono:rgba(98,220,245,.08);--ln:rgba(98,220,245,.13);--ok:#65dca7;--no:#ff8b91;color-scheme:dark}
+:root[data-theme="forest"]{--bg:#091610;--bar:#10251a;--bub:#1c3828;--text:#e9fff0;--mut:#8eb9a0;--acc:#70e39c;--mono:rgba(112,227,156,.08);--ln:rgba(112,227,156,.14);--ok:#78e6a1;--no:#ff888e;color-scheme:dark}
+:root[data-theme="amethyst"]{--bg:#130d1f;--bar:#20152e;--bub:#38244b;--text:#f8efff;--mut:#bba8cc;--acc:#d0a1ff;--mono:rgba(208,161,255,.08);--ln:rgba(208,161,255,.14);--ok:#7ae3b0;--no:#ff879e;color-scheme:dark}
+:root[data-theme="sunset"]{--bg:#1c100c;--bar:#2a1814;--bub:#48271f;--text:#fff2e8;--mut:#c3a095;--acc:#ffad76;--mono:rgba(255,173,118,.08);--ln:rgba(255,173,118,.15);--ok:#8be0a2;--no:#ff8a92;color-scheme:dark}
+:root[data-theme="rose"]{--bg:#1c0e17;--bar:#2a1724;--bub:#48263a;--text:#fff0f7;--mut:#c4a0b4;--acc:#ff8fbf;--mono:rgba(255,143,191,.08);--ln:rgba(255,143,191,.15);--ok:#83e1ad;--no:#ff869a;color-scheme:dark}
+:root[data-theme="emerald"]{--bg:#071b18;--bar:#0e2c26;--bub:#16463a;--text:#e6fff8;--mut:#87bdae;--acc:#54e0be;--mono:rgba(84,224,190,.08);--ln:rgba(84,224,190,.14);--ok:#71e2a8;--no:#ff858c;color-scheme:dark}
+:root[data-theme="graphite"]{--bg:#111316;--bar:#1d2025;--bub:#2c3038;--text:#f3f4f6;--mut:#a0a7b3;--acc:#c5d0e2;--mono:rgba(197,208,226,.08);--ln:rgba(197,208,226,.15);--ok:#6ddc97;--no:#ff858a;color-scheme:dark}
+:root[data-theme="coffee"]{--bg:#1c140d;--bar:#2a2017;--bub:#423020;--text:#fff5e5;--mut:#c2a987;--acc:#eac182;--mono:rgba(234,193,130,.08);--ln:rgba(234,193,130,.15);--ok:#8dda9d;--no:#ff8a91;color-scheme:dark}
+:root[data-theme="arctic"]{--bg:#08182b;--bar:#112b46;--bub:#1d3d60;--text:#eff8ff;--mut:#9dbad2;--acc:#7dc7ff;--mono:rgba(125,199,255,.08);--ln:rgba(125,199,255,.15);--ok:#77dca2;--no:#ff8894;color-scheme:dark}
+.theme-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:12px 14px 6px}
+#sh button.theme-choice{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0;min-height:80px;padding:10px!important;border:1px solid var(--ln)!important;border-radius:14px!important;background:var(--bar)!important;color:var(--text)!important;text-align:left;box-shadow:none!important}
+#sh button.theme-choice.selected{border-color:var(--acc)!important;box-shadow:0 0 0 1px var(--acc)!important}
+.theme-swatches{display:flex;gap:4px;padding:4px;height:29px;box-sizing:border-box;border-radius:8px;background:var(--sw-bg);border:1px solid var(--ln)}
+.theme-swatches i{display:block;flex:1;min-width:0;border-radius:4px}
+.theme-swatches i:nth-child(1){background:var(--sw-bar)}
+.theme-swatches i:nth-child(2){background:var(--sw-bub)}
+.theme-swatches i:nth-child(3){background:var(--sw-acc)}
+.theme-swatches i:nth-child(4){background:var(--sw-bg);border:1px solid var(--sw-acc)}
+.theme-choice-name{font-size:13px;font-weight:650;line-height:1.25}
+.theme-choice-check{position:absolute;right:8px;bottom:7px;color:var(--acc);font-weight:800}
+.theme-picker-footer{padding:8px 14px 14px;display:flex;justify-content:flex-end}
+#sh .theme-picker-footer button{min-width:84px;border-radius:10px;background:var(--mono);color:var(--text);border:1px solid var(--ln)}
+
 </style>
 </head>
 <body>
-<header><div class="av" id="av">N</div><button type="button" class="topic-switcher" id="topicSwitcher" aria-label="Switch topic"><span class="topic-switcher-text"><b id="ttl">All notes</b><small id="sub">saved on this device</small></span><svg class="topic-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/><path d="M8 10.8h5.6M10.8 8v5.6" opacity=".0"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
+<header><div class="av" id="av">N</div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx">✕</button></div>
 <div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
@@ -1311,7 +1345,7 @@ function render(){syncHiddenCredentialLifecycle();if(cur!=='hidden'){try{localSt
    if(!image)nativeImagePayloadCache.delete(id);
    return item;
   });
-  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',showTopics:cur==='all'||cur==='hidden',selectedIds:[...sel].map(String),items}))}catch(_){}
+  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),showTopics:cur==='all'||cur==='hidden',selectedIds:[...sel].map(String),items}))}catch(_){}
   syncNativeChatOverlay();
   return
  }
@@ -1342,7 +1376,12 @@ function handleAppBack(){
  if($('#tgcfg').classList.contains('on')){$('#tgcfg').classList.remove('on');return true}
  if($('#cfg').classList.contains('on')){$('#cfg').classList.remove('on');return true}
  if($('#qk').classList.contains('on')){$('#qk').classList.remove('on');return true}
- if($('#sq').classList.contains('on')){$('#sq').classList.remove('on');return true}
+ if($('#sq').classList.contains('on')){
+  // Close search and clear only the input. Keep q intact so the existing result list stays visible.
+  $('#sqi').value='';
+  $('#sq').classList.remove('on');
+  return true
+ }
  if($('#lk').classList.contains('on')){$('#lk').classList.remove('on');if(/^hide(pin|pw)/.test(mode)){hiddenUnlocked=false;hideTarget=null;hiddenSetupPurpose=null;if(cur==='hidden'){cur='all';clearCtx();render()}}return true}
  if($('#tb').classList.contains('on')){$('#tb').classList.remove('on');return true}
  if(sh.classList.contains('on')){restoreSheetState();return true}
@@ -1541,10 +1580,10 @@ function showNativeMessagePopup(id,mode){
   if(mode==='topics'){
    const topicItems=[{id:'quick',name:'Quick'}].concat(topics).map(t=>({key:'to:'+t.id,title:t.name,icon:'▰'}));
    topicItems.push({key:'x',title:'Cancel',icon:'×'});
-   config={mode:'topics',theme:document.documentElement.dataset.theme||'dark',title:'Move to topic',preview:'Choose where this message belongs',items:topicItems};
+   config={mode:'topics',theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),title:'Move to topic',preview:'Choose where this message belongs',items:topicItems};
   }else{
    const preview=(plain(m.h)||(m.i?'Photo attachment':'Empty note')).replace(/\s+/g,' ').slice(0,96);
-   config={mode:'message',theme:document.documentElement.dataset.theme||'dark',title:'Message',preview,items:[
+   config={mode:'message',theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),title:'Message',preview,items:[
     {key:'edit',title:'Edit',icon:'✎'},
     {key:'copy',title:'Copy text',icon:'▢'},
     {key:'hide',title:m.hidden?'Unhide note':'Hide note',icon:'▣'},
@@ -1678,6 +1717,41 @@ chatw.addEventListener('pointermove',e=>{
 },{passive:true});
 chatw.addEventListener('pointerup',()=>{if(blankPointerStart&&blankPointerStart.timer)clearTimeout(blankPointerStart.timer);blankPointerStart=null});
 chatw.addEventListener('pointercancel',()=>{if(blankPointerStart&&blankPointerStart.timer)clearTimeout(blankPointerStart.timer);blankPointerStart=null});
+
+const THEME_OPTIONS=[
+ {id:'dark',name:'Classic Dark',bg:'#0b111b',bar:'#111b29',bub:'#1b2b40',text:'#edf4ff',mut:'#93a4b8',acc:'#75aaff',mono:'rgba(255,255,255,.075)',ln:'rgba(255,255,255,.09)'},
+ {id:'light',name:'Clean Light',bg:'#f3f6fb',bar:'#ffffff',bub:'#e5edf8',text:'#172235',mut:'#637189',acc:'#286fdb',mono:'rgba(28,48,80,.07)',ln:'rgba(27,48,78,.13)'},
+ {id:'midnight',name:'Midnight',bg:'#05070b',bar:'#0b0f16',bub:'#151b26',text:'#f0f3fa',mut:'#8b96a8',acc:'#a4b9ff',mono:'rgba(255,255,255,.07)',ln:'rgba(180,196,225,.12)'},
+ {id:'ocean',name:'Ocean Blue',bg:'#061720',bar:'#0c2633',bub:'#12394a',text:'#e4f8ff',mut:'#87b7c4',acc:'#43d2f2',mono:'rgba(98,220,245,.08)',ln:'rgba(98,220,245,.13)'},
+ {id:'forest',name:'Forest',bg:'#091610',bar:'#10251a',bub:'#1c3828',text:'#e9fff0',mut:'#8eb9a0',acc:'#70e39c',mono:'rgba(112,227,156,.08)',ln:'rgba(112,227,156,.14)'},
+ {id:'amethyst',name:'Amethyst',bg:'#130d1f',bar:'#20152e',bub:'#38244b',text:'#f8efff',mut:'#bba8cc',acc:'#d0a1ff',mono:'rgba(208,161,255,.08)',ln:'rgba(208,161,255,.14)'},
+ {id:'sunset',name:'Sunset',bg:'#1c100c',bar:'#2a1814',bub:'#48271f',text:'#fff2e8',mut:'#c3a095',acc:'#ffad76',mono:'rgba(255,173,118,.08)',ln:'rgba(255,173,118,.15)'},
+ {id:'rose',name:'Rose',bg:'#1c0e17',bar:'#2a1724',bub:'#48263a',text:'#fff0f7',mut:'#c4a0b4',acc:'#ff8fbf',mono:'rgba(255,143,191,.08)',ln:'rgba(255,143,191,.15)'},
+ {id:'emerald',name:'Emerald',bg:'#071b18',bar:'#0e2c26',bub:'#16463a',text:'#e6fff8',mut:'#87bdae',acc:'#54e0be',mono:'rgba(84,224,190,.08)',ln:'rgba(84,224,190,.14)'},
+ {id:'graphite',name:'Graphite',bg:'#111316',bar:'#1d2025',bub:'#2c3038',text:'#f3f4f6',mut:'#a0a7b3',acc:'#c5d0e2',mono:'rgba(197,208,226,.08)',ln:'rgba(197,208,226,.15)'},
+ {id:'coffee',name:'Coffee',bg:'#1c140d',bar:'#2a2017',bub:'#423020',text:'#fff5e5',mut:'#c2a987',acc:'#eac182',mono:'rgba(234,193,130,.08)',ln:'rgba(234,193,130,.15)'},
+ {id:'arctic',name:'Arctic',bg:'#08182b',bar:'#112b46',bub:'#1d3d60',text:'#eff8ff',mut:'#9dbad2',acc:'#7dc7ff',mono:'rgba(125,199,255,.08)',ln:'rgba(125,199,255,.15)'}
+];
+function getThemePalette(){
+ const c=getComputedStyle(document.documentElement),v=k=>c.getPropertyValue('--'+k).trim();
+ return {bg:v('bg'),bar:v('bar'),bub:v('bub'),text:v('text'),mut:v('mut'),acc:v('acc')};
+}
+function applyTheme(themeId){
+ const theme=THEME_OPTIONS.find(t=>t.id===themeId)||THEME_OPTIONS[0];
+ document.documentElement.dataset.theme=theme.id;
+ try{localStorage.setItem('notes-theme',theme.id)}catch(e){}
+ sh.classList.remove('on');
+ render();
+ toast(theme.name+' theme applied',1600);
+}
+function openThemePicker(){
+ const current=document.documentElement.dataset.theme||'dark';
+ const cards=THEME_OPTIONS.map(t=>'<button type="button" class="theme-choice'+(t.id===current?' selected':'')+'" data-k="theme:'+t.id+'"><span class="theme-swatches" style="--sw-bg:'+t.bg+';--sw-bar:'+t.bar+';--sw-bub:'+t.bub+';--sw-acc:'+t.acc+'"><i></i><i></i><i></i><i></i></span><span class="theme-choice-name">'+t.name+'</span><span class="theme-choice-check">'+(t.id===current?'✓':'')+'</span></button>').join('');
+ sh.dataset.type='themes';
+ sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · PERSONALIZE</div><div class="context-title">Choose a theme</div><div class="context-preview">12 color themes · choose one to apply</div></div><div class="theme-picker-grid">'+cards+'</div><div class="theme-picker-footer"><button type="button" data-k="x">Cancel</button></div>';
+ sh.classList.add('on');
+}
+
 function openTopicSwitcher(){
  const rows=[];
  rows.push('<button type="button" data-k="all"><span class="mi"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8"/></svg></span><span class="mt">All notes</span>'+(cur==='all'?'<span class="switcher-check">✓</span>':'')+'</button>');
@@ -1691,7 +1765,7 @@ function openTopicSwitcher(){
  rows.push('<div class="switcher-divider"></div><button type="button" data-k="hidden"><span class="mi"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><span class="mt">Hidden notes</span></button>');
  sh.dataset.type='topic-switcher';sh.dataset.id='';sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · TOPICS</div><div class="context-title">Switch topic</div><div class="context-preview">Open the notes you want to see</div></div><div class="context-actions topic-switcher-actions">'+rows.join('')+'<button type="button" data-k="x"><span class="mi"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></span><span class="mt">Cancel</span></button></div>';sh.classList.add('on')
 }
-$('#topicSwitcher').addEventListener('click',openTopicSwitcher);
+
 sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');if(!button)return;const k=button.dataset.k;
  if(sh.dataset.type==='hideauthsetup'){
   if(k==='createpin'){sh.classList.remove('on');ask('hidepinset','Create PIN (4–12 digits)');return}
@@ -1733,10 +1807,15 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   sh.classList.remove('on');
   if(k==='srch'){$('#sq').classList.add('on');$('#sqi').focus()}
   if(k==='undo'){undoChange();return}if(k==='redo'){redoChange();return}
-  if(k==='th'){const d=document.documentElement,n=(d.dataset.theme||'dark')==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('notes-theme',n)}catch(e){}toast(n==='light'?'Light appearance enabled':'Dark appearance enabled',1800);}
+  if(k==='th'){openThemePicker();return}
   if(k==='hsettings'){openHiddenSettings();return}
    if(k==='hidden'){requestHiddenNotesAccess();return}
   return}
+ if(sh.dataset.type==='themes'){
+  if(k==='x'){sh.classList.remove('on');return}
+  if(k.startsWith('theme:')){applyTheme(k.slice(6));return}
+  return
+ }
  if(sh.dataset.type==='topic-switcher'){
   sh.classList.remove('on');
   if(k==='x')return;
@@ -2172,6 +2251,10 @@ window.nativeChatAction=function(rawId,action,index){
  }
 };
 $('#pin').onclick=()=>jump(+$('#pin').dataset.id);
+$('#allNotesBtn').onclick=()=>{
+ if(cur==='hidden'){hiddenUnlocked=false;hiddenTopicFilter=''}
+ cur='all';clearSelection();clearCtx();lk.classList.remove('on');render()
+};
 $('#hs').onclick=()=>{const s=$('#sq');s.classList.toggle('on');if(s.classList.contains('on'))$('#sqi').focus()};
 $('#sqi').oninput=e=>{q=e.target.value.trim().toLowerCase();$('#filters').classList.toggle('on',!!q);render()};
 $('#sqx').onclick=()=>{q='';searchFilter='all';$('#sqi').value='';$('#filters').classList.remove('on');$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));$('#sq').classList.remove('on');render()};
@@ -2187,7 +2270,7 @@ redo:'<path d="m15 4 5 5-5 5"></path><path d="M20 9h-9a7 7 0 0 0-7 7v2"></path>'
 hidden:'<rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>',
 settings:'<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.8 1.8 0 0 0-1.9.2l-.2.1h-3.3l-.1-.2a1.8 1.8 0 0 0-1.6-1l-.2.1-2.9-1.7.1-.2a1.8 1.8 0 0 0-.2-1.9l-.1-.2v-3.3l.2-.1a1.8 1.8 0 0 0 1-1.6l-.1-.2 1.7-2.9.2.1a1.8 1.8 0 0 0 1.9-.2l.2-.1h3.3l.1.2a1.8 1.8 0 0 0 1.6 1l.2-.1 2.9 1.7-.1.2a1.8 1.8 0 0 0 .2 1.9l.1.2v3.3z"></path>',
 cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'
-};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',hsettings:'settings',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Local backup','Save or restore a device backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Appearance','Light / dark theme')+item('hidden','Hidden notes','Password-protected notes')+(cur==='hidden'&&hiddenUnlocked&&hiddenNoteCount()>0?item('hsettings','Hidden Notes settings','Change PIN/password · Lock now'):'')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
+};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',hsettings:'settings',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Local backup','Save or restore a device backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Themes','12 color themes')+item('hidden','Hidden notes','Password-protected notes')+(cur==='hidden'&&hiddenUnlocked&&hiddenNoteCount()>0?item('hsettings','Hidden Notes settings','Change PIN/password · Lock now'):'')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 function handleSelectionToolbarAction(e){
  const target=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
  const btn=target&&target.closest('[data-s]');if(!btn)return;
