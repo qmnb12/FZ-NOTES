@@ -58,6 +58,16 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 #sh .del{color:#e5484d}
 #toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#222;color:#fff;padding:6px 14px;border-radius:14px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 #toast.on{opacity:1}
+.topic-switcher{border:0;background:transparent;color:inherit;padding:0;display:flex;align-items:center;gap:7px;min-width:0;text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.topic-switcher-text{display:block;min-width:0}
+.topic-switcher b{display:block;font-size:17px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topic-switcher small{display:block;color:var(--mut);font-size:13px;font-weight:400}
+.topic-chevron{width:17px;height:17px;flex:none;fill:none;stroke:var(--mut);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s}
+.topic-switcher:active .topic-chevron{transform:translateY(2px)}
+.header-action-icon{width:25px;height:25px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.quick-bolt{width:26px;height:26px;display:block;fill:currentColor;stroke:currentColor;stroke-width:.7;stroke-linejoin:round}
+.header-bolt{width:29px;height:29px;color:#fff}
+
 .main{flex:1;display:flex;min-height:0}.col{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
 #side{width:68px;flex:none;overflow-y:auto;background:var(--bar);border-right:1px solid var(--ln);padding:6px 0;display:flex;flex-direction:column;gap:2px}
 .tp{border:0;background:none;color:var(--mut);padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;font:inherit;font-size:11px;position:relative;-webkit-user-select:none;user-select:none}
@@ -440,7 +450,10 @@ body{min-height:100dvh}
 #sh button.context-close{width:32px;height:32px;min-height:32px;display:grid;place-items:center;padding:0;border:1px solid rgba(164,190,226,.13);border-radius:50%;background:rgba(255,255,255,.035);color:#9eacc0;font-size:21px;line-height:1}
 #sh .context-title{margin-top:2px;font-size:18px;font-weight:700;letter-spacing:-.35px;color:#edf4ff}
 #sh .context-preview{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:4px;color:#a2b1c6;font-size:12px;line-height:1.35}
-#sh .context-actions{display:flex;flex-direction:column;gap:2px;padding:4px 0}
+#sh .topic-switcher-actions .switcher-label{padding:12px 14px 5px;color:var(--mut);font-size:11px;letter-spacing:1.2px;font-weight:700}
+.topic-switcher-actions .switcher-divider{height:1px;background:var(--ln);margin:7px 12px}
+.topic-switcher-actions .switcher-check{margin-left:auto;color:var(--acc);font-size:18px;font-weight:700;padding-left:8px}
+.context-actions{display:flex;flex-direction:column;gap:2px;padding:4px 0}
 #sh button.context-menu-row{position:relative;z-index:1;display:flex;align-items:center;gap:12px;width:100%;min-height:43px;padding:5px 10px;border:1px solid transparent;border-radius:13px;background:transparent;color:#eaf1fc;text-align:left;font-size:14px;font-weight:550;line-height:1.2;box-sizing:border-box;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:background .13s ease,border-color .13s ease,transform .13s ease}
 #sh button.context-menu-row:active{background:rgba(105,163,255,.13);border-color:rgba(105,163,255,.13);transform:scale(.992)}
 #sh .context-menu-row .mi{width:32px;height:32px;display:grid;place-items:center;flex:none;border:1px solid rgba(117,170,255,.14);border-radius:10px;background:linear-gradient(145deg,rgba(117,170,255,.14),rgba(117,170,255,.04));color:#8db9ff}
@@ -1141,7 +1154,7 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 </style>
 </head>
 <body>
-<header><div class="av" id="av">N</div><div><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search">🔍</button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
+<header><div class="av" id="av">N</div><button type="button" class="topic-switcher" id="topicSwitcher" aria-label="Switch topic"><span class="topic-switcher-text"><b id="ttl">All notes</b><small id="sub">saved on this device</small></span><svg class="topic-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/><path d="M8 10.8h5.6M10.8 8v5.6" opacity=".0"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx">✕</button></div>
 <div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
@@ -1212,6 +1225,7 @@ let msgs=[],topics=[{id:'gen',name:'General'}],cur='all',ren='',q='',searchFilte
 let hadLocalNotesState=false;try{hadLocalNotesState=localStorage.getItem('notes-chat')!==null||localStorage.getItem('notes-topics')!==null}catch(e){}
 try{msgs=JSON.parse(localStorage.getItem('notes-chat')||'[]')}catch(e){}
 try{const t=JSON.parse(localStorage.getItem('notes-topics')||'null');if(t&&t.length)topics=t}catch(e){}
+try{const last=localStorage.getItem('notes-last-topic');if(last&&(last==='all'||last==='quick'||topics.some(t=>t.id===last)))cur=last}catch(e){}
 let undoStack=[],redoStack=[],lastSnapshot='';
 const snapshot=()=>JSON.stringify({msgs,topics});
 function rememberChange(){const now=snapshot();if(lastSnapshot&&now!==lastSnapshot){undoStack.push(lastSnapshot);if(undoStack.length>60)undoStack.shift();redoStack=[]}lastSnapshot=now}
@@ -1283,7 +1297,7 @@ function installNativeChatOverlayObservers(){
  bodyObserver.observe(document.body,{childList:true});
  document.addEventListener('visibilitychange',syncNativeChatOverlay);
 }
-function render(){syncHiddenCredentialLifecycle();renderSide();renderTop();
+function render(){syncHiddenCredentialLifecycle();if(cur!=='hidden'){try{localStorage.setItem('notes-last-topic',cur)}catch(e){}}renderSide();renderTop();
  const list=msgs.filter(m=>inView(m)&&(!q||(plain(m.h)+' '+(m.c||[]).map(i=>i.x).join(' ')).toLowerCase().includes(q))&&matchesFilter(m));if(searchFilter==='focus')list.sort((a,b)=>(a.due||Infinity)-(b.due||Infinity));
  if(hasNativeChat()){
   chat.innerHTML='';
@@ -1664,6 +1678,20 @@ chatw.addEventListener('pointermove',e=>{
 },{passive:true});
 chatw.addEventListener('pointerup',()=>{if(blankPointerStart&&blankPointerStart.timer)clearTimeout(blankPointerStart.timer);blankPointerStart=null});
 chatw.addEventListener('pointercancel',()=>{if(blankPointerStart&&blankPointerStart.timer)clearTimeout(blankPointerStart.timer);blankPointerStart=null});
+function openTopicSwitcher(){
+ const rows=[];
+ rows.push('<button type="button" data-k="all"><span class="mi"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8"/></svg></span><span class="mt">All notes</span>'+(cur==='all'?'<span class="switcher-check">✓</span>':'')+'</button>');
+ rows.push('<button type="button" data-k="quick"><span class="mi"><svg viewBox="0 0 24 24"><path d="M13.2 2.5 4.8 13h5.8l-.7 8.5L19.3 10h-6z"/></svg></span><span class="mt">Quick notes</span>'+(cur==='quick'?'<span class="switcher-check">✓</span>':'')+'</button>');
+ topics.filter(t=>t.id!=='gen'&&t.id!=='hidden').forEach(t=>rows.push('<button type="button" data-k="'+esc(t.id)+'"><span class="mi"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3z"/><path d="M3 7V5h7l2 2"/></svg></span><span class="mt">'+esc(t.name)+'</span>'+(cur===t.id?'<span class="switcher-check">✓</span>':'')+'</button>'));
+ if(cur==='hidden'&&hiddenUnlocked){
+  rows.push('<div class="switcher-label">HIDDEN NOTES</div>');
+  rows.push('<button type="button" data-k="hidden-all"><span class="mi"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><span class="mt">All hidden notes</span>'+(!hiddenTopicFilter?'<span class="switcher-check">✓</span>':'')+'</button>');
+  topics.filter(t=>msgs.some(m=>m.hidden&&(m.k||'gen')===t.id)).forEach(t=>rows.push('<button type="button" data-k="hidden-topic:'+esc(t.id)+'"><span class="mi"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3z"/></svg></span><span class="mt">'+esc(t.name)+'</span>'+(hiddenTopicFilter===t.id?'<span class="switcher-check">✓</span>':'')+'</button>'));
+ }
+ rows.push('<div class="switcher-divider"></div><button type="button" data-k="hidden"><span class="mi"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><span class="mt">Hidden notes</span></button>');
+ sh.dataset.type='topic-switcher';sh.dataset.id='';sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · TOPICS</div><div class="context-title">Switch topic</div><div class="context-preview">Open the notes you want to see</div></div><div class="context-actions topic-switcher-actions">'+rows.join('')+'<button type="button" data-k="x"><span class="mi"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></span><span class="mt">Cancel</span></button></div>';sh.classList.add('on')
+}
+$('#topicSwitcher').addEventListener('click',openTopicSwitcher);
 sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');if(!button)return;const k=button.dataset.k;
  if(sh.dataset.type==='hideauthsetup'){
   if(k==='createpin'){sh.classList.remove('on');ask('hidepinset','Create PIN (4–12 digits)');return}
@@ -1709,6 +1737,14 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='hsettings'){openHiddenSettings();return}
    if(k==='hidden'){requestHiddenNotesAccess();return}
   return}
+ if(sh.dataset.type==='topic-switcher'){
+  sh.classList.remove('on');
+  if(k==='x')return;
+  if(k==='hidden'){requestHiddenNotesAccess();return}
+  if(k==='hidden-all'){if(!hiddenUnlocked){requestHiddenNotesAccess();return}cur='hidden';hiddenTopicFilter='';clearSelection();clearCtx();render();return}
+  if(k.startsWith('hidden-topic:')){if(!hiddenUnlocked){requestHiddenNotesAccess();return}cur='hidden';hiddenTopicFilter=k.slice(13);clearSelection();clearCtx();render();return}
+  cur=k;hiddenTopicFilter='';if(cur!=='hidden')hiddenUnlocked=false;clearSelection();clearCtx();lk.classList.remove('on');render();return
+ }
  if(sh.dataset.type==='topic'){const tid=sh.dataset.id;sh.classList.remove('on');
   if(k==='up'||k==='dn'){const i=topics.findIndex(t=>t.id===tid),j=i+(k==='up'?-1:1);if(j>=0&&j<topics.length){[topics[i],topics[j]]=[topics[j],topics[i]];saveT();render()}}
   if(k==='ren'){ren=tid;const t=topics.find(t=>t.id===tid);ask('rename','Topic name',t?t.name:'')}
@@ -1764,32 +1800,37 @@ const first=s=>[...s][0].toUpperCase();
 function renderSide(){const side=$('#side');side.innerHTML='';
  side.style.display='';
  if(cur==='hidden'){
-  $('#ttl').textContent='🔒 Hidden notes';
+  $('#ttl').textContent=hiddenTopicFilter?(topics.find(t=>t.id===hiddenTopicFilter)?.name||'Hidden notes'):'All hidden notes';
   $('#av').textContent='🔒';
   const hiddenTopics=topics.filter(t=>msgs.some(m=>m.hidden&&(m.k||'gen')===t.id));
-  [{id:'hidden-all',name:'All hidden'},...hiddenTopics.map(t=>({id:t.id,name:t.name}))].forEach(t=>{
-   const b=document.createElement('button'),all=t.id==='hidden-all';
-   b.className='tp'+((all?!hiddenTopicFilter:hiddenTopicFilter===t.id)?' on':'');b.dataset.topic=t.id;
-   b.innerHTML='<i style="background:'+(all?'transparent':hue(t.name))+';color:'+(all?'var(--mut)':'#fff')+'">'+(all?'🔒':esc(first(t.name)))+'</i><span>'+esc(t.name)+'</span>';
-   b.onclick=()=>{hiddenTopicFilter=all?'':t.id;clearSelection();clearCtx();render()};
+  hiddenTopics.forEach(t=>{
+   const b=document.createElement('button');
+   b.className='tp'+(hiddenTopicFilter===t.id?' on':'');b.dataset.topic=t.id;
+   b.innerHTML='<i style="background:'+hue(t.name)+';color:#fff">'+esc(first(t.name))+'</i><span>'+esc(t.name)+'</span>';
+   b.onclick=()=>{hiddenTopicFilter=t.id;clearSelection();clearCtx();render()};
    side.appendChild(b)
   });
+  const a=document.createElement('button');a.className='tp add';a.innerHTML='<i><svg class="quick-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2.5 4.8 13h5.8l-.7 8.5L19.3 10h-6z"/></svg></i><span>Lock</span>';
+  a.onclick=()=>{hiddenUnlocked=false;cur='all';hiddenTopicFilter='';render();toast('Hidden Notes locked',1800)};side.appendChild(a);
   $('#sub').textContent=msgs.filter(inView).length+' hidden notes';
   return
  }
- [{id:'quick',name:'Quick'},{id:'all',name:'All'}].concat(topics.filter(t=>t.id!=='gen'&&t.id!=='hidden')).forEach(t=>{const b=document.createElement('button'),all=t.id==='all'||t.id==='quick';
+ topics.filter(t=>t.id!=='gen'&&t.id!=='hidden').concat([{id:'quick',name:'Quick'}]).forEach(t=>{
+  const b=document.createElement('button'),isQuick=t.id==='quick';
   b.className='tp'+(t.id===cur?' on':'');b.dataset.topic=t.id;
   const chatIcon='<svg class="chat-folder-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M22 7h14a8 8 0 0 1 8 8v7a8 8 0 0 1-8 8h-3l-6 5v-7a8 8 0 0 1-5-7v-6" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 13h16a8 8 0 0 1 8 8v6a8 8 0 0 1-8 8h-8l-7 5v-8a8 8 0 0 1-8-8v-3a8 8 0 0 1 7-8Z" fill="currentColor"/><circle cx="12" cy="24" r="1.8" fill="#132033"/><circle cx="18" cy="24" r="1.8" fill="#132033"/><circle cx="24" cy="24" r="1.8" fill="#132033"/></svg>';
-  b.innerHTML='<i style="background:'+(t.id==='quick'?'#e6a100':t.id==='all'?'transparent':hue(t.name))+';color:'+(t.id==='all'?'var(--mut)':'#fff')+'">'+(t.id==='quick'?'⚡':t.id==='all'?chatIcon:t.id==='hidden'?'🔒':esc(first(t.name)))+'</i><span>'+esc(t.name)+'</span>';
-  b.onclick=()=>{if(Date.now()-pressed<400)return;if(t.id==='hidden'){requestHiddenNotesAccess();return}if(cur==='hidden')hiddenUnlocked=false;cur=t.id;clearCtx();lk.classList.remove('on');render()};
-  if(!all){b.addEventListener('pointerdown',()=>{clearTimeout(tt);tt=setTimeout(()=>{pressed=Date.now();openTopicSheet(t)},550)});
-   ['pointerup','pointercancel','pointerleave'].forEach(x=>b.addEventListener(x,()=>clearTimeout(tt)))}
-  side.appendChild(b)});
+  const boltIcon='<svg class="quick-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2.5 4.8 13h5.8l-.7 8.5L19.3 10h-6z"/></svg>';
+  b.innerHTML='<i style="background:'+(isQuick?'#e6a100':hue(t.name))+';color:#fff">'+(isQuick?boltIcon:t.id==='hidden'?'🔒':esc(first(t.name)))+'</i><span>'+esc(t.name)+'</span>';
+  b.onclick=()=>{if(Date.now()-pressed<400)return;if(cur==='hidden')hiddenUnlocked=false;cur=t.id;clearCtx();lk.classList.remove('on');render()};
+  b.addEventListener('pointerdown',()=>{clearTimeout(tt);tt=setTimeout(()=>{pressed=Date.now();openTopicSheet(t)},550)});
+  ['pointerup','pointercancel','pointerleave'].forEach(x=>b.addEventListener(x,()=>clearTimeout(tt)));
+  side.appendChild(b)
+ });
  const a=document.createElement('button');a.className='tp add';a.innerHTML='<i>+</i><span>New</span>';
- a.onclick=()=>{if(cur==='hidden'){hiddenUnlocked=false;cur='all';render()}ask('topic','New topic name','')};side.appendChild(a);
- $('#ttl').textContent=cur==='all'?'All notes':cur==='quick'?'⚡ Quick notes':cur==='hidden'?'🔒 Hidden notes':tn(cur);
- if(cur==='all'){$('#av').innerHTML='<svg class="header-chat-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M9 9h25a8 8 0 0 1 8 8v10a8 8 0 0 1-8 8H22l-10 6v-7a8 8 0 0 1-8-8V17a8 8 0 0 1 5-8Z" fill="currentColor"/><circle cx="16" cy="22" r="2.4" fill="#287bd4"/><circle cx="24" cy="22" r="2.4" fill="#287bd4"/><circle cx="32" cy="22" r="2.4" fill="#287bd4"/></svg>'}else $('#av').textContent=cur==='quick'?'⚡':cur==='hidden'?'🔒':first(tn(cur));
- $('#sub').textContent=msgs.filter(inView).length+' notes'}
+ a.onclick=()=>{if(cur==='hidden'){hiddenUnlocked=false;cur='all';hiddenTopicFilter='';render()}ask('topic','New topic name','')};side.appendChild(a);
+ $('#ttl').textContent=cur==='all'?'All notes':cur==='quick'?'Quick notes':tn(cur);
+ if(cur==='all'){$('#av').innerHTML='<svg class="header-chat-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M9 9h25a8 8 0 0 1 8 8v10a8 8 0 0 1-8 8H22l-10 6v-7a8 8 0 0 1-8-8V17a8 8 0 0 1 5-8Z" fill="currentColor"/><circle cx="16" cy="22" r="2.4" fill="#287bd4"/><circle cx="24" cy="22" r="2.4" fill="#287bd4"/><circle cx="32" cy="22" r="2.4" fill="#287bd4"/></svg>'}else $('#av').innerHTML=cur==='quick'?'<svg class="quick-bolt header-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2.5 4.8 13h5.8l-.7 8.5L19.3 10h-6z"/></svg>':first(tn(cur));
+ $('#sub').textContent=msgs.filter(inView).length+(cur==='hidden'?' hidden notes':' notes')}
 function openTopicSheet(t){sh.innerHTML='<button data-k="ren">Rename topic</button><button data-k="up">Move up</button><button data-k="dn">Move down</button>'+(t.id==='gen'?'':'<button data-k="tdel" class="del">Delete topic and its notes</button>')+'<button data-k="x">Cancel</button>';
  sh.dataset.id=t.id;sh.dataset.type='topic';sh.classList.add('on')}
 $('#side').addEventListener('contextmenu',e=>e.preventDefault());
