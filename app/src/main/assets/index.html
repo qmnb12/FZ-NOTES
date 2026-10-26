@@ -1411,7 +1411,7 @@ function render(){syncHiddenCredentialLifecycle();if(cur!=='hidden'){try{localSt
    if(!image)nativeImagePayloadCache.delete(id);
    return item;
   });
-  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,searchHighlightId:searchHighlightedId,showTopics:cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'),selectedIds:[...sel].map(String),items}))}catch(_){}
+  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,messageCornerRadius:messageCornerRadius,searchHighlightId:searchHighlightedId,showTopics:cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'),selectedIds:[...sel].map(String),items}))}catch(_){}
   syncNativeChatOverlay();
   return
  }
@@ -2450,7 +2450,7 @@ window.nativeChatAction=function(rawId,action,index){
   return
  }
 };
-$('#pin').onclick=()=>{const id=$('#pin').dataset.id;if(id)jump(id)};
+$('#pin').onclick=()=>movePinnedMessage(1);
 $('#pinPrev').onclick=e=>{e.stopPropagation();movePinnedMessage(-1)};
 $('#pinNext').onclick=e=>{e.stopPropagation();movePinnedMessage(1)};
 $('#allNotesBtn').onclick=()=>{
