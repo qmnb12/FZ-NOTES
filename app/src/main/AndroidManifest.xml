@@ -5,8 +5,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:icon="@drawable/fz_notes_launcher"
-        android:roundIcon="@drawable/fz_notes_launcher"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="true"
         android:label="FZ NOTES"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
