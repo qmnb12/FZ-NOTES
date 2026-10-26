@@ -38,6 +38,7 @@ import com.google.android.gms.auth.api.identity.AuthorizationRequest;
 import com.google.android.gms.auth.api.identity.AuthorizationResult;
 import com.google.android.gms.auth.api.identity.Identity;
 import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.common.api.ApiException;
 import java.util.Collections;
 
 import java.io.InputStream;
@@ -330,7 +331,7 @@ public class MainActivity extends Activity {
                 if (token == null || token.isEmpty()) throw new Exception("Google se access token nahi mila");
                 reply(id, true, token);
             } catch (Exception e) {
-                reply(id, false, e.getMessage() == null ? "Google authorization failed" : e.getMessage());
+                reply(id, false, driveAuthorizationError(e));
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
@@ -486,6 +487,21 @@ public class MainActivity extends Activity {
         }
     }
 
+    private String driveAuthorizationError(Exception error) {
+        if (error instanceof ApiException) {
+            int status = ((ApiException) error).getStatusCode();
+            if (status == 10) {
+                return "Google OAuth DEVELOPER_ERROR (10): Android OAuth client me package com.fz.notes.chat aur is APK ke signing SHA-1 ka match zaroori hai. GitHub Actions wali APK ka SHA-1 bhi Google Cloud Console me register karein, ya registered debug.keystore se build karein.";
+            }
+            if (status == 7) return "Google connection ke liye internet available nahi hai (NETWORK_ERROR)";
+            if (status == 12501) return "Google account authorization cancel hua";
+            return "Google authorization error " + status + ": "
+                    + (error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage());
+        }
+        return error.getMessage() == null ? "Google authorization failed: " + error.getClass().getSimpleName()
+                : error.getMessage();
+    }
+
     private void authorizeDrive(int callbackId) {
         try {
             AuthorizationRequest request = AuthorizationRequest.builder()
@@ -509,8 +525,7 @@ public class MainActivity extends Activity {
                             else reply(callbackId, true, token);
                         }
                     })
-                    .addOnFailureListener(e -> reply(callbackId, false,
-                            e.getMessage() == null ? "Google authorization failed" : e.getMessage()));
+                    .addOnFailureListener(e -> reply(callbackId, false, driveAuthorizationError(e)));
         } catch (Exception e) {
             reply(callbackId, false, e.getMessage() == null ? "Google authorization failed" : e.getMessage());
         }
