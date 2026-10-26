@@ -946,6 +946,46 @@ body.selection-mode-out #sq,body.selection-mode-out #filters,body.selection-mode
   transition:none!important;animation:none!important
  }
 }
+
+/* Final smoothness pass: favor compositor-only motion and avoid competing transforms. */
+#selbar{
+ transform:translate3d(0,0,0);
+ backface-visibility:hidden;
+}
+#selbar.on:not(.leaving){
+ animation:selectionBarGlideIn .30s cubic-bezier(.22,1,.36,1) both!important;
+}
+#selbar.leaving{
+ animation:selectionBarGlideOut .24s cubic-bezier(.4,0,.2,1) both!important;
+}
+@keyframes selectionBarGlideIn{
+ from{opacity:0;transform:translate3d(0,-12px,0)}
+ to{opacity:1;transform:translate3d(0,0,0)}
+}
+@keyframes selectionBarGlideOut{
+ from{opacity:1;transform:translate3d(0,0,0)}
+ to{opacity:0;transform:translate3d(0,-12px,0)}
+}
+#sh[data-type="msg"],#sh[data-type="multi-select"]{
+ transform:translate3d(0,34px,0) scale(.985)!important;
+ transition:transform .34s cubic-bezier(.22,1,.36,1),opacity .28s ease-out,visibility .34s!important;
+ backface-visibility:hidden;
+}
+#sh[data-type="msg"].on,#sh[data-type="multi-select"].on{
+ transform:translate3d(0,0,0) scale(1)!important;
+}
+#sh[data-type="multi-select"] .context-sheet-head,
+#sh[data-type="multi-select"] .context-menu-row{
+ animation-duration:.32s!important;
+ animation-timing-function:cubic-bezier(.22,1,.36,1)!important;
+}
+#shBackdrop{transition:opacity .30s ease-out,visibility .34s!important}
+body.selection-mode header,body.selection-mode-out header{
+ transition:max-height .26s cubic-bezier(.22,1,.36,1),opacity .20s ease,transform .26s cubic-bezier(.22,1,.36,1),padding .26s cubic-bezier(.22,1,.36,1),margin .26s cubic-bezier(.22,1,.36,1),border-color .20s ease!important;
+}
+@media(prefers-reduced-motion:reduce){
+ #selbar.on:not(.leaving),#selbar.leaving,#sh[data-type="msg"],#sh[data-type="multi-select"]{animation:none!important;transition:none!important}
+}
 </style>
 </head>
 <body>
