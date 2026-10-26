@@ -1952,12 +1952,13 @@ window.flushCloudBackupBeforeClose=()=>{
   doGoogleBackup(true,true,true);
 };
 try{const th=localStorage.getItem('notes-theme');document.documentElement.dataset.theme=th||'dark'}catch(e){}
-let selectionExitTimer=0;
+let selectionExitTimer=0,selectionReturnTimer=0;
 function updateSelectionModeUI(active){
  const bar=$('#selbar'),body=document.body;
  if(active){
   if(selectionExitTimer){clearTimeout(selectionExitTimer);selectionExitTimer=0}
-  body.classList.remove('selection-mode-out');
+  if(selectionReturnTimer){clearTimeout(selectionReturnTimer);selectionReturnTimer=0}
+  body.classList.remove('selection-mode-out','selection-mode-return');
   body.classList.add('selection-mode');
   bar.classList.remove('leaving');
   bar.classList.add('on');
@@ -1968,13 +1969,18 @@ function updateSelectionModeUI(active){
   body.classList.add('selection-mode-out');
   bar.classList.add('leaving');
   if(selectionExitTimer)clearTimeout(selectionExitTimer);
-  // Keep the normal header collapsed while the selection bar exits.
-  // Swap both at the end to prevent the toolbar/header double-height jump.
+  // Let the selection bar finish its compositor-only exit before revealing the header.
   selectionExitTimer=setTimeout(()=>{
    body.classList.remove('selection-mode-out');
+   body.classList.add('selection-mode-return');
    bar.classList.remove('leaving','on');
-   selectionExitTimer=0
-  },270);
+   selectionExitTimer=0;
+   if(selectionReturnTimer)clearTimeout(selectionReturnTimer);
+   selectionReturnTimer=setTimeout(()=>{
+    body.classList.remove('selection-mode-return');
+    selectionReturnTimer=0
+   },280)
+  },250);
   return
  }
  if(!body.classList.contains('selection-mode-out'))bar.classList.remove('leaving','on')
