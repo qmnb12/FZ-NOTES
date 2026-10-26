@@ -987,6 +987,9 @@ body.selection-mode header,body.selection-mode-out header{
  #selbar.on:not(.leaving),#selbar.leaving,#sh[data-type="msg"],#sh[data-type="multi-select"]{animation:none!important;transition:none!important}
 }
 
+/* Back navigation within stacked action sheets gets a quick, soft content handoff. */
+#sh.sheet-restoring > *{animation:sheetBackContent .22s cubic-bezier(.22,1,.36,1) both}
+@keyframes sheetBackContent{from{opacity:.4;transform:translate3d(0,7px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
 /* Smoothness foundation: keep the chat viewport stable and animate on the compositor. */
 :root{--motion-out:cubic-bezier(.4,0,.2,1);--motion-in:cubic-bezier(.22,1,.36,1)}
 header{
@@ -1138,7 +1141,7 @@ const shObserver=new MutationObserver(()=>shBackdrop.classList.toggle('on',sh.cl
 shObserver.observe(sh,{attributes:true,attributeFilter:['class']});
 shBackdrop.addEventListener('click',()=>{shStack=[];sh.classList.remove('on');chat.classList.remove('sheet-open')});
 function pushSheetState(){if(!sh.classList.contains('on'))return;shStack.push({html:sh.innerHTML,dataset:Object.assign({},sh.dataset)});}
-function restoreSheetState(){if(shStack.length){const state=shStack.pop();sh.innerHTML=state.html;Array.from(sh.attributes).forEach(a=>{if(a.name.indexOf('data-')===0)sh.removeAttribute(a.name)});Object.keys(state.dataset).forEach(k=>sh.dataset[k]=state.dataset[k]);sh.classList.add('on');return true;}sh.classList.remove('on');return true;}
+let sheetRestoreTimer=0;function restoreSheetState(){if(shStack.length){const state=shStack.pop();sh.innerHTML=state.html;Array.from(sh.attributes).forEach(a=>{if(a.name.indexOf('data-')===0)sh.removeAttribute(a.name)});Object.keys(state.dataset).forEach(k=>sh.dataset[k]=state.dataset[k]);sh.classList.add('on');sh.classList.remove('sheet-restoring');requestAnimationFrame(()=>sh.classList.add('sheet-restoring'));if(sheetRestoreTimer)clearTimeout(sheetRestoreTimer);sheetRestoreTimer=setTimeout(()=>{sh.classList.remove('sheet-restoring');sheetRestoreTimer=0},260);return true;}sh.classList.remove('on');return true;}
 let nativeSelectionMenuOpen=false,lastAnySelectionRange=null,nativeSelectionSession=false;
 function updateComposerControls(){const hasText=!!ed.innerText.trim();$('#cmp').classList.toggle('has-text',hasText)}
 window.setNativeSelectionMenuOpen=function(open){
