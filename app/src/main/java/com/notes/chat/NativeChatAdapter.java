@@ -643,8 +643,16 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (boundId == null || listener == null) return true;
             bodyLongPressHandled = true;
             bodySelectionTouch = false;
-            // Telegram-style: long-press selects the note and opens its message menu.
-            // If the note was already selected, keep it selected while opening the menu.
+
+            // Once multi-selection is active, long-pressing another note should
+            // only toggle that note in the selection. Do not reopen its message
+            // menu on every selection gesture.
+            if (!selectedIds.isEmpty()) {
+                toggleSelection(boundId);
+                return true;
+            }
+
+            // The first long-press starts selection and opens the message menu.
             selectForContextMenu(boundId);
             return true;
         }
