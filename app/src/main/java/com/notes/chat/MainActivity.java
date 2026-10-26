@@ -697,9 +697,14 @@ public class MainActivity extends Activity {
                 boolean empty = nativeChatAdapter.getItemCount() == 0;
                 nativeEmptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
                 boolean light = false;
-                try { light = new JSONObject(json).optString("theme", "dark").equals("light"); }
-                catch (Exception ignored) { }
-                nativeEmptyView.setTextColor(light ? Color.rgb(99, 113, 137) : Color.rgb(147, 164, 184));
+                int emptyTextColor = Color.rgb(147, 164, 184);
+                try {
+                    JSONObject root = new JSONObject(json);
+                    light = "light".equals(root.optString("theme", "dark"));
+                    emptyTextColor = paletteColor(root.optJSONObject("palette"), "mut",
+                            light ? Color.rgb(99, 113, 137) : Color.rgb(147, 164, 184));
+                } catch (Exception ignored) { }
+                nativeEmptyView.setTextColor(emptyTextColor);
             });
         }
 
@@ -910,6 +915,25 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static int paletteColor(JSONObject palette, String key, int fallback) {
+        if (palette == null) return fallback;
+        try {
+            String value = palette.optString(key, "");
+            if (!value.isEmpty()) return Color.parseColor(value);
+        } catch (Exception ignored) { }
+        return fallback;
+    }
+
+    private static int blendColors(int base, int overlay, float amount) {
+        float t = Math.max(0f, Math.min(1f, amount));
+        int a = Color.alpha(base), r = Color.red(base), g = Color.green(base), b = Color.blue(base);
+        return Color.argb(
+                Math.round(a + (Color.alpha(overlay) - a) * t),
+                Math.round(r + (Color.red(overlay) - r) * t),
+                Math.round(g + (Color.green(overlay) - g) * t),
+                Math.round(b + (Color.blue(overlay) - b) * t));
+    }
+
     private void showNativeMessageMenuInternal(String id, String json) {
         if (rootLayout == null || web == null) return;
         final JSONObject config;
@@ -922,12 +946,18 @@ public class MainActivity extends Activity {
             return;
         }
         dismissNativeMessagePopupImmediately();
-        final boolean light = "light".equals(config.optString("theme", "dark"));
-        final int foreground = light ? Color.rgb(25, 35, 51) : Color.rgb(235, 243, 255);
-        final int muted = light ? Color.rgb(95, 112, 136) : Color.rgb(155, 174, 200);
-        final int accent = light ? Color.rgb(40, 111, 219) : Color.rgb(126, 180, 255);
-        final int panel = light ? Color.rgb(250, 252, 255) : Color.rgb(18, 29, 46);
-        final int border = light ? Color.rgb(223, 231, 243) : Color.rgb(47, 65, 89);
+        final String theme = config.optString("theme", "dark");
+        final boolean light = "light".equals(theme);
+        final JSONObject palette = config.optJSONObject("palette");
+        final int foreground = paletteColor(palette, "text",
+                light ? Color.rgb(25, 35, 51) : Color.rgb(235, 243, 255));
+        final int muted = paletteColor(palette, "mut",
+                light ? Color.rgb(95, 112, 136) : Color.rgb(155, 174, 200));
+        final int accent = paletteColor(palette, "acc",
+                light ? Color.rgb(40, 111, 219) : Color.rgb(126, 180, 255));
+        final int panel = paletteColor(palette, "bar",
+                light ? Color.rgb(250, 252, 255) : Color.rgb(18, 29, 46));
+        final int border = blendColors(panel, foreground, light ? 0.13f : 0.12f);
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
