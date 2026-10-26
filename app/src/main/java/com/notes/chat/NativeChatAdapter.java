@@ -233,8 +233,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     private void setSelectedIds(Set<String> ids, boolean animate) {
         Set<String> old = new HashSet<>(selectedIds);
+        boolean wasSelecting = !selectedIds.isEmpty();
         selectedIds.clear();
         selectedIds.addAll(ids);
+        boolean isSelecting = !selectedIds.isEmpty();
+        if (wasSelecting != isSelecting) {
+            // All visible rows need the same mode transition: checkbox rail in, per-note menu out.
+            if (!items.isEmpty()) notifyItemRangeChanged(0, items.size(), "selection");
+            return;
+        }
         for (String id : old) {
             if (!selectedIds.contains(id)) notifyIdChanged(id, animate);
         }
@@ -254,16 +261,27 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     private void toggleSelectionById(String id) {
         if (id == null) return;
+        boolean wasSelecting = !selectedIds.isEmpty();
         if (selectedIds.contains(id)) selectedIds.remove(id); else selectedIds.add(id);
-        notifyIdChanged(id, true);
+        boolean isSelecting = !selectedIds.isEmpty();
+        if (wasSelecting != isSelecting) {
+            if (!items.isEmpty()) notifyItemRangeChanged(0, items.size(), "selection");
+        } else {
+            notifyIdChanged(id, true);
+        }
         if (listener != null) listener.onSelectionChanged(new ArrayList<>(selectedIds));
     }
 
     private void selectForContextMenu(String id) {
         if (id == null) return;
         if (!selectedIds.contains(id)) {
+            boolean wasSelecting = !selectedIds.isEmpty();
             selectedIds.add(id);
-            notifyIdChanged(id, true);
+            if (!wasSelecting) {
+                if (!items.isEmpty()) notifyItemRangeChanged(0, items.size(), "selection");
+            } else {
+                notifyIdChanged(id, true);
+            }
         }
         if (listener != null) {
             listener.onSelectionChanged(new ArrayList<>(selectedIds));
@@ -787,6 +805,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             clock.setText((note.pinned ? "📌 " : "") + (note.edited ? "edited · " : "") + note.clock);
             clock.setTextColor(muted);
             menu.setTextColor(muted);
+            menu.animate().cancel();
+            menu.setAlpha(1f);
+            menu.setScaleX(1f);
+            menu.setScaleY(1f);
             menu.setVisibility(selectionMode ? GONE : VISIBLE);
             indicator.setColors(light ? LIGHT_ACCENT : 0xff3390ec, muted);
             if (selectionMode) {
@@ -818,6 +840,31 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             // Selection-mode taps are intercepted centrally by dispatchTouchEvent().
         }
 
+        private void animateMenuVisibility(boolean show) {
+            menu.animate().cancel();
+            if (!show) {
+                if (menu.getVisibility() != VISIBLE) return;
+                menu.animate().alpha(0f).scaleX(0.82f).scaleY(0.82f)
+                        .setDuration(125)
+                        .setInterpolator(new DecelerateInterpolator())
+                        .withEndAction(() -> {
+                            if (!selectedIds.isEmpty()) menu.setVisibility(GONE);
+                        })
+                        .start();
+                return;
+            }
+            if (menu.getVisibility() != VISIBLE) {
+                menu.setAlpha(0f);
+                menu.setScaleX(0.82f);
+                menu.setScaleY(0.82f);
+                menu.setVisibility(VISIBLE);
+            }
+            menu.animate().alpha(1f).scaleX(1f).scaleY(1f)
+                    .setDuration(190)
+                    .setInterpolator(new DecelerateInterpolator(1.4f))
+                    .start();
+        }
+
         void updateSelection(boolean selected, boolean selectionMode, boolean light) {
             indicator.setColors(light ? LIGHT_ACCENT : 0xff3390ec, light ? LIGHT_MUTED : DARK_MUTED);
             if (selectionMode) {
@@ -829,7 +876,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 indicator.setVisibility(INVISIBLE);
                 indicator.setChecked(false, false, true);
             }
-            menu.setVisibility(selectionMode ? GONE : VISIBLE);
+            animateMenuVisibility(!selectionMode);
             bubble.animate().cancel();
             if (selectionAnimator != null) {
                 selectionAnimator.cancel();
