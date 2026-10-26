@@ -64,6 +64,21 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 .all-notes-btn{flex:none;width:36px;height:38px;padding:5px!important;border-radius:11px!important;background:var(--mono)!important;display:grid;place-items:center;color:var(--acc)!important}
 .all-notes-btn:active{background:var(--ln)!important}
 .all-notes-icon{width:25px;height:25px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.all-hidden-icon svg{width:25px;height:25px;display:block;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}
+#chat .msgtext{font-size:var(--msg-size,16px)!important}
+.theme-customizer{padding:10px 16px 15px;display:flex;flex-direction:column;gap:14px}
+.theme-control{display:flex;flex-direction:column;gap:7px}
+.theme-control-label{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--text);font-size:14px;font-weight:650}
+.theme-customizer input[type=color]{width:100%;height:48px;border:1px solid var(--ln);border-radius:12px;padding:4px;background:var(--bar)}
+.theme-customizer input[type=range]{width:100%;accent-color:var(--acc)}
+.theme-size-range{display:flex;align-items:center;gap:12px}
+.theme-size-range input{flex:1;min-width:0}
+.theme-size-value{min-width:56px;text-align:right;color:var(--acc);font-weight:700;font-variant-numeric:tabular-nums}
+.theme-custom-preview{padding:12px 13px;border:1px solid var(--ln);border-radius:12px;background:var(--bub);color:var(--text);font-size:var(--msg-size,16px);line-height:1.4}
+.theme-custom-buttons{display:flex;justify-content:flex-end;gap:8px;padding:4px 16px 14px}
+#sh .theme-custom-buttons button{min-width:82px;padding:10px 14px;border-radius:11px;background:var(--mono);border:1px solid var(--ln);color:var(--text)}
+#sh .theme-custom-buttons button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+
 .topic-switcher{border:0;background:transparent;color:inherit;padding:0;display:flex;align-items:center;gap:7px;min-width:0;text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .topic-switcher-text{display:block;min-width:0}
 .topic-switcher b{display:block;font-size:17px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1188,7 +1203,7 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 </style>
 </head>
 <body>
-<header><div class="av" id="av">N</div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
+<header><div class="av" id="av">N</div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx">✕</button></div>
 <div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b>Pinned note</b><span></span></div></div>
@@ -1732,6 +1747,39 @@ const THEME_OPTIONS=[
  {id:'coffee',name:'Coffee',bg:'#1c140d',bar:'#2a2017',bub:'#423020',text:'#fff5e5',mut:'#c2a987',acc:'#eac182',mono:'rgba(234,193,130,.08)',ln:'rgba(234,193,130,.15)'},
  {id:'arctic',name:'Arctic',bg:'#08182b',bar:'#112b46',bub:'#1d3d60',text:'#eff8ff',mut:'#9dbad2',acc:'#7dc7ff',mono:'rgba(125,199,255,.08)',ln:'rgba(125,199,255,.15)'}
 ];
+let customTextColor='',messageTextSize=16;
+function applyCustomProperties(){
+ const root=document.documentElement;
+ if(customTextColor)root.style.setProperty('--text',customTextColor);
+ else root.style.removeProperty('--text');
+ root.style.setProperty('--msg-size',messageTextSize+'px');
+}
+function saveCustomTheme(){
+ try{
+  if(customTextColor)localStorage.setItem('notes-custom-text-color',customTextColor);
+  else localStorage.removeItem('notes-custom-text-color');
+  localStorage.setItem('notes-message-text-size',String(messageTextSize));
+ }catch(e){}
+}
+function openThemeCustomizer(){
+ const root=document.documentElement;
+ const originalColor=customTextColor;
+ const originalSize=messageTextSize;
+ let draftColor=customTextColor||getThemePalette().text||'#edf4ff';
+ let draftSize=messageTextSize;
+ sh.dataset.type='customize-theme';
+ sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · CUSTOMISE</div><div class="context-title">Your text settings</div><div class="context-preview">Choose how message text looks in your current theme</div></div><div class="theme-customizer"><label class="theme-control"><span class="theme-control-label">Message text colour <span id="customColorHex">'+draftColor.toUpperCase()+'</span></span><input type="color" id="customTextColour" value="'+draftColor+'"></label><label class="theme-control"><span class="theme-control-label">Message text size</span><span class="theme-size-range"><input type="range" id="customMessageSize" min="12" max="24" step="1" value="'+draftSize+'"><output id="customMessageSizeValue" class="theme-size-value">'+draftSize+' sp</output></span></label><div id="customThemePreview" class="theme-custom-preview">Message preview — text will look like this.</div></div><div class="theme-custom-buttons"><button type="button" data-k="custom-cancel">Cancel</button><button type="button" class="primary" data-k="custom-save">Save</button></div>';
+ const colorInput=$('#customTextColour'),sizeInput=$('#customMessageSize'),preview=$('#customThemePreview'),hex=$('#customColorHex'),value=$('#customMessageSizeValue');
+ const updatePreview=()=>{root.style.setProperty('--text',draftColor);root.style.setProperty('--msg-size',draftSize+'px');preview.style.color=draftColor;preview.style.fontSize=draftSize+'px';hex.textContent=draftColor.toUpperCase();value.textContent=draftSize+' sp'};
+ colorInput.addEventListener('input',()=>{draftColor=colorInput.value;updatePreview()});
+ sizeInput.addEventListener('input',()=>{draftSize=Math.max(12,Math.min(24,Number(sizeInput.value)||16));updatePreview()});
+ sh.dataset.customOriginalColor=originalColor;
+ sh.dataset.customOriginalSize=String(originalSize);
+ sh.dataset.customDraftColor=draftColor;
+ sh.dataset.customDraftSize=String(draftSize);
+ updatePreview();
+ sh.classList.add('on');
+}
 function getThemePalette(){
  const c=getComputedStyle(document.documentElement),v=k=>c.getPropertyValue('--'+k).trim();
  return {bg:v('bg'),bar:v('bar'),bub:v('bub'),text:v('text'),mut:v('mut'),acc:v('acc')};
@@ -1739,6 +1787,9 @@ function getThemePalette(){
 function applyTheme(themeId){
  const theme=THEME_OPTIONS.find(t=>t.id===themeId)||THEME_OPTIONS[0];
  document.documentElement.dataset.theme=theme.id;
+ customTextColor='';
+ applyCustomProperties();
+ saveCustomTheme();
  try{localStorage.setItem('notes-theme',theme.id)}catch(e){}
  sh.classList.remove('on');
  render();
@@ -1748,7 +1799,7 @@ function openThemePicker(){
  const current=document.documentElement.dataset.theme||'dark';
  const cards=THEME_OPTIONS.map(t=>'<button type="button" class="theme-choice'+(t.id===current?' selected':'')+'" data-k="theme:'+t.id+'"><span class="theme-swatches" style="--sw-bg:'+t.bg+';--sw-bar:'+t.bar+';--sw-bub:'+t.bub+';--sw-acc:'+t.acc+'"><i></i><i></i><i></i><i></i></span><span class="theme-choice-name">'+t.name+'</span><span class="theme-choice-check">'+(t.id===current?'✓':'')+'</span></button>').join('');
  sh.dataset.type='themes';
- sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · PERSONALIZE</div><div class="context-title">Choose a theme</div><div class="context-preview">12 color themes · choose one to apply</div></div><div class="theme-picker-grid">'+cards+'</div><div class="theme-picker-footer"><button type="button" data-k="x">Cancel</button></div>';
+ sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · PERSONALIZE</div><div class="context-title">Choose a theme</div><div class="context-preview">12 colour palettes, or customise your own text settings</div></div><div class="theme-picker-grid">'+cards+'</div><div class="theme-custom-buttons"><button type="button" data-k="customize">Customise</button><button type="button" data-k="x">Close</button></div>';
  sh.classList.add('on');
 }
 
@@ -1758,9 +1809,7 @@ function openTopicSwitcher(){
  rows.push('<button type="button" data-k="quick"><span class="mi"><svg viewBox="0 0 24 24"><path d="M13.2 2.5 4.8 13h5.8l-.7 8.5L19.3 10h-6z"/></svg></span><span class="mt">Quick notes</span>'+(cur==='quick'?'<span class="switcher-check">✓</span>':'')+'</button>');
  topics.filter(t=>t.id!=='gen'&&t.id!=='hidden').forEach(t=>rows.push('<button type="button" data-k="'+esc(t.id)+'"><span class="mi"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3z"/><path d="M3 7V5h7l2 2"/></svg></span><span class="mt">'+esc(t.name)+'</span>'+(cur===t.id?'<span class="switcher-check">✓</span>':'')+'</button>'));
  if(cur==='hidden'&&hiddenUnlocked){
-  rows.push('<div class="switcher-label">HIDDEN NOTES</div>');
-  rows.push('<button type="button" data-k="hidden-all"><span class="mi"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><span class="mt">All hidden notes</span>'+(!hiddenTopicFilter?'<span class="switcher-check">✓</span>':'')+'</button>');
-  topics.filter(t=>msgs.some(m=>m.hidden&&(m.k||'gen')===t.id)).forEach(t=>rows.push('<button type="button" data-k="hidden-topic:'+esc(t.id)+'"><span class="mi"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3z"/></svg></span><span class="mt">'+esc(t.name)+'</span>'+(hiddenTopicFilter===t.id?'<span class="switcher-check">✓</span>':'')+'</button>'));
+  // All hidden notes is only a dedicated item inside the Hidden Notes sidebar.
  }
  rows.push('<div class="switcher-divider"></div><button type="button" data-k="hidden"><span class="mi"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><span class="mt">Hidden notes</span></button>');
  sh.dataset.type='topic-switcher';sh.dataset.id='';sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · TOPICS</div><div class="context-title">Switch topic</div><div class="context-preview">Open the notes you want to see</div></div><div class="context-actions topic-switcher-actions">'+rows.join('')+'<button type="button" data-k="x"><span class="mi"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></span><span class="mt">Cancel</span></button></div>';sh.classList.add('on')
@@ -1813,7 +1862,23 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   return}
  if(sh.dataset.type==='themes'){
   if(k==='x'){sh.classList.remove('on');return}
+  if(k==='customize'){openThemeCustomizer();return}
   if(k.startsWith('theme:')){applyTheme(k.slice(6));return}
+  return
+ }
+ if(sh.dataset.type==='customize-theme'){
+  if(k==='custom-cancel'){
+   customTextColor=sh.dataset.customOriginalColor||'';
+   messageTextSize=Number(sh.dataset.customOriginalSize)||16;
+   applyCustomProperties();sh.classList.remove('on');render();return
+  }
+  if(k==='custom-save'){
+   const colour=$('#customTextColour').value;
+   customTextColor=/^#[0-9a-f]{6}$/i.test(colour)?colour:'';
+   messageTextSize=Math.max(12,Math.min(24,Number($('#customMessageSize').value)||16));
+   applyCustomProperties();saveCustomTheme();
+   sh.classList.remove('on');render();toast('Custom text settings saved',1800);return
+  }
   return
  }
  if(sh.dataset.type==='topic-switcher'){
@@ -1878,15 +1943,22 @@ const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return 'hsl(
 const first=s=>[...s][0].toUpperCase();
 function renderSide(){const side=$('#side');side.innerHTML='';
  side.style.display='';
+ $('#allNotesBtn').style.display=cur==='hidden'?'none':'grid';
  if(cur==='hidden'){
   $('#ttl').textContent=hiddenTopicFilter?(topics.find(t=>t.id===hiddenTopicFilter)?.name||'Hidden notes'):'All hidden notes';
   $('#av').textContent='🔒';
   const hiddenTopics=topics.filter(t=>msgs.some(m=>m.hidden&&(m.k||'gen')===t.id));
-  [{id:'hidden-all',name:'All hidden'},...hiddenTopics].forEach(t=>{
-   const b=document.createElement('button'),all=t.id==='hidden-all';
-   b.className='tp'+((all?!hiddenTopicFilter:hiddenTopicFilter===t.id)?' on':'');b.dataset.topic=t.id;
-   b.innerHTML='<i style="background:'+(all?'transparent':hue(t.name))+';color:'+(all?'var(--mut)':'#fff')+'">'+(all?'🔒':esc(first(t.name)))+'</i><span>'+esc(t.name)+'</span>';
-   b.onclick=()=>{hiddenTopicFilter=all?'':t.id;clearSelection();clearCtx();render()};
+  const allHiddenButton=document.createElement('button');
+  allHiddenButton.className='tp'+(!hiddenTopicFilter?' on':'');
+  allHiddenButton.dataset.topic='hidden-all';
+  allHiddenButton.innerHTML='<i class="all-hidden-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7.5h11.5a2 2 0 0 1 2 2V19H6z"/><path d="M4.5 16.5V5h10"/><path d="M9 11h7M9 14h6"/><rect x="12.5" y="3.5" width="7" height="6" rx="1.4"/><path d="M14.3 3.5V2.8a1.7 1.7 0 0 1 3.4 0v.7"/></svg></i><span>All hidden</span>';
+  allHiddenButton.onclick=()=>{hiddenTopicFilter='';clearSelection();clearCtx();render()};
+  side.appendChild(allHiddenButton);
+  hiddenTopics.forEach(t=>{
+   const b=document.createElement('button');
+   b.className='tp'+(hiddenTopicFilter===t.id?' on':'');b.dataset.topic=t.id;
+   b.innerHTML='<i style="background:'+hue(t.name)+';color:#fff">'+esc(first(t.name))+'</i><span>'+esc(t.name)+'</span>';
+   b.onclick=()=>{hiddenTopicFilter=t.id;clearSelection();clearCtx();render()};
    side.appendChild(b)
   });
   const a=document.createElement('button');a.className='tp add';a.innerHTML='<i><svg class="quick-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2.5 4.8 13h5.8l-.7 8.5L19.3 10h-6z"/></svg></i><span>Lock</span>';
@@ -2183,7 +2255,14 @@ window.flushCloudBackupBeforeClose=()=>{
  if(c.driveOn&&msgs.length>0&&cachedDriveAuth&&Date.now()-cachedDriveAuth.at<50*60*1000)
   doGoogleBackup(true,true,true);
 };
-try{const th=localStorage.getItem('notes-theme');document.documentElement.dataset.theme=th||'dark'}catch(e){}
+try{
+ const th=localStorage.getItem('notes-theme');document.documentElement.dataset.theme=th||'dark';
+ const savedColour=localStorage.getItem('notes-custom-text-color')||'';
+ customTextColor=/^#[0-9a-f]{6}$/i.test(savedColour)?savedColour:'';
+ const savedSize=Number(localStorage.getItem('notes-message-text-size')||16);
+ messageTextSize=Number.isFinite(savedSize)?Math.max(12,Math.min(24,savedSize)):16;
+ applyCustomProperties();
+}catch(e){}
 let selectionExitTimer=0,selectionReturnTimer=0;
 function updateSelectionModeUI(active){
  const bar=$('#selbar'),body=document.body,wasActive=body.classList.contains('selection-mode');
