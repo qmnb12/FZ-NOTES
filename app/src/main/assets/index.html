@@ -1465,10 +1465,36 @@ let timer,pressTarget=null,pressX=0,pressY=0,pressMenuArea=false;
 function noteCopyText(m){const tmp=document.createElement('div');tmp.innerHTML=m.h||'';tmp.querySelectorAll('.tg,.tm,.mn,.due,.cnt').forEach(n=>n.remove());let t=(tmp.innerText||tmp.textContent||'').trim();if(m.c)t+=(t?'\n':'')+m.c.map(i=>i.x).join('\n');return t}
 function keepSelectedVisible(id){chat.classList.add('sheet-open');if(hasNativeChat())return;const adjust=()=>{if(!sh.classList.contains('on'))return;const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b)return;const br=b.getBoundingClientRect(),sr=sh.getBoundingClientRect(),cr=chat.getBoundingClientRect();const top=Math.max(cr.top,0)+8,bottom=Math.min(cr.bottom,sr.top,window.innerHeight)-12;if(bottom<=top)return;const available=bottom-top;let desiredTop=br.top;if(br.height>=available)desiredTop=top;else if(br.bottom>bottom)desiredTop=bottom-br.height;else if(br.top<top)desiredTop=top;const delta=br.top-desiredTop;if(Math.abs(delta)>1)chat.scrollTop+=delta};requestAnimationFrame(()=>requestAnimationFrame(adjust));setTimeout(adjust,280)}
  sh.addEventListener('transitionend',e=>{if(e.target===sh&&!sh.classList.contains('on'))chat.classList.remove('sheet-open')});
-function openSheet(id){
-  try{const activeSelection=window.getSelection();if(activeSelection)activeSelection.removeAllRanges()}catch(_){}
-  shStack=[];const m=msgs.find(m=>m.id==id);if(!m)return;const txt=noteCopyText(m);
-  const preview=(plain(m.h)||(m.i?'Photo attachment':'Empty note')).replace(/\s+/g,' ').slice(0,96);
+function showNativeMessagePopup(id,mode){
+  if(!hasNativeChat()||!window.Android||typeof window.Android.showNativeMessageMenu!=='function')return false;
+  const m=msgs.find(m=>String(m.id)===String(id));if(!m)return false;
+  let config;
+  if(mode==='topics'){
+   const topicItems=[{id:'quick',name:'Quick'}].concat(topics).map(t=>({key:'to:'+t.id,title:t.name,icon:'▰'}));
+   topicItems.push({key:'x',title:'Cancel',icon:'×'});
+   config={mode:'topics',theme:document.documentElement.dataset.theme||'dark',title:'Move to topic',preview:'Choose where this message belongs',items:topicItems};
+  }else{
+   const preview=(plain(m.h)||(m.i?'Photo attachment':'Empty note')).replace(/\s+/g,' ').slice(0,96);
+   config={mode:'message',theme:document.documentElement.dataset.theme||'dark',title:'Message options',preview,items:[
+    {key:'reply',title:'Reply',icon:'↩'},
+    {key:'edit',title:'Edit',icon:'✎'},
+    {key:'copy',title:'Copy text',icon:'▢'},
+    {key:'pin',title:m.p?'Unpin message':'Pin message',icon:'⌖'},
+    {key:'hide',title:m.hidden?'Unhide note':'Hide note',icon:'▣'},
+    {key:'mv',title:'Move to topic',icon:'▰'},
+    {key:'sel',title:'Select message',icon:'☑'},
+    {key:'divider'},
+    {key:'del',title:'Delete message',icon:'▤',danger:true},
+    {key:'x',title:'Cancel',icon:'×'}
+   ]};
+  }
+  try{window.Android.showNativeMessageMenu(String(id),JSON.stringify(config));return true}catch(_){return false}
+ }
+ function openSheet(id){
+   try{const activeSelection=window.getSelection();if(activeSelection)activeSelection.removeAllRanges()}catch(_){}
+   if(showNativeMessagePopup(id,'message'))return;
+   shStack=[];const m=msgs.find(m=>m.id==id);if(!m)return;const txt=noteCopyText(m);
+   const preview=(plain(m.h)||(m.i?'Photo attachment':'Empty note')).replace(/\s+/g,' ').slice(0,96);
   sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-head-line"><span class="context-eyebrow">FZ NOTES · MESSAGE</span><button type="button" class="context-close" data-k="x" aria-label="Close menu">×</button></div><div class="context-title">Message options</div><div class="context-preview">'+esc(preview)+'</div></div>'+
    '<div class="context-actions">'+
    contextMenuRow('reply','Reply',contextIcons.reply)+
@@ -1650,7 +1676,37 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(k==='copy')copy(sh.dataset.txt);
  if(k==='del'){if(replyId===id||editId===id)clearCtx();msgs=msgs.filter(m=>m.id!==id);save();render()}
  if(k==='edit'){const m=msgs.find(m=>m.id===id);if(m){if(m.c){ed.innerText=m.c.map(i=>i.x).join('\n');listTitle=plain(m.h);listMode=true;ed.dataset.ph='Add list items, one per line';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');$('#taskdue').value=m.due?new Date(m.due-new Date(m.due).getTimezoneOffset()*60000).toISOString().slice(0,16):''}else ed.innerHTML=m.h;editId=id;replyId=null;setCtx();placeCaretAtEnd(ed)}}});
-const tn=k=>{const t=topics.find(t=>t.id===(k||'gen'));return t?t.name:'General'};
+window.nativeMessageMenuAction=function(rawId,action){
+  const id=Number(rawId),m=msgs.find(x=>Number(x.id)===id);
+  if(!m)return;
+  if(action==='x'||action==='cancel')return;
+  if(action==='mv'){showNativeMessagePopup(id,'topics');return}
+  if(action.startsWith('to:')){m.k=action.slice(3);m.p=0;save();render();return}
+  if(action==='pin'){
+   const was=m.p;msgs.forEach(x=>{if((x.k||'gen')===(m.k||'gen'))x.p=0});
+   m.p=was?0:1;save();render();return
+  }
+  if(action==='hide'){
+   if(m.hidden){
+    if(!hiddenUnlocked){requestHiddenNotesAccess();return}
+    m.hidden=false;save();render();toast('Note unhidden')
+   }else requestHideNoteAuth(id);
+   return
+  }
+  if(action==='sel'){selMode=true;sel.clear();selectNote(id);return}
+  if(action==='reply'){replyId=id;editId=null;setCtx();ed.focus();return}
+  if(action==='copy'){copy(noteCopyText(m));return}
+  if(action==='del'){if(replyId===id||editId===id)clearCtx();msgs=msgs.filter(x=>Number(x.id)!==id);save();render();return}
+  if(action==='edit'){
+   if(m.c){
+    ed.innerText=m.c.map(i=>i.x).join('\\n');listTitle=plain(m.h);listMode=true;
+    ed.dataset.ph='Add list items, one per line';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');
+    $('#taskdue').value=m.due?new Date(m.due-new Date(m.due).getTimezoneOffset()*60000).toISOString().slice(0,16):''
+   }else ed.innerHTML=m.h;
+   editId=id;replyId=null;setCtx();placeCaretAtEnd(ed);ed.focus()
+  }
+ };
+ const tn=k=>{const t=topics.find(t=>t.id===(k||'gen'));return t?t.name:'General'};
 const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return 'hsl('+h+' 55% 45%)'};
 const first=s=>[...s][0].toUpperCase();
 function renderSide(){const side=$('#side');side.innerHTML='';
