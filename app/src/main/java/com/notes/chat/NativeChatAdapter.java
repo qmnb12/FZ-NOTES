@@ -302,20 +302,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     private void selectForContextMenu(String id) {
         if (id == null) return;
+        // Keep the message anchor for the popup animation without entering multi-select mode.
+        // Opening a message menu must not also show the "N selected" toolbar and selection rails.
         lastSelectionChangedId = id;
-        if (!selectedIds.contains(id)) {
-            boolean wasSelecting = !selectedIds.isEmpty();
-            selectedIds.add(id);
-            if (!wasSelecting) {
-                if (!items.isEmpty()) notifyItemRangeChanged(0, items.size(), "selection");
-            } else {
-                notifyIdChanged(id, true);
-            }
-        }
-        if (listener != null) {
-            listener.onSelectionChanged(new ArrayList<>(selectedIds));
-            listener.onAction(id, "menu", 0);
-        }
+        if (listener != null) listener.onAction(id, "menu", 0);
     }
 
     void scrollToId(String id) {
