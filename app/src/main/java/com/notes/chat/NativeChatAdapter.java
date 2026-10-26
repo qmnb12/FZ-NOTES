@@ -32,6 +32,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -531,30 +532,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             // whole note, rather than being swallowed by LinkMovementMethod for spans.
             // When selection mode is off, touches pass through unchanged so Mono copies
             // and ordinary links keep their one-tap behaviour.
-            body.setOnTouchListener((v, event) -> {
-                switch (event.getActionMasked()) {
-                    case android.view.MotionEvent.ACTION_DOWN:
-                        bodySelectionTouch = !selectedIds.isEmpty();
-                        bodyLongPressHandled = false;
-                        bodyTouchDownX = event.getX();
-                        bodyTouchDownY = event.getY();
-                        return false;
-                    case android.view.MotionEvent.ACTION_UP:
-                        if (!bodySelectionTouch) return false;
-                        boolean isTap = Math.abs(event.getX() - bodyTouchDownX) <= dp(14)
-                                && Math.abs(event.getY() - bodyTouchDownY) <= dp(14);
-                        bodySelectionTouch = false;
-                        if (isTap && !bodyLongPressHandled && boundId != null) {
-                            toggleSelection(boundId);
-                        }
-                        return true;
-                    case android.view.MotionEvent.ACTION_CANCEL:
-                        bodySelectionTouch = false;
-                        return bodySelectionTouch;
-                    default:
-                        return bodySelectionTouch;
-                }
-            });
+            // Replaced after all message children have been built by
+            // installSelectionTapHandlers(), so every part of a selected message
+            // (text, timestamp, image, reply and checklist) toggles on a single tap.
             LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             bodyLp.bottomMargin = dp(2);
             bubble.addView(body, bodyLp);
@@ -620,6 +600,41 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bubble.setOnClickListener(v -> {
                 if (!selectedIds.isEmpty()) toggleSelection(boundId);
             });
+        }
+
+        private void installSelectionTapHandlers(View view) {
+            view.setOnTouchListener((v, event) -> {
+                switch (event.getActionMasked()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        bodySelectionTouch = !selectedIds.isEmpty();
+                        bodyLongPressHandled = false;
+                        bodyTouchDownX = event.getX();
+                        bodyTouchDownY = event.getY();
+                        return false;
+                    case android.view.MotionEvent.ACTION_UP:
+                        if (!bodySelectionTouch) return false;
+                        boolean isTap = Math.abs(event.getX() - bodyTouchDownX) <= dp(14)
+                                && Math.abs(event.getY() - bodyTouchDownY) <= dp(14);
+                        bodySelectionTouch = false;
+                        if (isTap && !bodyLongPressHandled && boundId != null) {
+                            toggleSelection(boundId);
+                        }
+                        // Consume the up event to prevent a child click handler from
+                        // triggering the same action twice after our selection toggle.
+                        return true;
+                    case android.view.MotionEvent.ACTION_CANCEL:
+                        bodySelectionTouch = false;
+                        return false;
+                    default:
+                        return false;
+                }
+            });
+            if (view instanceof ViewGroup) {
+                ViewGroup group = (ViewGroup) view;
+                for (int i = 0; i < group.getChildCount(); i++) {
+                    installSelectionTapHandlers(group.getChildAt(i));
+                }
+            }
         }
 
         private boolean longPress() {
@@ -784,13 +799,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 bubble.setBackground(bubbleBg);
                 bubble.setElevation(dp(1.5f));
             }
-            bubble.setOnTouchListener((v, event) -> {
-                if (event.getAction() == android.view.MotionEvent.ACTION_UP && !selectedIds.isEmpty()) {
-                    // Let the click handler toggle multi-selection; do not consume the event.
-                    return false;
-                }
-                return false;
-            });
+            // Touch listeners are installed recursively after bind(), once dynamic
+            // checklist/reply/image children exist.
+            installSelectionTapHandlers(this);
         }
 
         void updateSelection(boolean selected, boolean selectionMode, boolean light) {
@@ -815,7 +826,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                     : (light ? LIGHT_BUBBLE : DARK_BUBBLE);
             final int startColor = bubbleFillColor;
             final float startScale = bubble.getScaleX();
-            final float targetScale = selected ? 0.985f : 1f;
+            final float targetScale = selected ? 0.975f : 1f;
+            final OvershootInterpolator scaleInterpolator = new OvershootInterpolator(1.05f);
             GradientDrawable background = new GradientDrawable();
             background.setColor(startColor);
             background.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
@@ -825,13 +837,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bubble.setBackground(background);
             bubble.setElevation(dp(selected ? 2f : 1.5f));
             selectionAnimator = ValueAnimator.ofFloat(0f, 1f);
-            selectionAnimator.setDuration(190);
+            selectionAnimator.setDuration(220);
             selectionAnimator.setInterpolator(new DecelerateInterpolator());
             selectionAnimator.addUpdateListener(animation -> {
                 float fraction = (float) animation.getAnimatedValue();
                 bubbleFillColor = (Integer) new ArgbEvaluator().evaluate(fraction, startColor, targetColor);
                 background.setColor(bubbleFillColor);
-                float scale = startScale + (targetScale - startScale) * fraction;
+                float scaleFraction = scaleInterpolator.getInterpolation(fraction);
+                float scale = startScale + (targetScale - startScale) * scaleFraction;
                 bubble.setScaleX(scale);
                 bubble.setScaleY(scale);
             });
