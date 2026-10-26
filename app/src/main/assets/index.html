@@ -986,6 +986,99 @@ body.selection-mode header,body.selection-mode-out header{
 @media(prefers-reduced-motion:reduce){
  #selbar.on:not(.leaving),#selbar.leaving,#sh[data-type="msg"],#sh[data-type="multi-select"]{animation:none!important;transition:none!important}
 }
+
+/* Smoothness foundation: keep the chat viewport stable and animate on the compositor. */
+:root{--motion-out:cubic-bezier(.4,0,.2,1);--motion-in:cubic-bezier(.22,1,.36,1)}
+header{
+ min-height:54px;box-sizing:border-box;
+ transition:opacity .18s ease,transform .24s var(--motion-in)!important;
+}
+body.selection-mode header,body.selection-mode-out header{
+ max-height:80px!important;min-height:54px!important;
+ padding:8px 12px!important;margin:0!important;
+ opacity:0!important;transform:translate3d(0,-7px,0)!important;
+ border-bottom-color:transparent!important;pointer-events:none!important;
+}
+/* The selection bar overlays the header instead of entering document flow.
+   This avoids resizing the native RecyclerView every time the toolbar animates. */
+#selbar{
+ position:fixed!important;top:env(safe-area-inset-top,0px)!important;
+ left:0!important;right:0!important;z-index:30!important;
+ margin:0!important;min-height:54px!important;height:54px!important;
+ box-sizing:border-box!important;display:none;align-items:center!important;
+ padding:6px 8px!important;gap:4px!important;
+ background:var(--bar)!important;border-bottom:1px solid var(--ln)!important;
+ box-shadow:0 4px 14px rgba(0,0,0,.16)!important;
+ transform:translate3d(0,-14px,0)!important;opacity:0;
+ transition:opacity .24s ease,transform .30s var(--motion-in)!important;
+ backface-visibility:hidden;
+}
+#selbar.on{display:flex!important}
+#selbar.on:not(.leaving){animation:selectionBarEnterFinal .30s var(--motion-in) both!important}
+#selbar.leaving{animation:selectionBarExitFinal .24s var(--motion-out) both!important;pointer-events:none!important}
+@keyframes selectionBarEnterFinal{from{opacity:0;transform:translate3d(0,-14px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@keyframes selectionBarExitFinal{from{opacity:1;transform:translate3d(0,0,0)}to{opacity:0;transform:translate3d(0,-12px,0)}}
+body.selection-mode #sq,body.selection-mode #filters,body.selection-mode #pin,
+body.selection-mode-out #sq,body.selection-mode-out #filters,body.selection-mode-out #pin{
+ display:none!important
+}
+body.selection-mode-return header{animation:selectionHeaderReturn .26s var(--motion-in) both}
+@keyframes selectionHeaderReturn{from{opacity:0;transform:translate3d(0,-7px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+/* Animate visible surfaces without changing their display/layout mid-frame. */
+#sh{
+ transform:translate3d(0,24px,0) scale(.985)!important;opacity:0;
+ transition:transform .32s var(--motion-in),opacity .24s ease,visibility .32s linear!important;
+ will-change:transform,opacity;backface-visibility:hidden;
+}
+#sh.on{transform:translate3d(0,0,0) scale(1)!important;opacity:1}
+#shBackdrop{background:rgba(2,7,15,.42)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transition:opacity .24s ease,visibility .30s linear!important}
+#photoViewer{
+ display:flex!important;visibility:hidden;opacity:0;pointer-events:none;
+ transform:scale(.985);transform-origin:center center;
+ transition:opacity .22s ease,transform .28s var(--motion-in),visibility .28s linear!important;
+}
+#photoViewer.on{display:flex!important;visibility:visible;opacity:1;pointer-events:auto;transform:scale(1)}
+#photoViewer img{opacity:0;transform:scale(.985);transition:opacity .24s ease,transform .30s var(--motion-in)!important}
+#photoViewer.on img{opacity:1;transform:scale(1)}
+/* Sheets and dialogs fade/slide out on Back instead of disappearing instantly. */
+.ov,#cfg,#tgcfg{
+ display:flex!important;visibility:hidden;opacity:0;pointer-events:none;
+ transition:opacity .22s ease,visibility .28s linear!important;
+}
+.ov.on,#cfg.on,#tgcfg.on{display:flex!important;visibility:visible;opacity:1;pointer-events:auto}
+.ov .cfgb,#cfg .cfgb,#tgcfg .cfgb{
+ opacity:0;transform:translate3d(0,28px,0) scale(.99);
+ transition:opacity .24s ease,transform .30s var(--motion-in)!important;
+}
+.ov.on .cfgb,#cfg.on .cfgb,#tgcfg.on .cfgb{opacity:1;transform:translate3d(0,0,0) scale(1)}
+#lk{
+ display:flex!important;visibility:hidden;opacity:0;pointer-events:none;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+ animation:none!important;
+ transition:opacity .20s ease,visibility .26s linear!important;
+}
+#lk.on{display:flex!important;visibility:visible;opacity:1;pointer-events:auto;animation:none!important}
+#lk .lk-card{
+ opacity:0;transform:translate3d(0,22px,0) scale(.99);animation:none!important;
+ transition:opacity .22s ease,transform .28s var(--motion-in)!important;
+}
+#lk.on .lk-card{opacity:1;transform:translate3d(0,0,0) scale(1)}
+/* Lightweight press feedback; avoid expensive blur/filter animations on mobile. */
+#fab,#listfab,#send,#att,.hb,.tp,#selbar button,#sh button{
+ -webkit-tap-highlight-color:transparent;
+}
+#fab,#listfab,#send,.hb,.tp,#selbar button{
+ transition:transform .18s var(--motion-in),background-color .18s ease,opacity .18s ease!important;
+}
+#fab:active,#send:active,.hb:active,#selbar button:active{transform:scale(.94)}
+#listfab:active,.tp:active{transform:scale(.96)}
+@media(prefers-reduced-motion:reduce){
+ header,#selbar,#sh,#shBackdrop,#photoViewer,#photoViewer img,
+ .ov,#cfg,#tgcfg,#lk,.cfgb,.lk-card,#fab,#listfab,#send,.hb,.tp{
+  transition:none!important;animation:none!important
+ }
+}
+
 </style>
 </head>
 <body>
