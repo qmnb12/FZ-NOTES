@@ -102,6 +102,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private int themeMuted = DARK_MUTED;
     private int themeAccent = DARK_ACCENT;
     private int themeBorder = Color.rgb(43, 59, 79);
+    private float messageTextSizeSp = 16f;
     private String lastSelectionChangedId = "";
 
     NativeChatAdapter(Context context, Listener listener) {
@@ -132,6 +133,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         themeMuted = paletteColor(palette, "mut", lightTheme ? LIGHT_MUTED : DARK_MUTED);
         themeAccent = paletteColor(palette, "acc", lightTheme ? LIGHT_ACCENT : DARK_ACCENT);
         themeBorder = blendColors(themeBar, themeText, lightTheme ? 0.13f : 0.12f);
+        messageTextSizeSp = (float) root.optDouble("messageTextSize", 16d);
+        messageTextSizeSp = Math.max(12f, Math.min(24f, messageTextSizeSp));
         showTopics = root.optBoolean("showTopics", true);
         final JSONArray selected = root.optJSONArray("selectedIds");
         final Set<String> newSelected = new HashSet<>();
@@ -227,12 +230,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
     }
 
-    private String lastBoundTheme = "dark";
-    private boolean lastShowTopics = true;
+    private String lastBoundAppearance = "";
     private void notifyDataSetChangedThemeIfNeeded() {
-        if (!lastBoundTheme.equals(themeName) || lastShowTopics != showTopics) {
-            lastBoundTheme = themeName;
-            lastShowTopics = showTopics;
+        String appearance = themeName + "|" + themeBg + "|" + themeBar + "|" + themeBubble
+                + "|" + themeText + "|" + themeMuted + "|" + themeAccent + "|"
+                + messageTextSizeSp + "|" + showTopics;
+        if (!lastBoundAppearance.equals(appearance)) {
+            lastBoundAppearance = appearance;
             notifyItemRangeChanged(0, getItemCount());
         }
     }
@@ -801,6 +805,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             Spanned parsed = Html.fromHtml(rich, Html.FROM_HTML_MODE_COMPACT, null,
                     new NativeRichTagHandler(context, accent, themeBg, dp(3), dp(8), NativeChatAdapter.this, note.id));
             body.setText(parsed);
+            body.setTextSize(TypedValue.COMPLEX_UNIT_SP, messageTextSizeSp);
             body.setTextColor(fg);
             body.setLinkTextColor(accent);
             body.setVisibility(TextUtils.isEmpty(note.html) ? GONE : VISIBLE);
