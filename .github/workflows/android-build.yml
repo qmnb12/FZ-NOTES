@@ -56,8 +56,8 @@ jobs:
             if [ -n "$SHA1" ]; then
               {
                 echo "### Google OAuth Android signing fingerprint"
-                echo "- Android package: `com.fz.notes.chat`"
-                echo "- SHA-1: `$SHA1`"
+                echo "- Android package: com.fz.notes.chat"
+                echo "- SHA-1: $SHA1"
                 echo "- This is the signing certificate used by this build; register it in the Android OAuth client if Google returns DEVELOPER_ERROR (10)."
               } >> "$GITHUB_STEP_SUMMARY"
             else
