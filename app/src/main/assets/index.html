@@ -903,6 +903,7 @@ body.selection-mode #sq,body.selection-mode #filters,body.selection-mode #pin{di
   <section class="cfg-card">
     <div class="cfg-card-title"><span class="cfg-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"/></svg></span><div><h4>Google account sync</h4><p class="hint">Same Google account se notes automatic restore aur backup ho sakte hain.</p></div></div>
     <div id="c_driveStatus" class="cfg-status"><span class="status-dot"></span><span>Not connected</span></div>
+    <p id="c_driveDiagnostic" class="hint cfg-footnote" aria-live="polite">Last connection result: not checked yet.</p>
     <div class="row"><button id="c_driveConnect">Connect Google account</button><button id="c_driveDisconnect" class="alt cfg-danger-button">Disconnect</button></div>
     <div class="row cfg-quick-actions"><button id="c_driveBackup" class="cfg-secondary">Back up now</button><button id="c_driveRestore" class="cfg-secondary">Restore notes</button></div>
     <p class="hint cfg-footnote">New/edit notes ke baad backup, app open hone par backup aur app background mein jaate waqt best-effort backup. Fresh install ya Clear data ke baad connect karte hi latest Drive backup restore hoga, agar backup available hai.</p>
@@ -1512,6 +1513,10 @@ function openCfg(){
  const st=$('#c_driveStatus');st.classList.toggle('on',!!c.driveOn);
  st.querySelector('span:last-child').textContent=c.driveOn?'Connected · encrypted Drive backup ready':'Not connected · tap Connect Google account';
  $('#cfg').classList.add('on');
+ const diagnostic=$('#c_driveDiagnostic');
+ if(diagnostic&&window.Android)native('driveauthdebug',{}).then(v=>{
+  diagnostic.textContent='Last connection result: '+(v||'No status recorded');
+ }).catch(()=>{});
 }
 function openTgCfg(){
  const c=cfgGet();
@@ -1592,12 +1597,23 @@ $('#c_close').onclick=()=>$('#cfg').classList.remove('on');
 $('#c_driveBackup').onclick=()=>{if(!cfgGet().driveOn){toast('Google account connect kar raha hoon…',2500);$('#c_driveConnect').click();return}doGoogleBackup()};
 $('#c_driveRestore').onclick=()=>{if(!cfgGet().driveOn){toast('Pehle Google account connect karo',2800);return}$('#cfg').classList.remove('on');openDriveHistory()};
 $('#c_driveConnect').onclick=async()=>{
+ const diagnostic=$('#c_driveDiagnostic');
+ if(diagnostic)diagnostic.textContent='Opening Google authorization and checking Drive access…';
  try{
   toast('Google account connect ho raha hai…',3500);
   const {token,key}=await ensureDriveKey();
   const connected=await onGoogleConnected(token,key);
-  if(connected)toast('Google account connected',2200);
- }catch(e){toast('Google connect failed: '+e.message,4500)}
+  if(connected){
+   if(diagnostic)diagnostic.textContent='Connected successfully; Google Drive access verified.';
+   toast('Google account connected',2200);
+  }else{
+   const status=await native('driveauthdebug',{}).catch(()=> 'No native status available');
+   if(diagnostic)diagnostic.textContent='Connection not completed: '+status;
+  }
+ }catch(e){
+  if(diagnostic)diagnostic.textContent='Connection failed: '+e.message;
+  toast('Google connect failed: '+e.message,5000);
+ }
 };
 $('#c_driveDisconnect').onclick=()=>{const c=cfgGet();c.driveOn=false;cfgSet(c);cachedDriveAuth=null;try{clearTimeout(autoBackupTimer);autoBackupAgain=false}catch(_){}openCfg();toast('Google Drive disconnected · automatic backup stopped',2800)};
 $('#c_save').onclick=async()=>{if(await saveTelegramSettings())$('#tgcfg').classList.remove('on')};
@@ -1940,7 +1956,51 @@ async function pickFile(){try{if(window.Android){toast('Pehle FZ Notes se banayi
 async function exportBackupFile(){const payload=JSON.stringify({format:'FZ-NOTES-BACKUP',version:3,exportedAt:new Date().toISOString(),msgs,topics},null,2);const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.json';try{if(window.Android){toast('Backup save karne ke liye location choose karo',2200);const result=await native('savefile',{filename,text:payload});toast(result||'Backup file save ho gayi',3000);return true}const blob=new Blob([payload],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup download start ho gaya',3000);return true}catch(e){toast(e.message||'Backup save nahi hua',3500);return false}}
 msgs.filter(m=>m.due>Date.now()&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
 installNativeChatOverlayObservers();render();restoreDraft();updateComposerControls();lastSnapshot=snapshot();syncNativeChatOverlay();
-if(window.Android&&cfgGet().driveOn)setTimeout(()=>startupCloudSync(),1100);
+if(window.Android){
+ let driveRecoveryBusy=false,driveRecoveryAttempts=0;
+ async function recoverDriveAuthResult(){
+  if(driveRecoveryBusy)return false;
+  driveRecoveryBusy=true;
+  try{
+   const raw=await native('driveauthrecover',{});
+   if(!raw)return false;
+   const result=JSON.parse(raw);
+   if(!result.ok){
+    openCfg();
+    const diagnostic=$('#c_driveDiagnostic');
+    if(diagnostic)diagnostic.textContent='Previous Google authorization failed: '+(result.data||'Unknown error');
+    toast('Google authorization failed: '+(result.data||'Unknown error'),5000);
+    return true;
+   }
+   const token=String(result.data||'');
+   if(!token)return false;
+   openCfg();
+   const diagnostic=$('#c_driveDiagnostic');
+   if(diagnostic)diagnostic.textContent='Resuming Google connection after app recreation…';
+   const key=await native('drivekey',{token});
+   cachedDriveAuth={token,key,at:Date.now()};
+   const connected=await onGoogleConnected(token,key);
+   if(diagnostic)diagnostic.textContent=connected
+    ? 'Connected successfully; Drive access verified after app resumed.'
+    : 'Connection failed after app resumed: '+await native('driveauthdebug',{}).catch(()=> 'No status available');
+   if(connected)toast('Google account connected',3000);
+   return true;
+  }catch(e){
+   const diagnostic=$('#c_driveDiagnostic');
+   if(diagnostic)diagnostic.textContent='Google connection recovery failed: '+e.message;
+   return false;
+  }finally{driveRecoveryBusy=false}
+ }
+ function scheduleDriveAuthRecovery(){
+  recoverDriveAuthResult().then(found=>{
+   if(!found&&driveRecoveryAttempts++<12)setTimeout(scheduleDriveAuthRecovery,1000);
+  });
+ }
+ setTimeout(scheduleDriveAuthRecovery,1000);
+ window.addEventListener('focus',()=>setTimeout(scheduleDriveAuthRecovery,300));
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(scheduleDriveAuthRecovery,300)});
+ if(cfgGet().driveOn)setTimeout(()=>startupCloudSync(),1100);
+}
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&cur==='hidden'){hiddenUnlocked=false;cur='all';clearCtx();render()}});
 window.addEventListener('pagehide',()=>{if(cur==='hidden'){hiddenUnlocked=false;cur='all'}});
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!ed.contains(document.activeElement)){e.preventDefault();e.shiftKey?redoChange():undoChange()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'&&!ed.contains(document.activeElement)){e.preventDefault();redoChange()}});
