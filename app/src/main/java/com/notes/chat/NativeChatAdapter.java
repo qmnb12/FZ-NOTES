@@ -103,6 +103,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private int themeAccent = DARK_ACCENT;
     private int themeBorder = Color.rgb(43, 59, 79);
     private float messageTextSizeSp = 16f;
+    private float messageCornerRadiusDp = 17f;
     private String searchHighlightId = "";
     private String lastSelectionChangedId = "";
 
@@ -136,6 +137,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         themeBorder = blendColors(themeBar, themeText, lightTheme ? 0.13f : 0.12f);
         messageTextSizeSp = (float) root.optDouble("messageTextSize", 16d);
         messageTextSizeSp = Math.max(12f, Math.min(24f, messageTextSizeSp));
+        messageCornerRadiusDp = (float) root.optDouble("messageCornerRadius", 17d);
+        messageCornerRadiusDp = Math.max(4f, Math.min(28f, messageCornerRadiusDp));
         searchHighlightId = root.optString("searchHighlightId", "");
         showTopics = root.optBoolean("showTopics", true);
         final JSONArray selected = root.optJSONArray("selectedIds");
@@ -236,7 +239,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private void notifyDataSetChangedThemeIfNeeded() {
         String appearance = themeName + "|" + themeBg + "|" + themeBar + "|" + themeBubble
                 + "|" + themeText + "|" + themeMuted + "|" + themeAccent + "|"
-                + messageTextSizeSp + "|" + showTopics + "|" + searchHighlightId;
+                + messageTextSizeSp + "|" + messageCornerRadiusDp + "|" + showTopics + "|" + searchHighlightId;
         if (!lastBoundAppearance.equals(appearance)) {
             lastBoundAppearance = appearance;
             notifyItemRangeChanged(0, getItemCount());
