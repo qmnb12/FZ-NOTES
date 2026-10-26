@@ -446,6 +446,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private ValueAnimator selectionAnimator;
         private int bubbleFillColor = DARK_BUBBLE;
         private final int[] colors = new int[4];
+         private final ArgbEvaluator selectionColorEvaluator = new ArgbEvaluator();
 
         @Override public boolean dispatchTouchEvent(android.view.MotionEvent event) {
             final int action = event.getActionMasked();
@@ -846,12 +847,20 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
             bubble.setBackground(background);
             bubble.setElevation(dp(selected ? 2f : 1.5f));
+            // Keep the selected message response on the hardware compositor; avoid layout changes.
+            bubble.animate().translationX(selected ? -dp(1.5f) : 0f)
+                    .scaleX(selected ? 1.008f : 1f)
+                    .scaleY(selected ? 1.008f : 1f)
+                    .setDuration(240)
+                    .setInterpolator(new DecelerateInterpolator(1.5f))
+                    .withLayer()
+                    .start();
             selectionAnimator = ValueAnimator.ofFloat(0f, 1f);
-            selectionAnimator.setDuration(220);
-            selectionAnimator.setInterpolator(new DecelerateInterpolator());
+            selectionAnimator.setDuration(240);
+            selectionAnimator.setInterpolator(new DecelerateInterpolator(1.5f));
             selectionAnimator.addUpdateListener(animation -> {
                 float fraction = (float) animation.getAnimatedValue();
-                bubbleFillColor = (Integer) new ArgbEvaluator().evaluate(fraction, startColor, targetColor);
+                bubbleFillColor = (Integer) selectionColorEvaluator.evaluate(fraction, startColor, targetColor);
                 background.setColor(bubbleFillColor);
             });
             selectionAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
@@ -886,13 +895,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     private final class SelectionIndicator extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path checkPath = new Path();
         private float progress;
         private int accent = 0xff3390ec;
         private int outline = 0xff93a4b8;
         private ValueAnimator animator;
         SelectionIndicator(Context context) {
             super(context);
-            setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+            // Keep drawing hardware-accelerated. Software layers caused selection stutter.
         }
         void setColors(int accent, int outline) { this.accent = accent; this.outline = outline; invalidate(); }
         void setChecked(boolean checked, boolean animated) { setChecked(checked, animated, false); }
@@ -912,8 +922,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 return;
             }
             animator = ValueAnimator.ofFloat(progress, target);
-            animator.setDuration(190);
-            animator.setInterpolator(new DecelerateInterpolator());
+            animator.setDuration(230);
+            animator.setInterpolator(new DecelerateInterpolator(1.5f));
             animator.addUpdateListener(a -> { progress = (float) a.getAnimatedValue(); invalidate(); });
             animator.addListener(new android.animation.AnimatorListenerAdapter() {
                 @Override public void onAnimationEnd(android.animation.Animator animation) {
@@ -943,11 +953,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 paint.setStrokeJoin(Paint.Join.ROUND);
                 paint.setColor(Color.WHITE);
                 paint.setAlpha((int) (255 * progress));
-                Path path = new Path();
-                path.moveTo(cx - radius * 0.45f, cy);
-                path.lineTo(cx - radius * 0.08f, cy + radius * 0.34f);
-                path.lineTo(cx + radius * 0.52f, cy - radius * 0.38f);
-                canvas.drawPath(path, paint);
+                checkPath.reset();
+                checkPath.moveTo(cx - radius * 0.45f, cy);
+                checkPath.lineTo(cx - radius * 0.08f, cy + radius * 0.34f);
+                checkPath.lineTo(cx + radius * 0.52f, cy - radius * 0.38f);
+                canvas.drawPath(checkPath, paint);
                 paint.setAlpha(255);
             }
         }
