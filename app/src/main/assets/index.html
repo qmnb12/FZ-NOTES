@@ -2072,8 +2072,10 @@ try{const th=localStorage.getItem('notes-theme');document.documentElement.datase
 let selectionExitTimer=0,selectionReturnTimer=0,selectionPocketOrigin=null;
 function setSelectionPocketOrigin(bar){
  if(!selectionPocketOrigin||!Number.isFinite(selectionPocketOrigin.x)||!Number.isFinite(selectionPocketOrigin.y))return;
- const r=bar.getBoundingClientRect();
- bar.style.transformOrigin=(selectionPocketOrigin.x-r.left)+'px '+(selectionPocketOrigin.y-r.top)+'px';
+ const s=getComputedStyle(bar);
+ const left=parseFloat(s.left)||0,top=parseFloat(s.top)||0;
+ // Use the untransformed fixed slot. getBoundingClientRect() includes the running scale animation.
+ bar.style.transformOrigin=(selectionPocketOrigin.x-left)+'px '+(selectionPocketOrigin.y-top)+'px';
 }
 function updateSelectionModeUI(active){
  const bar=$('#selbar'),body=document.body,wasActive=body.classList.contains('selection-mode');
