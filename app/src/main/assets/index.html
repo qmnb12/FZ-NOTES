@@ -1086,9 +1086,10 @@ function handleAppBack(){
  if($('#sq').classList.contains('on')){$('#sq').classList.remove('on');return true}
  if($('#lk').classList.contains('on')){$('#lk').classList.remove('on');if(/^hide(pin|pw)/.test(mode)){hiddenUnlocked=false;hideTarget=null;hiddenSetupPurpose=null;if(cur==='hidden'){cur='all';clearCtx();render()}}return true}
  if($('#tb').classList.contains('on')){$('#tb').classList.remove('on');return true}
- if(selMode){clearSelection();if(sh.classList.contains('on'))restoreSheetState();return true}
  if(sh.classList.contains('on')){restoreSheetState();return true}
- if(cur==='hidden'){hiddenUnlocked=false;cur='all';clearCtx();render();return true}
+ // Leaving the private view with Back must lock it and return to the normal notes screen.
+ if(cur==='hidden'){hiddenUnlocked=false;cur='all';clearSelection();clearCtx();render();return true}
+ if(selMode){clearSelection();return true}
  if(listMode){saveDraft();listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';return true}
  if(ed.innerText.trim()||$('#taskdue').value)saveDraft();
  return false
@@ -1463,6 +1464,14 @@ const tn=k=>{const t=topics.find(t=>t.id===(k||'gen'));return t?t.name:'General'
 const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return 'hsl('+h+' 55% 45%)'};
 const first=s=>[...s][0].toUpperCase();
 function renderSide(){const side=$('#side');side.innerHTML='';
+ // Hidden Notes is a private, focused view: don't expose All/Quick/topic navigation beside it.
+ side.style.display=cur==='hidden'?'none':'';
+ if(cur==='hidden'){
+  $('#ttl').textContent='🔒 Hidden notes';
+  $('#av').textContent='🔒';
+  $('#sub').textContent=msgs.filter(inView).length+' hidden notes';
+  return
+ }
  [{id:'quick',name:'Quick'},{id:'all',name:'All'}].concat(topics.filter(t=>t.id!=='gen'&&t.id!=='hidden')).forEach(t=>{const b=document.createElement('button'),all=t.id==='all'||t.id==='quick';
   b.className='tp'+(t.id===cur?' on':'');b.dataset.topic=t.id;
   const chatIcon='<svg class="chat-folder-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M22 7h14a8 8 0 0 1 8 8v7a8 8 0 0 1-8 8h-3l-6 5v-7a8 8 0 0 1-5-7v-6" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 13h16a8 8 0 0 1 8 8v6a8 8 0 0 1-8 8h-8l-7 5v-8a8 8 0 0 1-8-8v-3a8 8 0 0 1 7-8Z" fill="currentColor"/><circle cx="12" cy="24" r="1.8" fill="#132033"/><circle cx="18" cy="24" r="1.8" fill="#132033"/><circle cx="24" cy="24" r="1.8" fill="#132033"/></svg>';
