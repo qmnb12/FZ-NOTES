@@ -564,7 +564,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
             body.setIncludeFontPadding(false);
             body.setLineSpacing(dp(1), 1.02f);
-            body.setTextIsSelectable(false);
+            // Allow selecting/copying text inside a note. Long-press on the text
+            // should use Android's text-selection toolbar; the separate ⋮ button
+            // and long-press on other message areas still open message actions.
+            body.setTextIsSelectable(true);
             body.setLinksClickable(true);
             body.setMovementMethod(LinkMovementMethod.getInstance());
             // Prevent Android's pressed-link highlight from flashing when a Mono span is crossed while scrolling.
@@ -634,7 +637,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             setOnLongClickListener(v -> longPress());
             row.setOnLongClickListener(v -> longPress());
             bubble.setOnLongClickListener(v -> longPress());
-            body.setOnLongClickListener(v -> longPress());
+            // Do not override the TextView's native long-press selection gesture.
             imageView.setOnClickListener(v -> {
                 if (boundId == null || listener == null) return;
                 if (!selectedIds.isEmpty()) toggleSelection(boundId);
