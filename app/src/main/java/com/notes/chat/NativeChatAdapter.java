@@ -437,12 +437,54 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private final TextView clock;
         private final TextView menu;
         private String boundId;
-        private boolean bodySelectionTouch;
-        private boolean bodyLongPressHandled;
-        private float bodyTouchDownX, bodyTouchDownY;
+        // When selection mode is active, intercept the entire row gesture here.
+        // Installing listeners on every nested child made taps depend on which
+        // TextView/ImageView happened to receive the touch stream.
+        private boolean selectionGestureActive;
+        private boolean selectionGestureMoved;
+        private float selectionGestureDownX, selectionGestureDownY;
         private ValueAnimator selectionAnimator;
         private int bubbleFillColor = DARK_BUBBLE;
         private final int[] colors = new int[4];
+
+        @Override public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+            final int action = event.getActionMasked();
+            if (action == android.view.MotionEvent.ACTION_DOWN) {
+                // Snapshot selection mode once per gesture. The first long-press
+                // starts outside selection mode and must still reach the row's
+                // long-click listener; taps after it are handled as row selections.
+                selectionGestureActive = !selectedIds.isEmpty();
+                selectionGestureMoved = false;
+                selectionGestureDownX = event.getX();
+                selectionGestureDownY = event.getY();
+                if (selectionGestureActive) return true;
+                return super.dispatchTouchEvent(event);
+            }
+
+            if (selectionGestureActive) {
+                if (action == android.view.MotionEvent.ACTION_MOVE) {
+                    if (Math.abs(event.getX() - selectionGestureDownX) > dp(14)
+                            || Math.abs(event.getY() - selectionGestureDownY) > dp(14)) {
+                        selectionGestureMoved = true;
+                    }
+                    return true;
+                }
+                if (action == android.view.MotionEvent.ACTION_UP) {
+                    boolean isTap = !selectionGestureMoved
+                            && Math.abs(event.getX() - selectionGestureDownX) <= dp(14)
+                            && Math.abs(event.getY() - selectionGestureDownY) <= dp(14);
+                    selectionGestureActive = false;
+                    if (isTap && boundId != null) toggleSelection(boundId);
+                    return true;
+                }
+                if (action == android.view.MotionEvent.ACTION_CANCEL) {
+                    selectionGestureActive = false;
+                    return true;
+                }
+                return true;
+            }
+            return super.dispatchTouchEvent(event);
+        }
 
         NoteRow(Context context) {
             super(context);
@@ -604,48 +646,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             });
         }
 
-        private void installSelectionTapHandlers(View view) {
-            view.setOnTouchListener((v, event) -> {
-                switch (event.getActionMasked()) {
-                    case android.view.MotionEvent.ACTION_DOWN:
-                        bodySelectionTouch = !selectedIds.isEmpty();
-                        bodyLongPressHandled = false;
-                        bodyTouchDownX = event.getX();
-                        bodyTouchDownY = event.getY();
-                        return false;
-                    case android.view.MotionEvent.ACTION_UP:
-                        boolean wasSelectionTouch = bodySelectionTouch;
-                        boolean isTap = Math.abs(event.getX() - bodyTouchDownX) <= dp(14)
-                                && Math.abs(event.getY() - bodyTouchDownY) <= dp(14);
-                        bodySelectionTouch = false;
-                        // Read selection state again on ACTION_UP: the first long-press
-                        // may have entered selection mode after ACTION_DOWN.
-                        if ((wasSelectionTouch || !selectedIds.isEmpty())
-                                && isTap && !bodyLongPressHandled && boundId != null) {
-                            toggleSelection(boundId);
-                            return true;
-                        }
-                        return false;
-                    case android.view.MotionEvent.ACTION_CANCEL:
-                        bodySelectionTouch = false;
-                        return false;
-                    default:
-                        return false;
-                }
-            });
-            if (view instanceof ViewGroup) {
-                ViewGroup group = (ViewGroup) view;
-                for (int i = 0; i < group.getChildCount(); i++) {
-                    installSelectionTapHandlers(group.getChildAt(i));
-                }
-            }
-        }
-
         private boolean longPress() {
             if (boundId == null || listener == null) return true;
-            bodyLongPressHandled = true;
-            bodySelectionTouch = false;
-
             // First long-press selects the note and opens its message menu.
             // Once selection is active, a further long-press only toggles the
             // target note; it must not reopen the message menu.
@@ -809,9 +811,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 bubble.setBackground(bubbleBg);
                 bubble.setElevation(dp(1.5f));
             }
-            // Touch listeners are installed recursively after bind(), once dynamic
-            // checklist/reply/image children exist.
-            installSelectionTapHandlers(this);
+            // Selection-mode taps are intercepted centrally by dispatchTouchEvent().
         }
 
         void updateSelection(boolean selected, boolean selectionMode, boolean light) {
