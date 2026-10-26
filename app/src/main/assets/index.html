@@ -1111,6 +1111,35 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
  position:fixed!important;
 }
 
+
+/* Selection toolbar feels like it unfolds out of the selected message, then returns on deselect. */
+#selbar{
+ transform-origin:50% 100%!important;
+ backface-visibility:hidden!important;
+ will-change:transform,opacity!important;
+}
+#selbar.on:not(.leaving){
+ animation:selectionPocketOpen .34s cubic-bezier(.16,1,.3,1) both!important;
+}
+#selbar.leaving{
+ transform-origin:50% 100%!important;
+ animation:selectionPocketClose .23s cubic-bezier(.4,0,1,1) both!important;
+ pointer-events:none!important;
+}
+@keyframes selectionPocketOpen{
+ 0%{opacity:0;transform:translate3d(0,20px,0) scale(.34);filter:blur(1.5px)}
+ 58%{opacity:1;transform:translate3d(0,-2px,0) scale(1.025);filter:blur(0)}
+ 78%{transform:translate3d(0,1px,0) scale(.995)}
+ 100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}
+}
+@keyframes selectionPocketClose{
+ 0%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}
+ 100%{opacity:0;transform:translate3d(0,18px,0) scale(.38);filter:blur(1px)}
+}
+@media(prefers-reduced-motion:reduce){
+ #selbar.on:not(.leaving),#selbar.leaving{animation:none!important}
+}
+
 </style>
 </head>
 <body>
