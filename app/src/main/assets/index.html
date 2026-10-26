@@ -1098,6 +1098,19 @@ body.selection-mode #filters.on,body.selection-mode-out #filters.on{
 body.selection-mode-return #pin.on{animation:selectionPinReturn .20s ease both}
 @keyframes selectionPinReturn{from{opacity:0}to{opacity:1}}
 
+
+/* Final alignment: selection toolbar occupies the pin-row slot, below the regular header. */
+#selbar{
+ top:calc(env(safe-area-inset-top,0px) + 54px)!important;
+}
+body.selection-mode #pin.on,body.selection-mode-out #pin.on{
+ display:flex!important;visibility:hidden!important;opacity:0!important;
+ height:auto!important;min-height:0!important;pointer-events:none!important;
+}
+body.selection-mode #selbar,body.selection-mode-out #selbar{
+ position:fixed!important;
+}
+
 </style>
 </head>
 <body>
