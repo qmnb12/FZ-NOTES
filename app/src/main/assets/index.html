@@ -1156,9 +1156,9 @@ body.selection-mode-return #pin.on{animation:selectionPinReturn .20s ease both}
 @keyframes selectionPinReturn{from{opacity:0}to{opacity:1}}
 
 
-/* Final alignment: selection toolbar occupies the pin-row slot, below the regular header. */
+/* Keep the selection toolbar close to the status bar; remove the extra header-height gap. */
 #selbar{
- top:calc(env(safe-area-inset-top,0px) + 54px)!important;
+ top:calc(env(safe-area-inset-top,0px) + 8px)!important;
 }
 body.selection-mode #pin.on,body.selection-mode-out #pin.on{
  display:flex!important;visibility:hidden!important;opacity:0!important;
