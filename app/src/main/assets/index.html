@@ -1083,6 +1083,21 @@ body.selection-mode-return header{animation:selectionHeaderReturn .26s var(--mot
  }
 }
 
+
+/* Keep every top row's slot reserved during selection to prevent the chat viewport jumping. */
+body.selection-mode #pin.on,body.selection-mode-out #pin.on{
+ display:flex!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;
+}
+body.selection-mode #sq.on,body.selection-mode-out #sq.on{
+ display:flex!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;
+}
+body.selection-mode #filters.on,body.selection-mode-out #filters.on{
+ display:flex!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;
+}
+/* Pin/filters return visually in place; their height never changes the native chat bounds. */
+body.selection-mode-return #pin.on{animation:selectionPinReturn .20s ease both}
+@keyframes selectionPinReturn{from{opacity:0}to{opacity:1}}
+
 </style>
 </head>
 <body>
