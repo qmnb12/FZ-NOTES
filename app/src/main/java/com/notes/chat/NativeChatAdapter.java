@@ -103,6 +103,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private int themeAccent = DARK_ACCENT;
     private int themeBorder = Color.rgb(43, 59, 79);
     private float messageTextSizeSp = 16f;
+    private String searchHighlightId = "";
     private String lastSelectionChangedId = "";
 
     NativeChatAdapter(Context context, Listener listener) {
@@ -135,6 +136,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         themeBorder = blendColors(themeBar, themeText, lightTheme ? 0.13f : 0.12f);
         messageTextSizeSp = (float) root.optDouble("messageTextSize", 16d);
         messageTextSizeSp = Math.max(12f, Math.min(24f, messageTextSizeSp));
+        searchHighlightId = root.optString("searchHighlightId", "");
         showTopics = root.optBoolean("showTopics", true);
         final JSONArray selected = root.optJSONArray("selectedIds");
         final Set<String> newSelected = new HashSet<>();
@@ -234,7 +236,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private void notifyDataSetChangedThemeIfNeeded() {
         String appearance = themeName + "|" + themeBg + "|" + themeBar + "|" + themeBubble
                 + "|" + themeText + "|" + themeMuted + "|" + themeAccent + "|"
-                + messageTextSizeSp + "|" + showTopics;
+                + messageTextSizeSp + "|" + showTopics + "|" + searchHighlightId;
         if (!lastBoundAppearance.equals(appearance)) {
             lastBoundAppearance = appearance;
             notifyItemRangeChanged(0, getItemCount());
@@ -427,7 +429,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         Note note = items.get(position);
         ((NoteRow) holder.itemView).bind(note, selectedIds.contains(note.id), !selectedIds.isEmpty(),
                 lightTheme, showTopics, position > 0 ? items.get(position - 1).date : null, listener,
-                bitmapFor(note));
+                bitmapFor(note), note.id.equals(searchHighlightId));
     }
 
     @Override public void onBindViewHolder(Holder holder, int position, List<Object> payloads) {
@@ -748,7 +750,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
 
         void bind(Note note, boolean selected, boolean selectionMode, boolean light, boolean topics,
-                  String previousDate, Listener listener, Bitmap cachedBitmap) {
+                  String previousDate, Listener listener, Bitmap cachedBitmap, boolean searchHighlighted) {
             if (selectionAnimator != null) {
                 selectionAnimator.cancel();
                 selectionAnimator = null;
@@ -895,8 +897,17 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 bubble.setElevation(dp(2));
             } else {
                 bubbleFillColor = bg;
-                bubble.setBackground(bubbleBg);
-                bubble.setElevation(dp(1.5f));
+                if (searchHighlighted) {
+                    GradientDrawable searchBg = new GradientDrawable();
+                    searchBg.setColor(bg);
+                    searchBg.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
+                    searchBg.setStroke(dp(2), accent);
+                    bubble.setBackground(searchBg);
+                    bubble.setElevation(dp(4));
+                } else {
+                    bubble.setBackground(bubbleBg);
+                    bubble.setElevation(dp(1.5f));
+                }
             }
             // Selection-mode taps are intercepted centrally by dispatchTouchEvent().
         }
