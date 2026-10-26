@@ -1089,11 +1089,12 @@ public class MainActivity extends Activity {
         overlay.addView(card, cardLp);
 
         PopupWindow popup = new PopupWindow(overlay,
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, true);
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, false);
         popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popup.setOutsideTouchable(false);
         popup.setTouchable(true);
-        popup.setFocusable(true);
+        // Let Activity Back handling run so the panel can animate back into the message.
+        popup.setFocusable(false);
         popup.setClippingEnabled(true);
         popup.setElevation(0);
         popup.setOnDismissListener(() -> {
