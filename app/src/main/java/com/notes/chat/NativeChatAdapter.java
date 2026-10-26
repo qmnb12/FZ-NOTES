@@ -259,15 +259,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         if (listener != null) listener.onSelectionChanged(new ArrayList<>(selectedIds));
     }
 
-    private void selectForContextMenu(String id) {
+    private void beginSelection(String id) {
         if (id == null) return;
         if (!selectedIds.contains(id)) {
             selectedIds.add(id);
             notifyIdChanged(id, true);
         }
         if (listener != null) {
+            // Notify the web selection toolbar, but don't open the message menu.
             listener.onSelectionChanged(new ArrayList<>(selectedIds));
-            listener.onAction(id, "menu", 0);
         }
     }
 
@@ -644,16 +644,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bodyLongPressHandled = true;
             bodySelectionTouch = false;
 
-            // Once multi-selection is active, long-pressing another note should
-            // only toggle that note in the selection. Do not reopen its message
-            // menu on every selection gesture.
+            // Telegram-style multi-select: the first long-press enters selection
+            // mode without opening a message sheet. After that, a normal tap on
+            // any message toggles it in the selection; long-press never reopens
+            // a separate menu over the message list.
             if (!selectedIds.isEmpty()) {
                 toggleSelection(boundId);
-                return true;
+            } else {
+                beginSelection(boundId);
             }
-
-            // The first long-press starts selection and opens the message menu.
-            selectForContextMenu(boundId);
             return true;
         }
 
