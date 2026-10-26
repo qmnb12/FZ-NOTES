@@ -302,9 +302,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     private void selectForContextMenu(String id) {
         if (id == null) return;
-        // Keep the message anchor for the popup animation without entering multi-select mode.
-        // Opening a message menu must not also show the "N selected" toolbar and selection rails.
-        lastSelectionChangedId = id;
+        // Telegram-like behavior: a first long-press selects the note before opening its
+        // message menu. Keep the selection after the menu closes so the user can continue
+        // selecting more notes or use the selection toolbar.
+        if (!selectedIds.contains(id)) {
+            toggleSelectionById(id);
+        } else {
+            lastSelectionChangedId = id;
+        }
         if (listener != null) listener.onAction(id, "menu", 0);
     }
 
