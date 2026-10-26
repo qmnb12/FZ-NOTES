@@ -773,7 +773,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
             GradientDrawable bubbleBg = new GradientDrawable();
             bubbleBg.setColor(bg);
-            bubbleBg.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
+            bubbleBg.setCornerRadii(new float[]{dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(5),dp(5),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp)});
             // Matching border width keeps the drawable's inner content geometry identical when selected.
             bubbleBg.setStroke(dp(1), themeBorder);
             bubble.setBackground(bubbleBg);
@@ -894,7 +894,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 GradientDrawable selectedBg = new GradientDrawable();
                 selectedBg.setColor(blendColors(bg, accent, light ? 0.14f : 0.26f));
                 bubbleFillColor = blendColors(bg, accent, light ? 0.14f : 0.26f);
-                selectedBg.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
+                selectedBg.setCornerRadii(new float[]{dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(5),dp(5),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp)});
                 selectedBg.setStroke(dp(1), accent);
                 bubble.setBackground(selectedBg);
                 bubble.setElevation(dp(2));
@@ -903,7 +903,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 if (searchHighlighted) {
                     GradientDrawable searchBg = new GradientDrawable();
                     searchBg.setColor(bg);
-                    searchBg.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
+                    searchBg.setCornerRadii(new float[]{dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(5),dp(5),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp)});
                     searchBg.setStroke(dp(2), accent);
                     bubble.setBackground(searchBg);
                     bubble.setElevation(dp(4));
@@ -963,7 +963,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             final int startColor = bubbleFillColor;
             GradientDrawable background = new GradientDrawable();
             background.setColor(startColor);
-            background.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
+            background.setCornerRadii(new float[]{dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(5),dp(5),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp)});
             if (selected) {
                 background.setStroke(dp(1), themeAccent);
             }
