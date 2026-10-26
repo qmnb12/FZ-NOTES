@@ -1882,11 +1882,11 @@ function renderSide(){const side=$('#side');side.innerHTML='';
   $('#ttl').textContent=hiddenTopicFilter?(topics.find(t=>t.id===hiddenTopicFilter)?.name||'Hidden notes'):'All hidden notes';
   $('#av').textContent='🔒';
   const hiddenTopics=topics.filter(t=>msgs.some(m=>m.hidden&&(m.k||'gen')===t.id));
-  hiddenTopics.forEach(t=>{
-   const b=document.createElement('button');
-   b.className='tp'+(hiddenTopicFilter===t.id?' on':'');b.dataset.topic=t.id;
-   b.innerHTML='<i style="background:'+hue(t.name)+';color:#fff">'+esc(first(t.name))+'</i><span>'+esc(t.name)+'</span>';
-   b.onclick=()=>{hiddenTopicFilter=t.id;clearSelection();clearCtx();render()};
+  [{id:'hidden-all',name:'All hidden'},...hiddenTopics].forEach(t=>{
+   const b=document.createElement('button'),all=t.id==='hidden-all';
+   b.className='tp'+((all?!hiddenTopicFilter:hiddenTopicFilter===t.id)?' on':'');b.dataset.topic=t.id;
+   b.innerHTML='<i style="background:'+(all?'transparent':hue(t.name))+';color:'+(all?'var(--mut)':'#fff')+'">'+(all?'🔒':esc(first(t.name)))+'</i><span>'+esc(t.name)+'</span>';
+   b.onclick=()=>{hiddenTopicFilter=all?'':t.id;clearSelection();clearCtx();render()};
    side.appendChild(b)
   });
   const a=document.createElement('button');a.className='tp add';a.innerHTML='<i><svg class="quick-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2.5 4.8 13h5.8l-.7 8.5L19.3 10h-6z"/></svg></i><span>Lock</span>';
