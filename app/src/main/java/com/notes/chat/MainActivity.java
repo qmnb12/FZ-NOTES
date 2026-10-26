@@ -931,7 +931,7 @@ public class MainActivity extends Activity {
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(8), dp(9), dp(8), dp(8));
+        card.setPadding(dp(8), dp(7), dp(8), dp(7));
         GradientDrawable panelBackground = new GradientDrawable();
         panelBackground.setColor(panel);
         panelBackground.setCornerRadius(dp(20));
@@ -957,7 +957,7 @@ public class MainActivity extends Activity {
         TextView heading = new TextView(this);
         heading.setText(config.optString("title", "Message options"));
         heading.setTextColor(foreground);
-        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         heading.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
         heading.setPadding(dp(10), dp(1), dp(10), dp(2));
         card.addView(heading);
@@ -970,14 +970,14 @@ public class MainActivity extends Activity {
             preview.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             preview.setSingleLine(true);
             preview.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            preview.setPadding(dp(10), 0, dp(10), dp(8));
+            preview.setPadding(dp(10), 0, dp(10), dp(6));
             card.addView(preview);
         }
         View separator = new View(this);
         separator.setBackgroundColor(border);
         LinearLayout.LayoutParams sepLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
-        sepLp.setMargins(dp(7), dp(3), dp(7), dp(5));
+        sepLp.setMargins(dp(7), dp(2), dp(7), dp(4));
         card.addView(separator, sepLp);
 
         ScrollView scroll = new ScrollView(this);
@@ -1006,8 +1006,8 @@ public class MainActivity extends Activity {
             LinearLayout action = new LinearLayout(this);
             action.setOrientation(LinearLayout.HORIZONTAL);
             action.setGravity(Gravity.CENTER_VERTICAL);
-            action.setMinimumHeight(dp(42));
-            action.setPadding(dp(8), dp(4), dp(10), dp(4));
+            action.setMinimumHeight(dp(40));
+            action.setPadding(dp(8), dp(3), dp(10), dp(3));
             GradientDrawable actionBg = new GradientDrawable();
             actionBg.setColor(Color.TRANSPARENT);
             actionBg.setCornerRadius(dp(12));
@@ -1064,7 +1064,7 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         int maxMenuHeight = Math.max(dp(150), rootLayout.getHeight() - dp(170));
         card.addView(scroll, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Math.min(dp(430), maxMenuHeight)));
+                ViewGroup.LayoutParams.MATCH_PARENT, Math.min(dp(400), maxMenuHeight)));
 
         int availableWidth = Math.max(dp(220), rootLayout.getWidth() - dp(24));
         int menuWidth = Math.min(dp(390), availableWidth);
