@@ -1360,7 +1360,7 @@ function render(){syncHiddenCredentialLifecycle();if(cur!=='hidden'){try{localSt
    if(!image)nativeImagePayloadCache.delete(id);
    return item;
   });
-  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),showTopics:cur==='all'||cur==='hidden',selectedIds:[...sel].map(String),items}))}catch(_){}
+  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,showTopics:cur==='all'||cur==='hidden',selectedIds:[...sel].map(String),items}))}catch(_){}
   syncNativeChatOverlay();
   return
  }
