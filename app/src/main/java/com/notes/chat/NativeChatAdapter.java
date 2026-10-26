@@ -1,6 +1,7 @@
 package com.notes.chat;
 
 import android.animation.ValueAnimator;
+import android.animation.ArgbEvaluator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -438,6 +439,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private boolean bodySelectionTouch;
         private boolean bodyLongPressHandled;
         private float bodyTouchDownX, bodyTouchDownY;
+        private ValueAnimator selectionAnimator;
+        private int bubbleFillColor = DARK_BUBBLE;
         private final int[] colors = new int[4];
 
         NoteRow(Context context) {
@@ -454,6 +457,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             GradientDrawable chip = new GradientDrawable();
             chip.setCornerRadius(dp(14));
             dateHeader.setBackground(chip);
+            dateHeader.setOnClickListener(v -> {
+                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+            });
             LayoutParams dateLp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
             dateLp.gravity = Gravity.CENTER_HORIZONTAL;
             dateLp.topMargin = dp(5);
@@ -486,6 +492,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             topicLabel = new TextView(context);
             topicLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             topicLabel.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            topicLabel.setOnClickListener(v -> {
+                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+            });
             LinearLayout.LayoutParams topicLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             topicLp.bottomMargin = dp(3);
             bubble.addView(topicLabel, topicLp);
@@ -553,10 +562,16 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             dueView = new TextView(context);
             dueView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             dueView.setPadding(0, dp(2), 0, dp(2));
+            dueView.setOnClickListener(v -> {
+                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+            });
             bubble.addView(dueView, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
             checkSummary = new TextView(context);
             checkSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            checkSummary.setOnClickListener(v -> {
+                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+            });
             LinearLayout.LayoutParams summaryLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             summaryLp.topMargin = dp(2);
             bubble.addView(checkSummary, summaryLp);
@@ -576,6 +591,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
             clock = new TextView(context);
             clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            clock.setOnClickListener(v -> {
+                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+            });
             footer.addView(clock, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
 
             menu = new TextView(context);
@@ -625,6 +643,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
         void bind(Note note, boolean selected, boolean selectionMode, boolean light, boolean topics,
                   String previousDate, Listener listener, Bitmap cachedBitmap) {
+            if (selectionAnimator != null) {
+                selectionAnimator.cancel();
+                selectionAnimator = null;
+            }
             boundId = note.id;
             setBackgroundColor(Color.TRANSPARENT);
             dateHeader.setVisibility(!note.date.equals(previousDate) ? VISIBLE : GONE);
@@ -752,11 +774,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (selected) {
                 GradientDrawable selectedBg = new GradientDrawable();
                 selectedBg.setColor(light ? Color.rgb(222, 236, 255) : Color.rgb(37, 66, 99));
+                bubbleFillColor = light ? Color.rgb(222, 236, 255) : Color.rgb(37, 66, 99);
                 selectedBg.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
                 selectedBg.setStroke(dp(1), light ? Color.rgb(53, 122, 225) : Color.rgb(100, 167, 255));
                 bubble.setBackground(selectedBg);
                 bubble.setElevation(dp(2));
             } else {
+                bubbleFillColor = bg;
                 bubble.setBackground(bubbleBg);
                 bubble.setElevation(dp(1.5f));
             }
@@ -782,17 +806,43 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
             menu.setVisibility(selectionMode ? GONE : VISIBLE);
             bubble.animate().cancel();
-            bubble.animate().scaleX(selected ? 0.985f : 1f).scaleY(selected ? 0.985f : 1f)
-                    .setDuration(150).setInterpolator(new DecelerateInterpolator()).start();
-            GradientDrawable background = new GradientDrawable();
-            background.setColor(selected
+            if (selectionAnimator != null) {
+                selectionAnimator.cancel();
+                selectionAnimator = null;
+            }
+            final int targetColor = selected
                     ? (light ? Color.rgb(222, 236, 255) : Color.rgb(37, 66, 99))
-                    : (light ? LIGHT_BUBBLE : DARK_BUBBLE));
+                    : (light ? LIGHT_BUBBLE : DARK_BUBBLE);
+            final int startColor = bubbleFillColor;
+            final float startScale = bubble.getScaleX();
+            final float targetScale = selected ? 0.985f : 1f;
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(startColor);
             background.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
             if (selected) {
                 background.setStroke(dp(1), light ? Color.rgb(53, 122, 225) : Color.rgb(100, 167, 255));
             }
             bubble.setBackground(background);
+            bubble.setElevation(dp(selected ? 2f : 1.5f));
+            selectionAnimator = ValueAnimator.ofFloat(0f, 1f);
+            selectionAnimator.setDuration(190);
+            selectionAnimator.setInterpolator(new DecelerateInterpolator());
+            selectionAnimator.addUpdateListener(animation -> {
+                float fraction = (float) animation.getAnimatedValue();
+                bubbleFillColor = (Integer) new ArgbEvaluator().evaluate(fraction, startColor, targetColor);
+                background.setColor(bubbleFillColor);
+                float scale = startScale + (targetScale - startScale) * fraction;
+                bubble.setScaleX(scale);
+                bubble.setScaleY(scale);
+            });
+            selectionAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(android.animation.Animator animation) {
+                    if (selectionAnimator == animation) selectionAnimator = null;
+                    bubbleFillColor = targetColor;
+                    background.setColor(targetColor);
+                }
+            });
+            selectionAnimator.start();
         }
     }
 
