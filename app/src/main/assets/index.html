@@ -2365,7 +2365,8 @@ try{
  messageCornerRadius=Number.isFinite(savedRadius)?Math.max(4,Math.min(28,savedRadius)):17;
  applyCustomProperties();
 }catch(e){}
-let selectionExitTimer=0,selectionReturnTimer=0,sfunction updateSelectionModeUI(active){
+let selectionExitTimer=0,selectionReturnTimer=0,selectionLayoutTimer=0;
+function updateSelectionModeUI(active){
  const bar=$('#selbar'),body=document.body,wasActive=body.classList.contains('selection-mode');
  if(active){
   if(selectionExitTimer){clearTimeout(selectionExitTimer);selectionExitTimer=0}
@@ -2385,7 +2386,7 @@ let selectionExitTimer=0,selectionReturnTimer=0,sfunction updateSelectionModeUI(
   bar.style.transformOrigin='50% 50%';
   bar.classList.add('leaving');
   if(selectionExitTimer)clearTimeout(selectionExitTimer);
-  // Let the side-slide/fade finish; don't collapse the toolbar back into a note.
+  // Let the toolbar and header finish transitioning before recalculating native chat bounds.
   selectionExitTimer=setTimeout(()=>{
    body.classList.remove('selection-mode-out');
    body.classList.add('selection-mode-return');
@@ -2403,7 +2404,6 @@ let selectionExitTimer=0,selectionReturnTimer=0,sfunction updateSelectionModeUI(
   return
  }
  if(!body.classList.contains('selection-mode-out'))bar.classList.remove('leaving','on')
-}emove('leaving','on')
 }
 function renderTop(){
  const pins=msgs.filter(m=>m.p&&inView(m));
