@@ -976,7 +976,7 @@ public class MainActivity extends Activity {
             TextView label = new TextView(this);
             label.setText(rowData.optString("title", key));
             label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-            label.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.MEDIUM);
+            label.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
             label.setTextColor(danger ? (light ? Color.rgb(190, 46, 60) : Color.rgb(255, 129, 143)) : foreground);
             LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
@@ -1012,7 +1012,7 @@ public class MainActivity extends Activity {
         }
         scroll.addView(rowsLayout, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        int maxMenuHeight = Math.max(dp(180), rootLayout.getHeight() - dp(128));
+        int maxMenuHeight = Math.max(dp(150), rootLayout.getHeight() - dp(170));
         card.addView(scroll, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Math.min(dp(430), maxMenuHeight)));
 
