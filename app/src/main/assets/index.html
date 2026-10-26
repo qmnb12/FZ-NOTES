@@ -1530,14 +1530,11 @@ function showNativeMessagePopup(id,mode){
    config={mode:'topics',theme:document.documentElement.dataset.theme||'dark',title:'Move to topic',preview:'Choose where this message belongs',items:topicItems};
   }else{
    const preview=(plain(m.h)||(m.i?'Photo attachment':'Empty note')).replace(/\s+/g,' ').slice(0,96);
-   config={mode:'message',theme:document.documentElement.dataset.theme||'dark',title:'Message options',preview,items:[
-    {key:'reply',title:'Reply',icon:'↩'},
+   config={mode:'message',theme:document.documentElement.dataset.theme||'dark',title:'Message',preview,items:[
     {key:'edit',title:'Edit',icon:'✎'},
     {key:'copy',title:'Copy text',icon:'▢'},
-    {key:'pin',title:m.p?'Unpin message':'Pin message',icon:'⌖'},
     {key:'hide',title:m.hidden?'Unhide note':'Hide note',icon:'▣'},
     {key:'mv',title:'Move to topic',icon:'▰'},
-    {key:'sel',title:'Select message',icon:'☑'},
     {key:'divider'},
     {key:'del',title:'Delete message',icon:'▤',danger:true},
     {key:'x',title:'Cancel',icon:'×'}
