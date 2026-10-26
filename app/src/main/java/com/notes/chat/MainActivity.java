@@ -78,7 +78,10 @@ public class MainActivity extends Activity {
     private boolean nativeChatTransitionTargetVisible;
     private ValueCallback<Uri[]> filePicker;
     private PopupWindow nativeMessagePopup;
+    private View nativeMessagePopupCard;
     private String nativeMessagePopupId = "";
+    private boolean nativeMessagePopupClosing;
+    private float nativeMessagePopupStartDx, nativeMessagePopupStartDy;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -859,12 +862,52 @@ public class MainActivity extends Activity {
     }
 
     private void dismissNativeMessagePopup() {
-        if (nativeMessagePopup != null) {
-            PopupWindow old = nativeMessagePopup;
-            nativeMessagePopup = null;
+        dismissNativeMessagePopup(null);
+    }
+
+    private void dismissNativeMessagePopup(Runnable afterDismiss) {
+        final PopupWindow popup = nativeMessagePopup;
+        final View card = nativeMessagePopupCard;
+        if (popup == null || card == null || !popup.isShowing()) {
+            dismissNativeMessagePopupImmediately();
+            if (afterDismiss != null) afterDismiss.run();
+            return;
+        }
+        if (nativeMessagePopupClosing) return;
+        nativeMessagePopupClosing = true;
+        card.animate().cancel();
+        card.animate()
+                .alpha(0f)
+                .translationX(nativeMessagePopupStartDx)
+                .translationY(nativeMessagePopupStartDy)
+                .scaleX(0.055f).scaleY(0.055f)
+                .setDuration(225)
+                .setInterpolator(new AccelerateInterpolator(1.2f))
+                .withLayer()
+                .withEndAction(() -> {
+                    if (nativeMessagePopup == popup) {
+                        nativeMessagePopup = null;
+                        nativeMessagePopupCard = null;
+                        nativeMessagePopupId = "";
+                    }
+                    nativeMessagePopupClosing = false;
+                    try { popup.dismiss(); } catch (Exception ignored) { }
+                    if (afterDismiss != null) afterDismiss.run();
+                })
+                .start();
+    }
+
+    private void dismissNativeMessagePopupImmediately() {
+        PopupWindow old = nativeMessagePopup;
+        View oldCard = nativeMessagePopupCard;
+        nativeMessagePopup = null;
+        nativeMessagePopupCard = null;
+        nativeMessagePopupId = "";
+        nativeMessagePopupClosing = false;
+        if (oldCard != null) oldCard.animate().cancel();
+        if (old != null) {
             try { old.dismiss(); } catch (Exception ignored) { }
         }
-        nativeMessagePopupId = "";
     }
 
     private void showNativeMessageMenuInternal(String id, String json) {
@@ -878,7 +921,7 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             return;
         }
-        dismissNativeMessagePopup();
+        dismissNativeMessagePopupImmediately();
         final boolean light = "light".equals(config.optString("theme", "dark"));
         final int foreground = light ? Color.rgb(25, 35, 51) : Color.rgb(235, 243, 255);
         final int muted = light ? Color.rgb(95, 112, 136) : Color.rgb(155, 174, 200);
