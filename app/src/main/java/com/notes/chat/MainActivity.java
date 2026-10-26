@@ -433,9 +433,10 @@ public class MainActivity extends Activity {
                     // The WebView callback adds platform actions such as Copy more than once
                     // on some Android builds. Rebuild the menu deterministically instead.
                     menu.clear();
-                    addSelectionMenuItem(menu, MENU_CUT, 10, "Cut", MenuItem.SHOW_AS_ACTION_ALWAYS);
-                    addSelectionMenuItem(menu, MENU_COPY, 20, "Copy", MenuItem.SHOW_AS_ACTION_ALWAYS);
-                    addSelectionMenuItem(menu, MENU_MONO, 30, "Mono", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                    // Keep the two most useful actions visible and stable; remaining actions stay in overflow.
+                    addSelectionMenuItem(menu, MENU_COPY, 10, "Copy", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                    addSelectionMenuItem(menu, MENU_MONO, 20, "Mono", MenuItem.SHOW_AS_ACTION_ALWAYS);
+                    addSelectionMenuItem(menu, MENU_CUT, 30, "Cut", MenuItem.SHOW_AS_ACTION_IF_ROOM);
                     addSelectionMenuItem(menu, MENU_PASTE, 35, "Paste", MenuItem.SHOW_AS_ACTION_NEVER);
                     addSelectionMenuItem(menu, MENU_SELECT_ALL, 40, "Select all", MenuItem.SHOW_AS_ACTION_NEVER);
                     addSelectionMenuItem(menu, MENU_BOLD, 50, "Bold", MenuItem.SHOW_AS_ACTION_NEVER);
@@ -464,7 +465,9 @@ public class MainActivity extends Activity {
                 @Override
                 public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
                     boolean prepared = original.onPrepareActionMode(mode, menu);
-                    if (prepared) {
+                    // Rebuilding action items on every prepare makes the floating toolbar flicker
+                    // while selection handles move. Rebuild only if our Mono item disappeared.
+                    if (prepared && menu.findItem(0x4D4F) == null) {
                         populateSelectionMenu(menu);
                     }
                     return prepared;

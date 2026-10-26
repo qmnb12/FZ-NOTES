@@ -875,6 +875,24 @@ body.selection-mode #sq,body.selection-mode #filters,body.selection-mode #pin{di
  #chat .b,#chat .b::before,#chat .b::after,#selbar{transition:none!important;animation:none!important}
 }
 
+
+/* FZ NOTES: stable Telegram-like Mono and selection polish */
+#chat .b, #chat .b.sel, body.selection-mode #chat .b.sel, body.selection-mode-out #chat .b.sel {
+  transform: none !important;
+  animation: none !important;
+  will-change: auto !important;
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease !important;
+}
+#chat .msgtext .mono, #ed .mono {
+  display: inline; vertical-align: baseline;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: .90em !important; line-height: inherit !important;
+  padding: 1px 4px !important; border-radius: 5px !important;
+  -webkit-box-decoration-break: clone !important; box-decoration-break: clone !important;
+}
+#selbar { min-height: 54px; box-sizing: border-box; gap: 4px; padding-left: 8px; padding-right: 8px; }
+#selbar span { font-size: 15px !important; font-weight: 600; }
+#selbar button { flex: 0 0 40px; width: 40px; min-width: 40px; height: 40px; }
 </style>
 </head>
 <body>

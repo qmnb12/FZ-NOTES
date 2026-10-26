@@ -20,6 +20,7 @@ import android.text.style.BackgroundColorSpan;
 import android.text.style.ClickableSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.QuoteSpan;
+import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TypefaceSpan;
 import android.text.Layout;
@@ -32,7 +33,6 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
-import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -525,6 +525,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setTextIsSelectable(false);
             body.setLinksClickable(true);
             body.setMovementMethod(LinkMovementMethod.getInstance());
+            // Prevent Android's pressed-link highlight from flashing when a Mono span is crossed while scrolling.
+            body.setHighlightColor(Color.TRANSPARENT);
             body.setOnClickListener(v -> {
                 if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
             });
@@ -784,8 +786,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
             bubble.animate().cancel();
             bubble.setTranslationX(0f);
-            bubble.setScaleX(selected ? 0.985f : 1f);
-            bubble.setScaleY(selected ? 0.985f : 1f);
+            bubble.setScaleX(1f);
+            bubble.setScaleY(1f);
             if (selected) {
                 GradientDrawable selectedBg = new GradientDrawable();
                 selectedBg.setColor(light ? Color.rgb(222, 236, 255) : Color.rgb(37, 66, 99));
@@ -825,9 +827,6 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                     ? (light ? Color.rgb(222, 236, 255) : Color.rgb(37, 66, 99))
                     : (light ? LIGHT_BUBBLE : DARK_BUBBLE);
             final int startColor = bubbleFillColor;
-            final float startScale = bubble.getScaleX();
-            final float targetScale = selected ? 0.975f : 1f;
-            final OvershootInterpolator scaleInterpolator = new OvershootInterpolator(1.05f);
             GradientDrawable background = new GradientDrawable();
             background.setColor(startColor);
             background.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
@@ -843,10 +842,6 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 float fraction = (float) animation.getAnimatedValue();
                 bubbleFillColor = (Integer) new ArgbEvaluator().evaluate(fraction, startColor, targetColor);
                 background.setColor(bubbleFillColor);
-                float scaleFraction = scaleInterpolator.getInterpolation(fraction);
-                float scale = startScale + (targetScale - startScale) * scaleFraction;
-                bubble.setScaleX(scale);
-                bubble.setScaleY(scale);
             });
             selectionAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
                 @Override public void onAnimationEnd(android.animation.Animator animation) {
@@ -987,7 +982,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 output.setSpan(new TypefaceSpan("monospace"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new BackgroundColorSpan(codeBackground), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new LeadingCodeIndent(dpStatic(context, 7), accent), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                output.setSpan(new InlineCopySpan(adapter, noteId, "code", mark.index), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new InlineCopySpan(adapter, noteId, "code", mark.index, Color.TRANSPARENT), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             } else if ("monospan".equals(mark.tag)) {
                 // Make inline code instantly distinguishable from prose, while keeping
                 // it as a real clickable span so one tap copies only this Mono value.
@@ -996,9 +991,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 int monoFg = accent == Color.rgb(40, 111, 219)
                         ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255);
                 output.setSpan(new TypefaceSpan("monospace"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new RelativeSizeSpan(0.90f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new BackgroundColorSpan(monoBg), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new ForegroundColorSpan(monoFg), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                output.setSpan(new InlineCopySpan(adapter, noteId, "mono", mark.index), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new InlineCopySpan(adapter, noteId, "mono", mark.index, monoFg), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             } else {
                 output.setSpan(new QuoteSpan(accent, stripeWidth, gapWidth), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new BackgroundColorSpan(codeBackground), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -1020,8 +1016,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private final String noteId;
         private final String action;
         private final int index;
-        InlineCopySpan(NativeChatAdapter adapter, String noteId, String action, int index) {
-            this.adapter = adapter; this.noteId = noteId; this.action = action; this.index = index;
+        private final int fixedTextColor;
+        InlineCopySpan(NativeChatAdapter adapter, String noteId, String action, int index, int fixedTextColor) {
+            this.adapter = adapter; this.noteId = noteId; this.action = action; this.index = index; this.fixedTextColor = fixedTextColor;
         }
         @Override public void onClick(View widget) {
             if (adapter == null || noteId == null) return;
@@ -1030,6 +1027,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
         @Override public void updateDrawState(TextPaint ds) {
             ds.setUnderlineText(false);
+            // ClickableSpan normally overwrites ForegroundColorSpan with the link color.
+            // Keep Mono in its own calm code color instead of flashing blue while scrolling/tapping.
+            if (fixedTextColor != Color.TRANSPARENT) ds.setColor(fixedTextColor);
         }
     }
 
