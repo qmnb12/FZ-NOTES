@@ -1047,12 +1047,12 @@ function render(){syncHiddenCredentialLifecycle();renderSide();renderTop();
   const items=list.map(m=>{
    const id=String(m.id),image=typeof m.i==='string'&&m.i.length>0;
    const reply=m.r?msgs.find(x=>Number(x.id)===Number(m.r)):null;
-   const item={id,time:Number(m.t)||Date.now(),html:m.h||'',imagePresent:image,topic:cur==='all'?tn(m.k):'',edited:!!m.e,pinned:!!m.p,due:Number(m.due)||0,reply:reply?(plain(reply.h)||'Photo').slice(0,100):'',checks:Array.isArray(m.c)?m.c.map(c=>({text:String(c.x||''),state:Number(c.s)||0})):[]};
+   const item={id,time:Number(m.t)||Date.now(),html:m.h||'',imagePresent:image,topic:tn(m.k),edited:!!m.e,pinned:!!m.p,due:Number(m.due)||0,reply:reply?(plain(reply.h)||'Photo').slice(0,100):'',checks:Array.isArray(m.c)?m.c.map(c=>({text:String(c.x||''),state:Number(c.s)||0})):[]};
    if(image&&nativeImagePayloadCache.get(id)!==m.i){item.image=m.i;nativeImagePayloadCache.set(id,m.i)}
    if(!image)nativeImagePayloadCache.delete(id);
    return item;
   });
-  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',showTopics:cur==='all',selectedIds:[...sel].map(String),items}))}catch(_){}
+  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',showTopics:cur==='all'||cur==='hidden',selectedIds:[...sel].map(String),items}))}catch(_){}
   syncNativeChatOverlay();
   return
  }
@@ -1062,7 +1062,7 @@ function render(){syncHiddenCredentialLifecycle();renderSide();renderTop();
  list.forEach(m=>{const d=new Date(m.t),ds=d.toDateString();
   if(ds!==last){last=ds;const c=document.createElement('div');c.className='chip';c.textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});fragment.appendChild(c)}
   const b=document.createElement('div');b.className='b'+(m.h&&m.h.includes('class="code"')?' has-code':'')+(selMode&&sel.has(Number(m.id))?' sel':'');b.dataset.id=m.id;
-  b.innerHTML=(cur==='all'?'<span class="tg">'+esc(tn(m.k))+'</span>':'')+(m.i?'<img class="im" src="'+m.i+'" alt="Photo">':'')+'<div class="msgtext">'+rq(m)+m.h+'</div>'+(m.due?'<span class="due '+(m.due<Date.now()&&!(m.c&&m.c.every(i=>i.s===1))?'late':'')+'">◷ '+esc(new Date(m.due).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}))+'</span>':'')+ckHtml(m)+'<span class="tm">'+(m.e?'edited · ':'')+d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'<button class="mn" aria-label="Options">⋮</button></span>';
+  b.innerHTML=((cur==='all'||cur==='hidden')?'<span class="tg">'+esc(tn(m.k))+'</span>':'')+(m.i?'<img class="im" src="'+m.i+'" alt="Photo">':'')+'<div class="msgtext">'+rq(m)+m.h+'</div>'+(m.due?'<span class="due '+(m.due<Date.now()&&!(m.c&&m.c.every(i=>i.s===1))?'late':'')+'">◷ '+esc(new Date(m.due).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}))+'</span>':'')+ckHtml(m)+'<span class="tm">'+(m.e?'edited · ':'')+d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'<button class="mn" aria-label="Options">⋮</button></span>';
   const photo=b.querySelector('.im');if(photo)photo.addEventListener('error',()=>{photo.onerror=null;photo.classList.add('image-error');photo.alt='Photo preview could not be loaded';photo.removeAttribute('src')});
   fragment.appendChild(b)});
  chat.appendChild(fragment);chat.scrollTop=chat.scrollHeight}
@@ -1072,6 +1072,13 @@ ed.addEventListener('input',()=>{updateComposerControls();clearTimeout(draftTime
 function restoreDraft(){try{const d=JSON.parse(localStorage.getItem('notes-chat-draft')||'null');if(!d)return;if(d.text)ed.innerHTML=d.text;if(d.listMode){listMode=true;listTitle=d.listTitle||'';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.dataset.ph='Add list items, one per line'}if(d.due)$('#taskdue').value=d.due;if(d.topic==='hidden'){cur='all';hiddenUnlocked=false}else if(d.topic&&((d.topic==='all')||d.topic==='quick'||topics.some(t=>t.id===d.topic)))cur=d.topic;replyId=d.replyId||null;editId=d.editId||null;if(replyId||editId)setCtx();if(d.plain&&d.plain.trim())toast('Draft restored',1800)}catch(e){}}
 function clearSelection(){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop()}
 function handleAppBack(){
+ // The photo viewer sits above the chat and must close before the Activity handles Back.
+ const photoViewer=$('#photoViewer');
+ if(photoViewer&&photoViewer.classList.contains('on')){
+  photoViewer.classList.remove('on');
+  syncNativeChatOverlay();
+  return true
+ }
  // Close the top-most dedicated modal first; the cloud action sheet may still sit underneath.
  if($('#tgcfg').classList.contains('on')){$('#tgcfg').classList.remove('on');return true}
  if($('#cfg').classList.contains('on')){$('#cfg').classList.remove('on');return true}
