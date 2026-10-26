@@ -1112,29 +1112,27 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 }
 
 
-/* Selection toolbar feels like it unfolds out of the selected message, then returns on deselect. */
+/* Telegram-like selection toolbar: slides horizontally, never shrinks into the selected message. */
 #selbar{
- transform-origin:50% 100%;
+ transform-origin:50% 50%;
  backface-visibility:hidden;
  will-change:transform,opacity;
 }
 #selbar.on:not(.leaving){
- animation:selectionPocketOpen .34s cubic-bezier(.16,1,.3,1) both!important;
+ animation:selectionSideIn .20s cubic-bezier(.2,.75,.25,1) both!important;
 }
 #selbar.leaving{
- transform-origin:50% 100%;
- animation:selectionPocketClose .23s cubic-bezier(.4,0,1,1) both!important;
+ animation:selectionSideOut .19s cubic-bezier(.4,0,1,1) both!important;
  pointer-events:none!important;
 }
-@keyframes selectionPocketOpen{
- 0%{opacity:0;transform:scale(.04)}
- 52%{opacity:1;transform:scale(1.055)}
- 76%{opacity:1;transform:scale(.975)}
- 100%{opacity:1;transform:scale(1)}
+@keyframes selectionSideIn{
+ 0%{opacity:0;transform:translateX(26px)}
+ 78%{opacity:1;transform:translateX(-2px)}
+ 100%{opacity:1;transform:translateX(0)}
 }
-@keyframes selectionPocketClose{
- 0%{opacity:1;transform:scale(1)}
- 100%{opacity:0;transform:scale(.04)}
+@keyframes selectionSideOut{
+ 0%{opacity:1;transform:translateX(0)}
+ 100%{opacity:0;transform:translateX(-18px)}
 }
 @media(prefers-reduced-motion:reduce){
  #selbar.on:not(.leaving),#selbar.leaving{animation:none!important}
@@ -2069,14 +2067,7 @@ window.flushCloudBackupBeforeClose=()=>{
   doGoogleBackup(true,true,true);
 };
 try{const th=localStorage.getItem('notes-theme');document.documentElement.dataset.theme=th||'dark'}catch(e){}
-let selectionExitTimer=0,selectionReturnTimer=0,selectionPocketOrigin=null;
-function setSelectionPocketOrigin(bar){
- if(!selectionPocketOrigin||!Number.isFinite(selectionPocketOrigin.x)||!Number.isFinite(selectionPocketOrigin.y))return;
- const s=getComputedStyle(bar);
- const left=parseFloat(s.left)||0,top=parseFloat(s.top)||0;
- // Use the untransformed fixed slot. getBoundingClientRect() includes the running scale animation.
- bar.style.transformOrigin=(selectionPocketOrigin.x-left)+'px '+(selectionPocketOrigin.y-top)+'px';
-}
+let selectionExitTimer=0,selectionReturnTimer=0;
 function updateSelectionModeUI(active){
  const bar=$('#selbar'),body=document.body,wasActive=body.classList.contains('selection-mode');
  if(active){
@@ -2084,18 +2075,18 @@ function updateSelectionModeUI(active){
   if(selectionReturnTimer){clearTimeout(selectionReturnTimer);selectionReturnTimer=0}
   body.classList.remove('selection-mode-out','selection-mode-return');
   body.classList.add('selection-mode');
+  bar.style.transformOrigin='50% 50%';
   bar.classList.remove('leaving');
   bar.classList.add('on');
-  if(!wasActive)setSelectionPocketOrigin(bar);
   return
  }
  if(wasActive){
-  setSelectionPocketOrigin(bar);
   body.classList.remove('selection-mode');
   body.classList.add('selection-mode-out');
+  bar.style.transformOrigin='50% 50%';
   bar.classList.add('leaving');
   if(selectionExitTimer)clearTimeout(selectionExitTimer);
-  // Collapse from the same note anchor used by the opening animation.
+  // Let the side-slide/fade finish; don't collapse the toolbar back into a note.
   selectionExitTimer=setTimeout(()=>{
    body.classList.remove('selection-mode-out');
    body.classList.add('selection-mode-return');
@@ -2107,7 +2098,7 @@ function updateSelectionModeUI(active){
     body.classList.remove('selection-mode-return');
     selectionReturnTimer=0
    },280)
-  },250);
+  },205);
   return
  }
  if(!body.classList.contains('selection-mode-out'))bar.classList.remove('leaving','on')
@@ -2115,7 +2106,6 @@ function updateSelectionModeUI(active){
 function renderTop(){const pn=msgs.filter(m=>m.p&&inView(m)).pop(),pb=$('#pin');pb.classList.toggle('on',!!pn);if(pn){pb.dataset.id=pn.id;pb.querySelector('span').textContent=plain(pn.h)||'Photo'}updateSelectionModeUI(selMode&&sel.size>0);$('#selc').textContent=sel.size+' selected';syncNativeSelection()}
 window.nativeChatSelectionChanged=function(raw,originX,originY){
  let ids=[];try{ids=JSON.parse(raw||'[]').map(Number).filter(Number.isFinite)}catch(_){}
- if(Number.isFinite(originX)&&Number.isFinite(originY))selectionPocketOrigin={x:originX,y:originY};
  sel.clear();ids.forEach(id=>{if(msgs.some(m=>Number(m.id)===id))sel.add(id)});
  selMode=sel.size>0;
  renderTop();
