@@ -712,6 +712,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             GradientDrawable bubbleBg = new GradientDrawable();
             bubbleBg.setColor(bg);
             bubbleBg.setCornerRadii(new float[]{dp(17),dp(17),dp(17),dp(17),dp(5),dp(5),dp(17),dp(17)});
+            // Matching border width keeps the drawable's inner content geometry identical when selected.
+            bubbleBg.setStroke(dp(1), light ? Color.rgb(219, 228, 240) : Color.rgb(43, 59, 79));
             bubble.setBackground(bubbleBg);
 
             topicLabel.setVisibility(topics && !TextUtils.isEmpty(note.topic) ? VISIBLE : GONE);
@@ -809,7 +811,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             menu.setAlpha(1f);
             menu.setScaleX(1f);
             menu.setScaleY(1f);
-            menu.setVisibility(selectionMode ? GONE : VISIBLE);
+            // Keep the footer's menu slot reserved; GONE changes bubble width/height on selection.
+            menu.setVisibility(selectionMode ? INVISIBLE : VISIBLE);
             indicator.setColors(light ? LIGHT_ACCENT : 0xff3390ec, muted);
             if (selectionMode) {
                 indicator.setVisibility(VISIBLE);
@@ -848,7 +851,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                         .setDuration(125)
                         .setInterpolator(new DecelerateInterpolator())
                         .withEndAction(() -> {
-                            if (!selectedIds.isEmpty()) menu.setVisibility(GONE);
+                            if (!selectedIds.isEmpty()) menu.setVisibility(INVISIBLE);
                         })
                         .start();
                 return;
@@ -895,10 +898,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bubble.setBackground(background);
             bubble.setElevation(dp(selected ? 2f : 1.5f));
             // Keep the selected message response on the hardware compositor; avoid layout changes.
-            bubble.animate().translationX(selected ? -dp(1.5f) : 0f)
-                    .scaleX(selected ? 1.008f : 1f)
-                    .scaleY(selected ? 1.008f : 1f)
-                    .setDuration(240)
+            // Never scale/translate the bubble itself: selection must not alter its visible size.
+            bubble.animate().translationX(0f).scaleX(1f).scaleY(1f)
+                    .setDuration(220)
                     .setInterpolator(new DecelerateInterpolator(1.5f))
                     .withLayer()
                     .start();
