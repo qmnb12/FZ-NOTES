@@ -1649,26 +1649,45 @@ async function restoreLegacyWithPassword(pw){
  catch(e){toast('Old backup restore failed: '+e.message,4500)}
 }
 async function onGoogleConnected(token,key){
- const c=cfgGet();c.driveOn=true;cfgSet(c);
- const freshInstall=!hadLocalNotesState&&msgs.length===0&&topics.length<=1;
- if(freshInstall){
-  toast('Google Drive ka latest backup dhoondh raha hoon…',4000);
-  try{
-   const restored=await restoreLatestDriveBackup(token,key,true);
+ const c=cfgGet();
+ const hasLocalContent=msgs.length>0||topics.length>1;
+ // Empty/default-only local state should be restored even if startup has already
+ // created an empty localStorage key. Keep non-empty local notes safe from auto-restore.
+ try{
+  if(!hasLocalContent){
+   toast('Google Drive ka latest backup dhoondh raha hoon…',4000);
+   const restored=await restoreLatestDriveBackup(token,key,false);
    if(restored){
+    c.driveOn=true;cfgSet(c);
     $('#cfg').classList.remove('on');
     hadLocalNotesState=true;
     setTimeout(()=>doGoogleBackup(true,true),1200);
     return;
    }
-   if(legacyRestoreId){$('#cfg').classList.remove('on');return}
-  }catch(e){
-   openCfg();toast('Drive restore fail: '+e.message,4500);return;
+   if(legacyRestoreId){c.driveOn=true;cfgSet(c);$('#cfg').classList.remove('on');return}
+   c.driveOn=true;cfgSet(c);
+   openCfg();
+   toast('Google account connected, lekin is account mein purana FZ NOTES backup nahi mila.',4500);
+   return;
   }
+
+  // Test actual Drive listing before saying the account is connected. If backups
+  // already exist, offer manual restore and don't silently replace local data.
+  const backups=JSON.parse(await native('drivehistory',{token}));
+  c.driveOn=true;cfgSet(c);
+  openCfg();
+  if(backups.length){
+   driveHistoryItems=backups;
+   toast('Google connected · '+backups.length+' cloud backups mile. Restore dabakar backup choose karo; current notes auto-overwrite nahi hongi.',5000);
+   return;
+  }
+  toast('Google connected · cloud mein purana backup nahi mila. Current notes ka backup bana raha hoon.',4000);
+  setTimeout(()=>doGoogleBackup(true,true,true),700);
+ }catch(e){
+  c.driveOn=false;cfgSet(c);cachedDriveAuth=null;
+  openCfg();
+  toast('Google Drive connect/test failed: '+e.message,5000);
  }
- openCfg();
- if(msgs.length>0||topics.length>1)setTimeout(()=>doGoogleBackup(true,true,true),700);
- else toast('Google account connected · backup list check kar li',3000);
 }
 async function startupCloudSync(){
  const c=cfgGet();if(!c.driveOn)return;
