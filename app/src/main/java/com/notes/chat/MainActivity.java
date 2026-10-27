@@ -113,10 +113,14 @@ public class MainActivity extends Activity {
         nativeChatView.setBackgroundColor(Color.TRANSPARENT);
         nativeChatView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         nativeChatView.setClipToPadding(false);
-        nativeChatView.setPadding(0, dp(7), 0, dp(54));
+        nativeChatView.setPadding(0, dp(7), 0, dp(16));
         nativeChatView.setItemViewCacheSize(12);
         nativeChatView.setNestedScrollingEnabled(false);
-        nativeChatView.setLayoutManager(new LinearLayoutManager(this, RecyclerView.VERTICAL, false));
+        LinearLayoutManager chatLayoutManager = new LinearLayoutManager(this, RecyclerView.VERTICAL, false);
+        // Keep a short conversation anchored just above the floating action buttons,
+        // instead of leaving a large empty area between the last note and the composer.
+        chatLayoutManager.setStackFromEnd(true);
+        nativeChatView.setLayoutManager(chatLayoutManager);
         DefaultItemAnimator itemAnimator = new DefaultItemAnimator();
         itemAnimator.setAddDuration(210);
         itemAnimator.setMoveDuration(230);
