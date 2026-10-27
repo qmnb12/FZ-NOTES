@@ -150,6 +150,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
         }
         final JSONArray array = root.optJSONArray("items");
+        final boolean forceFollowLatest = root.optBoolean("forceFollowLatest", false);
         final int oldItemCount = items.size();
         final String oldLastId = oldItemCount > 0 ? items.get(oldItemCount - 1).id : null;
         boolean wasAtBottom = oldItemCount == 0;
@@ -224,8 +225,12 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         final String newLastId = next.isEmpty() ? null : next.get(next.size() - 1).id;
         final boolean appendedLatestMessage = next.size() > oldItemCount
                 && newLastId != null && !newLastId.equals(oldLastId);
-        final boolean shouldFollowLatest = oldItemCount == 0 && !next.isEmpty()
-                || wasAtBottom && appendedLatestMessage;
+        // A user-authored send must stay visible even if the keyboard just resized the
+        // RecyclerView and made the previous bottom check stale. Incoming/background changes
+        // still follow the timeline only when the user was already at the bottom.
+        final boolean shouldFollowLatest = forceFollowLatest
+                || (oldItemCount == 0 && !next.isEmpty())
+                || (wasAtBottom && appendedLatestMessage);
         if (recyclerView != null && shouldFollowLatest) {
             recyclerView.post(() -> {
                 if (recyclerView != null && getItemCount() > 0) {
