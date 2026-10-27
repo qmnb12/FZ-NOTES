@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.view.Gravity;
+import android.view.inputmethod.InputMethodManager;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.PopupWindow;
@@ -113,7 +114,7 @@ public class MainActivity extends Activity {
         nativeChatView.setBackgroundColor(Color.TRANSPARENT);
         nativeChatView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         nativeChatView.setClipToPadding(false);
-        nativeChatView.setPadding(0, dp(7), 0, dp(16));
+        nativeChatView.setPadding(0, dp(7), 0, dp(8));
         nativeChatView.setItemViewCacheSize(12);
         nativeChatView.setNestedScrollingEnabled(false);
         LinearLayoutManager chatLayoutManager = new LinearLayoutManager(this, RecyclerView.VERTICAL, false);
@@ -683,6 +684,23 @@ public class MainActivity extends Activity {
 
     /** JS -> Java bridge for encrypted cloud backup (runs on a background thread). */
     class Bridge {
+        @JavascriptInterface
+        public void showSoftKeyboard() {
+            // WebView can focus a field without asking Android to display the IME.
+            // Explicitly request it after the CSS modal/focus transition has completed.
+            runOnUiThread(() -> {
+                if (web == null || isFinishing()) return;
+                web.requestFocus();
+                web.postDelayed(() -> {
+                    if (web == null || isFinishing()) return;
+                    InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        imm.showSoftInput(web, InputMethodManager.SHOW_IMPLICIT);
+                    }
+                }, 90L);
+            });
+        }
+
         @JavascriptInterface
         public void showNativeMessageMenu(final String id, final String json) {
             runOnUiThread(() -> showNativeMessageMenuInternal(id, json));
