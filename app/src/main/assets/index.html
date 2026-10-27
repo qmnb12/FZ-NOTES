@@ -1475,7 +1475,6 @@ function keepComposerFocused(){
  try{const range=document.createRange();range.selectNodeContents(ed);range.collapse(false);const s=window.getSelection();s.removeAllRanges();s.addRange(range)}catch(_){}
  updateComposerControls();
 }
-$('#send').addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&document.activeElement===ed)e.preventDefault()});
 $('#send').addEventListener('mousedown',e=>{if(document.activeElement===ed)e.preventDefault()});
 function send(){const h=clean(ed);if(!ed.textContent.trim())return;
  const wasEditing=!!editId;
