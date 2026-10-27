@@ -1120,7 +1120,49 @@ public class MainActivity extends Activity {
         overlay.setBackgroundColor(Color.TRANSPARENT);
         overlay.setClickable(true);
         overlay.setFocusableInTouchMode(true);
-        overlay.setOnClickListener(v -> dismissNativeMessagePopup());
+
+        // The menu is a full-window popup, so outside touches normally only dismiss it
+        // and never reach the RecyclerView underneath. In selection mode, route a single
+        // tap on a note through to the adapter: close the popup and toggle that note
+        // together, rather than requiring separate taps to dismiss and then select.
+        final float[] outsideDown = new float[2];
+        final boolean[] outsideMoved = new boolean[1];
+        overlay.setOnTouchListener((v, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    outsideDown[0] = event.getRawX();
+                    outsideDown[1] = event.getRawY();
+                    outsideMoved[0] = false;
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    if (Math.abs(event.getRawX() - outsideDown[0]) > dp(12)
+                            || Math.abs(event.getRawY() - outsideDown[1]) > dp(12)) {
+                        outsideMoved[0] = true;
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                    if (outsideMoved[0]) return true;
+                    if (nativeChatAdapter != null && nativeChatView != null
+                            && nativeChatAdapter.hasSelection()) {
+                        int[] chatLocation = new int[2];
+                        nativeChatView.getLocationOnScreen(chatLocation);
+                        float x = event.getRawX() - chatLocation[0];
+                        float y = event.getRawY() - chatLocation[1];
+                        String hitId = nativeChatAdapter.idAt(x, y);
+                        if (hitId != null) {
+                            dismissNativeMessagePopupImmediately();
+                            nativeChatAdapter.toggleSelectionFromPopupTap(hitId);
+                            return true;
+                        }
+                    }
+                    dismissNativeMessagePopup();
+                    return true;
+                case MotionEvent.ACTION_CANCEL:
+                    return true;
+                default:
+                    return true;
+            }
+        });
 
         card.setClickable(true);
         card.setPivotX(menuWidth / 2f);
