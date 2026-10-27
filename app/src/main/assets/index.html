@@ -1535,12 +1535,28 @@ $('#listfab').onclick=()=>{if(listMode){listMode=false;listTitle='';$('#listfab'
 ed.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'))});
 document.addEventListener('selectionchange',()=>{const s=getSelection();const selectedAny=s.rangeCount&&!s.isCollapsed;if(selectedAny)lastAnySelectionRange=s.getRangeAt(0).cloneRange();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;if(!selected&&!nativeSelectionMenuOpen){nativeSelectionSession=false;$('#tb').classList.remove('native-selection-hidden')}$('#tb').classList.remove('on');if(selected){$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',b.dataset.a==='mono'&&!!(s.anchorNode.parentElement&&s.anchorNode.parentElement.closest('.mono'))))}}else{nativeSelectionSession=false;$('#tb').classList.remove('on','native-selection-hidden')}});
 function restore(){ed.focus();if(saved){const s=getSelection();s.removeAllRanges();s.addRange(saved)}}function placeCaretAtEnd(el){try{el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();s.removeAllRanges();s.addRange(r)}catch(_){}if(el===ed)updateComposerControls()}
+let nativeImeFocusTarget=null,nativeImeFocusAt=0;
+function requestNativeKeyboard(el){
+ if(!el||!window.Android||typeof window.Android.showSoftKeyboard!=="function")return;
+ const now=Date.now();
+ if(nativeImeFocusTarget===el&&now-nativeImeFocusAt<260)return;
+ nativeImeFocusTarget=el;nativeImeFocusAt=now;
+ try{window.Android.showSoftKeyboard()}catch(_){}
+}
+// Catch programmatic focus from other dialogs/settings too, not just the known broken prompts.
+document.addEventListener('focusin',e=>{
+ const el=e.target;
+ if(!el||el.nodeType!==1||!el.matches('textarea,[contenteditable="true"],input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="range"]):not([type="color"]):not([type="date"]):not([type="datetime-local"]):not([type="time"])'))return;
+ setTimeout(()=>{
+  if(document.activeElement===el&&el.isConnected&&(el.offsetWidth||el.offsetHeight||el.getClientRects().length))requestNativeKeyboard(el);
+ },80);
+},true);
 function focusWithKeyboard(el,caretAtEnd=false){
  if(!el)return;
  const attempt=()=>{
   if(!el.isConnected||!(el.offsetWidth||el.offsetHeight||el.getClientRects().length))return;
   try{if(caretAtEnd&&el===ed)placeCaretAtEnd(el);else el.focus({preventScroll:true})}catch(_){try{el.focus()}catch(__){}}
-  try{if(el===ed)updateComposerControls();if(window.Android&&typeof window.Android.showSoftKeyboard==="function")window.Android.showSoftKeyboard()}catch(_){}
+  try{if(el===ed)updateComposerControls();requestNativeKeyboard(el)}catch(_){}
  };
  try{requestAnimationFrame(()=>setTimeout(attempt,90))}catch(_){setTimeout(attempt,90)}
  setTimeout(attempt,240)
