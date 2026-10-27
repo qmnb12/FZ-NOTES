@@ -2113,6 +2113,7 @@ const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return 'hsl(
 const first=s=>[...s][0].toUpperCase();
 function renderSide(){
  const side=$('#side');
+ const retainedTopicScroll=side.querySelector('#sideList')?.scrollTop||0;
  side.innerHTML='<div id="sideQuick"></div><div id="sideList"></div><div id="sideBottom"></div>';
  const quickSlot=$('#sideQuick'),listSlot=$('#sideList'),bottomSlot=$('#sideBottom');
  side.style.display='';
@@ -2144,6 +2145,7 @@ function renderSide(){
   lockButton.innerHTML='<i><svg class="quick-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2.5 4.8 13h5.8l-.7 8.5L19.3 10h-6z"/></svg></i><span>Lock</span>';
   lockButton.onclick=()=>{hiddenUnlocked=false;cur='all';hiddenTopicFilter='';render();toast('Hidden Notes locked',1800)};
   bottomSlot.appendChild(lockButton);
+  listSlot.scrollTop=retainedTopicScroll;
   $('#sub').textContent=msgs.filter(inView).length+' hidden notes';
   return;
  }
@@ -2160,6 +2162,7 @@ function renderSide(){
  }
  makeTopicButton({id:'quick',name:'Quick'},quickSlot);
  topics.filter(t=>t.id!=='gen'&&t.id!=='hidden').forEach(t=>makeTopicButton(t,listSlot));
+ listSlot.scrollTop=retainedTopicScroll;
  const addButton=document.createElement('button');
  addButton.className='tp add';
  addButton.innerHTML='<i>+</i><span>New</span>';
