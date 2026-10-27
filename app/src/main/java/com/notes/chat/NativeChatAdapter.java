@@ -327,6 +327,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         return !selectedIds.isEmpty();
     }
 
+    // Used when a tap lands on a note while the full-window message menu is open.
+    // It lets one tap both dismiss the menu and update multi-selection.
+    void toggleSelectionFromPopupTap(String id) {
+        if (id == null) return;
+        toggleSelectionById(id);
+    }
+
     String idAt(float x, float y) {
         if (recyclerView == null) return null;
         View child = recyclerView.findChildViewUnder(x, y);
