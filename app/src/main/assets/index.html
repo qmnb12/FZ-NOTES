@@ -1389,7 +1389,7 @@ function installNativeChatOverlayObservers(){
  bodyObserver.observe(document.body,{childList:true});
  document.addEventListener('visibilitychange',syncNativeChatOverlay);
 }
-function render(){syncHiddenCredentialLifecycle();if(cur!=='hidden'){try{localStorage.setItem('notes-last-topic',cur)}catch(e){}}renderSide();renderTop();
+function render(forceScrollToLatest=false){syncHiddenCredentialLifecycle();if(cur!=='hidden'){try{localStorage.setItem('notes-last-topic',cur)}catch(e){}}renderSide();renderTop();
  const list=msgs.filter(m=>(q.trim()?inSearchScope(m):inView(m))&&searchMatches(m)&&matchesFilter(m));
  if(searchFilter==='focus')list.sort((a,b)=>(a.due||Infinity)-(b.due||Infinity));
  if(q.trim()){
@@ -1414,7 +1414,7 @@ function render(){syncHiddenCredentialLifecycle();if(cur!=='hidden'){try{localSt
    if(!image)nativeImagePayloadCache.delete(id);
    return item;
   });
-  try{window.Android.setNativeChatData(JSON.stringify({theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,messageCornerRadius:messageCornerRadius,searchHighlightId:searchHighlightedId,showTopics:cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'),selectedIds:[...sel].map(String),items}))}catch(_){}
+  try{window.Android.setNativeChatData(JSON.stringify({forceFollowLatest:!!forceScrollToLatest,theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,messageCornerRadius:messageCornerRadius,searchHighlightId:searchHighlightedId,showTopics:cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'),selectedIds:[...sel].map(String),items}))}catch(_){}
   syncNativeChatOverlay();
   return
  }
@@ -1470,17 +1470,25 @@ function handleAppBack(){
  return false
 }
 window.handleAppBack=handleAppBack;
+function keepComposerFocused(){
+ try{ed.focus({preventScroll:true})}catch(_){try{ed.focus()}catch(__){}}
+ try{const range=document.createRange();range.selectNodeContents(ed);range.collapse(false);const s=window.getSelection();s.removeAllRanges();s.addRange(range)}catch(_){}
+ updateComposerControls();
+}
+$('#send').addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&document.activeElement===ed)e.preventDefault()});
+$('#send').addEventListener('mousedown',e=>{if(document.activeElement===ed)e.preventDefault()});
 function send(){const h=clean(ed);if(!ed.textContent.trim())return;
+ const wasEditing=!!editId;
  const em=editId&&msgs.find(m=>m.id===editId);
  if(listMode||(em&&em.c)){const title=(listTitle||(em&&plain(em.h))||'').trim();const L=ed.innerText.split('\n').map(x=>x.trim()).filter(Boolean);if(!title||!L.length){toast('List ka naam aur kam se kam ek item likhein',2500);return}
   const items=L.map(x=>{const o=em&&em.c&&em.c.find(i=>i.x===x);return{x,s:o?o.s:0}});
   const dueText=$('#taskdue').value;const due=dueText?new Date(dueText).getTime():(em&&em.due||0);
   if(em){em.h='<b>'+esc(title)+'</b>';em.c=items;em.due=due||undefined;em.e=1;editId=null;if(due)scheduleReminder(em)}
   else{const rm=replyId&&msgs.find(m=>m.id===replyId);const task={id:Date.now(),t:Date.now(),h:'<b>'+esc(title)+'</b>',c:items,due:due||undefined,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined};msgs.push(task);if(due)scheduleReminder(task);replyId=null}
-  listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');$('#taskdue').value='';ed.innerHTML='';updateComposerControls();ed.dataset.ph='Message in Notes';clearDraft();setCtx();save();render();return}
+  listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');$('#taskdue').value='';ed.innerHTML='';updateComposerControls();ed.dataset.ph='Message in Notes';clearDraft();setCtx();save();render(!wasEditing);keepComposerFocused();return}
  if(editId){const m=msgs.find(m=>m.id===editId);if(m){m.h=h;m.e=1}editId=null}
  else{const rm=replyId&&msgs.find(m=>m.id===replyId);msgs.push({id:Date.now(),t:Date.now(),h,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});replyId=null}
- ed.innerHTML='';updateComposerControls();clearDraft();setCtx();save();render()}$('#send').onclick=send;
+ ed.innerHTML='';updateComposerControls();clearDraft();setCtx();save();render(!wasEditing);keepComposerFocused()}$('#send').onclick=send;
 $('#listfab').onclick=()=>{if(listMode){listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';toast('Checklist mode off');return}ask('listtitle','List ka naam likhein');};
 ed.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'))});
 document.addEventListener('selectionchange',()=>{const s=getSelection();const selectedAny=s.rangeCount&&!s.isCollapsed;if(selectedAny)lastAnySelectionRange=s.getRangeAt(0).cloneRange();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;if(!selected&&!nativeSelectionMenuOpen){nativeSelectionSession=false;$('#tb').classList.remove('native-selection-hidden')}$('#tb').classList.remove('on');if(selected){$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',b.dataset.a==='mono'&&!!(s.anchorNode.parentElement&&s.anchorNode.parentElement.closest('.mono'))))}}else{nativeSelectionSession=false;$('#tb').classList.remove('on','native-selection-hidden')}});
