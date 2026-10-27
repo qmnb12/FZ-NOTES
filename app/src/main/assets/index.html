@@ -1230,6 +1230,20 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 
 /* Apply the custom corner slider to web-rendered notes too. */
 #chat .b{border-radius:var(--msg-radius,17px) var(--msg-radius,17px) 5px var(--msg-radius,17px)!important}
+
+
+/* Compact chat timeline spacing and refreshed action buttons. */
+#chat{padding-bottom:76px!important;scroll-padding-bottom:76px!important}
+#chatw>#fab{right:12px!important;bottom:12px!important;width:48px!important;height:48px!important;display:grid!important;place-items:center!important;padding:0!important;border:1px solid rgba(255,205,88,.42)!important;border-radius:50%!important;background:linear-gradient(145deg,#ffc233,#e39a00)!important;color:#fff!important;font-size:0!important;line-height:1!important;box-shadow:0 5px 15px rgba(230,161,0,.23),0 2px 8px rgba(0,0,0,.32)!important}
+#chatw>#listfab{right:68px!important;bottom:17px!important;width:40px!important;height:40px!important;display:grid!important;place-items:center!important;padding:0!important;border:1px solid rgba(126,174,255,.30)!important;border-radius:50%!important;background:linear-gradient(145deg,rgba(24,39,60,.98),rgba(12,21,34,.98))!important;color:#a7c7ff!important;font-size:0!important;line-height:1!important;box-shadow:0 3px 10px rgba(0,0,0,.25)!important}
+#chatw>#fab svg,#chatw>#listfab svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+#chatw>#listfab svg{width:21px;height:21px;stroke-width:1.9}
+#chatw>#fab:active,#chatw>#listfab:active{transform:scale(.93);filter:brightness(1.08)}
+#chatw>#listfab.on{background:linear-gradient(145deg,#4a91ff,#286ad1)!important;border-color:rgba(175,211,255,.72)!important;color:#fff!important;box-shadow:0 4px 12px rgba(52,125,229,.28)!important}
+#att{display:grid!important;place-items:center!important;flex:0 0 36px!important;width:36px!important;height:40px!important;padding:0!important;border:1px solid rgba(133,179,238,.18)!important;border-radius:13px!important;background:rgba(117,170,255,.075)!important;color:#a8ccff!important;font-size:0!important;line-height:1!important;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s ease,background .12s ease!important}
+#att svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+#att:active{transform:scale(.94);background:rgba(117,170,255,.16)!important}
+@media(max-width:420px){#chat{padding-bottom:76px!important;scroll-padding-bottom:76px!important}#chatw>#listfab{right:66px!important;bottom:17px!important}#chatw>#fab{right:10px!important;bottom:12px!important}#att{flex-basis:34px!important;width:34px!important}}
 </style>
 </head>
 <body>
@@ -1251,7 +1265,7 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 <div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
 <div id="pin"><div class="cx"><b id="pinTitle">Pinned note</b><span id="pinPreview"></span></div><button type="button" id="pinPrev" aria-label="Previous pinned note" title="Previous pin"><svg viewBox="0 0 24 24"><path d="m6 14 6-6 6 6"/></svg></button><button type="button" id="pinNext" aria-label="Next pinned note" title="Next pin"><svg viewBox="0 0 24 24"><path d="m6 10 6 6 6-6"/></svg></button></div>
 <div id="selbar"><button data-s="x" aria-label="Exit selection" title="Cancel selection">✕</button><span id="selc">1 selected</span><button data-s="reply" aria-label="Reply" title="Reply">↩</button><button data-s="copy" aria-label="Copy selected" title="Copy">▢</button><button data-s="more" aria-label="More actions" title="More actions">⋮</button><button data-s="del" aria-label="Delete selected" title="Delete">🗑</button></div>
-<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Create task list">☑</button><button id="fab" aria-label="Quick note" title="Quick note">+</button></div></div></div>
+<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div><button id="listfab" aria-label="Create checklist" title="Create task list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h12M9 12h12M9 19h12"/><path d="m3 5 1.5 1.5L7 4.5M3 12l1.5 1.5L7 11.5M3 19l1.5 1.5L7 18.5"/></svg></button><button id="fab" aria-label="Quick note" title="Quick note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div></div></div>
 <div id="footer">
 <div id="tb">
 <button data-a="b" aria-label="Bold" title="Bold"><b class="fmticon">B</b></button><button data-a="i" aria-label="Italic" title="Italic"><i class="fmticon">I</i></button>
@@ -1264,7 +1278,7 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 <div id="taskmeta"><label for="taskdue">Due / reminder</label><input id="taskdue" type="datetime-local"><span>Optional reminder</span></div>
 <div id="ctx"><div class="cx"><b id="cxt"></b><span id="cxs"></span></div><button id="cxx" aria-label="Cancel">✕</button></div>
 <div id="lk" role="dialog" aria-modal="true" aria-labelledby="lkTitle"><div class="lk-card"><div class="lk-head"><div><div class="lk-eyebrow" id="lkEyebrow">FZ NOTES · ACTION</div><h3 id="lkTitle">Enter details</h3></div><button type="button" id="lkclose" aria-label="Close dialog">×</button></div><p id="lkHint" class="lk-hint"></p><div class="lk-fields"><input id="lki" type="text" autocomplete="off"><button id="lkok" type="button">Continue</button></div></div></div>
-<div id="cmp"><button id="att" aria-label="Attach image">📎</button><input id="fi" type="file" accept="image/*" hidden><div id="ed" contenteditable="true" data-ph="Message in Notes"></div><button id="send" aria-label="Send" title="Send message">➤</button></div>
+<div id="cmp"><button id="att" type="button" aria-label="Attach image" title="Attach photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 11.5-8.8 8.8a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.6 5.6l-9.1 9.1a2 2 0 0 1-2.9-2.8l8.5-8.5"/></svg></button><input id="fi" type="file" accept="image/*" hidden><div id="ed" contenteditable="true" data-ph="Message in Notes"></div><button id="send" aria-label="Send" title="Send message">➤</button></div>
 </div>
 <div id="cfg"><div class="cfgb">
   <div class="cfg-top"><div class="cfg-brand"><span class="cfg-brand-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h11a4 4 0 0 0 .3-8A6.5 6.5 0 0 0 6 8.8 4.8 4.8 0 0 0 7 18Z"/><path d="M12 11v8m-3-3 3 3 3-3"/></svg></span><div><h3>Google Drive</h3><p class="hint">Automatic notes backup and restore</p></div></div><span class="cfg-badge">FZ NOTES</span></div>
@@ -2539,43 +2553,84 @@ $('#selbar').onclick=e=>{
  if(Date.now()-selectionToolbarPointerAt<700){e.preventDefault();e.stopPropagation();return}
  handleSelectionToolbarAction(e);
 };
-$('#att').onclick=()=>$('#fi').click();
-$('#fi').onchange=e=>{
+$('#att').onclick=()=>{
+ const input=$('#fi');
+ try{if(typeof input.showPicker==='function')input.showPicker();else input.click()}
+ catch(_){input.click()}
+};
+function readImageAsDataUrl(blob){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onload=()=>resolve(String(reader.result||''));
+  reader.onerror=()=>reject(new Error('Photo read nahi ho paayi. Dobara try karo.'));
+  reader.readAsDataURL(blob);
+ });
+}
+function drawResizedImage(image){
+ const iw=image.naturalWidth||image.width,ih=image.naturalHeight||image.height;
+ if(!iw||!ih)throw new Error('Image dimensions unavailable');
+ const scale=Math.min(1,1200/Math.max(iw,ih));
+ const canvas=document.createElement('canvas');
+ canvas.width=Math.max(1,Math.round(iw*scale));
+ canvas.height=Math.max(1,Math.round(ih*scale));
+ const ctx=canvas.getContext('2d');
+ if(!ctx)throw new Error('Canvas unavailable');
+ // Keep transparent PNG areas white when exporting JPEG.
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.drawImage(image,0,0,canvas.width,canvas.height);
+ return canvas;
+}
+async function encodeOptimizedJpeg(canvas,fallback=''){
+ try{
+  if(typeof canvas.toBlob==='function'){
+   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.82));
+   if(blob)return await readImageAsDataUrl(blob);
+  }
+ }catch(_){}
+ try{
+  const data=canvas.toDataURL('image/jpeg',.82);
+  if(data&&data!=='data:,')return data;
+ }catch(_){}
+ return fallback;
+}
+async function compressAttachment(file){
+ let bitmap=null;
+ if(typeof createImageBitmap==='function'){
+  try{
+   bitmap=await createImageBitmap(file);
+   const canvas=drawResizedImage(bitmap);
+   bitmap.close();bitmap=null;
+   const compressed=await encodeOptimizedJpeg(canvas);
+   if(compressed)return compressed;
+  }catch(_){if(bitmap&&typeof bitmap.close==='function')bitmap.close();bitmap=null}
+ }
+ const source=await readImageAsDataUrl(file);
+ if(!source.startsWith('data:image/'))throw new Error('Image data read nahi hui');
+ const image=await new Promise((resolve,reject)=>{
+  const img=new Image();
+  img.onload=()=>resolve(img);
+  img.onerror=()=>reject(new Error('Is photo format ko open nahi kar paye. JPG ya PNG try karo.'));
+  img.src=source;
+ });
+ let canvas=null;
+ try{canvas=drawResizedImage(image)}catch(_){}
+ if(canvas){
+  const compressed=await encodeOptimizedJpeg(canvas,source);
+  if(compressed)return compressed;
+ }
+ if(source.length<=3*1024*1024)return source;
+ throw new Error('Photo conversion fail hui aur file badi hai. Smaller JPG/PNG choose karo.');
+}
+$('#fi').onchange=async e=>{
  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
  if(f.type&&!f.type.startsWith('image/')){toast('Image file select karo',2600);return}
- const r=new FileReader();
- r.onerror=()=>toast('Photo read nahi ho paayi. Dobara try karo.',3200);
- r.onload=()=>{
-  const source=String(r.result||'');if(!source.startsWith('data:image/')){toast('Image data read nahi hui',3000);return}
-  const im=new Image();
-  im.onerror=()=>toast('Is photo format ko open nahi kar paye. JPG ya PNG try karo.',3500);
-  im.onload=()=>{
-   let photoData=source;
-   try{
-    const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
-    if(!iw||!ih)throw new Error('Image dimensions unavailable');
-    const scale=Math.min(1,1200/Math.max(iw,ih));
-    const c=document.createElement('canvas');c.width=Math.max(1,Math.round(iw*scale));c.height=Math.max(1,Math.round(ih*scale));
-    const ctx=c.getContext('2d',{willReadFrequently:true});if(!ctx)throw new Error('Canvas unavailable');
-    // Paint behind transparent PNG pixels before JPEG export; transparent-to-JPEG often turns black.
-    ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(im,0,0,c.width,c.height);
-    const pts=[[.12,.12],[.5,.12],[.88,.12],[.12,.5],[.5,.5],[.88,.5],[.12,.88],[.5,.88],[.88,.88]];
-    const lumas=pts.map(p=>{const x=Math.min(c.width-1,Math.floor(c.width*p[0])),y=Math.min(c.height-1,Math.floor(c.height*p[1]));const d=ctx.getImageData(x,y,1,1).data;return (d[0]+d[1]+d[2])/3});
-    const lo=Math.min.apply(null,lumas),hi=Math.max.apply(null,lumas);
-    // A suspicious solid-black/solid-white canvas is safer to keep as the original than send a black preview.
-    if(hi-lo<3&&(hi<18||lo>250))throw new Error('Canvas preview looks blank');
-    const compressed=c.toDataURL('image/jpeg',.82);if(!compressed||compressed==='data:,')throw new Error('Image compression failed');photoData=compressed;
-   }catch(err){
-    photoData=source;
-    if(source.length>3*1024*1024){toast('Photo conversion fail hui aur file badi hai. Smaller JPG/PNG choose karo.',4500);return}
-   }
-   const rm=replyId&&msgs.find(m=>m.id===replyId);
-   msgs.push({id:Date.now(),t:Date.now(),h:clean(ed),i:photoData,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});
-   replyId=null;editId=null;ed.innerHTML='';updateComposerControls();setCtx();save();render();
-  };
-  im.src=source;
- };
- r.readAsDataURL(f);
+ try{
+  const photoData=await compressAttachment(f);
+  if(!photoData.startsWith('data:image/'))throw new Error('Image data read nahi hui');
+  const rm=replyId&&msgs.find(m=>m.id===replyId);
+  msgs.push({id:Date.now(),t:Date.now(),h:clean(ed),i:photoData,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});
+  replyId=null;editId=null;ed.innerHTML='';updateComposerControls();setCtx();save();render(true);
+ }catch(err){toast(err&&err.message||'Photo attach nahi ho paayi. Dobara try karo.',3500)}
 };
 let sx=0,sy=0,sb=null,dx=0;
 chat.addEventListener('touchstart',e=>{sb=e.target.closest('.b');if(!sb)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0},{passive:true});
