@@ -26,6 +26,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.util.TypedValue;
 import android.content.Intent;
+import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -702,6 +703,13 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void flashNativeCode(final String noteId, final String kind, final int index) {
+            runOnUiThread(() -> {
+                if (nativeChatAdapter != null) nativeChatAdapter.flashInlineCode(noteId, kind, index);
+            });
+        }
+
+        @JavascriptInterface
         public void showNativeMessageMenu(final String id, final String json) {
             runOnUiThread(() -> showNativeMessageMenuInternal(id, json));
         }
@@ -784,6 +792,23 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void run(final int id, final String op, final String args) {
+            if ("clipboardwrite".equals(op)) {
+                runOnUiThread(() -> {
+                    try {
+                        JSONObject payload = new JSONObject(args == null ? "{}" : args);
+                        String text = payload.optString("text", "");
+                        ClipboardManager clipboard =
+                                (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                        if (clipboard == null) throw new IllegalStateException("Clipboard service unavailable");
+                        clipboard.setPrimaryClip(ClipData.newPlainText("FZ NOTES", text));
+                        reply(id, true, "Clipboard updated");
+                    } catch (Exception e) {
+                        String message = e.getMessage() == null ? "Clipboard write failed" : e.getMessage();
+                        reply(id, false, message);
+                    }
+                });
+                return;
+            }
             if ("clipboardread".equals(op)) {
                 runOnUiThread(() -> {
                     try {
