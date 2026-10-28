@@ -392,6 +392,75 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         return null;
     }
 
+    /** Flash only the exact inline Mono/code span, after the clipboard write succeeded. */
+    void flashInlineCode(String noteId, String kind, int index) {
+        if (!"mono".equals(kind) && !"code".equals(kind)) return;
+        NoteRow row = findVisibleRow(noteId);
+        if (row == null || row.body == null) return;
+
+        CharSequence current = row.body.getText();
+        android.text.Spannable styled;
+        if (current instanceof android.text.Spannable) {
+            styled = (android.text.Spannable) current;
+        } else if (current instanceof Spanned) {
+            row.body.setText(new SpannableStringBuilder(current), TextView.BufferType.SPANNABLE);
+            CharSequence converted = row.body.getText();
+            if (!(converted instanceof android.text.Spannable)) return;
+            styled = (android.text.Spannable) converted;
+        } else {
+            return;
+        }
+
+        InlineCopySpan target = null;
+        InlineCopySpan[] spans = styled.getSpans(0, styled.length(), InlineCopySpan.class);
+        for (InlineCopySpan span : spans) {
+            if (noteId.equals(span.noteId) && kind.equals(span.action) && index == span.index) {
+                target = span;
+                break;
+            }
+        }
+        if (target == null) return;
+        final int start = styled.getSpanStart(target);
+        final int end = styled.getSpanEnd(target);
+        if (start < 0 || end <= start) return;
+
+        if (row.copyFlashAnimator != null) {
+            row.copyFlashAnimator.cancel();
+            row.copyFlashAnimator = null;
+        }
+        if (row.copyFlashText != null && row.copyFlashSpan != null
+                && row.copyFlashText.getSpanStart(row.copyFlashSpan) >= 0) {
+            row.copyFlashText.removeSpan(row.copyFlashSpan);
+        }
+        final CopyFlashSpan pulse = new CopyFlashSpan(
+                Color.argb(112, Color.red(themeAccent), Color.green(themeAccent), Color.blue(themeAccent)));
+        final int flashColor = pulse.getColor();
+        styled.setSpan(pulse, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        row.copyFlashText = styled;
+        row.copyFlashSpan = pulse;
+
+        ValueAnimator animator = ValueAnimator.ofObject(new ArgbEvaluator(), flashColor, Color.TRANSPARENT);
+        animator.setDuration(460L);
+        animator.setInterpolator(new DecelerateInterpolator(1.5f));
+        animator.addUpdateListener(animation -> {
+            pulse.setColor((Integer) animation.getAnimatedValue());
+            row.body.invalidate();
+        });
+        animator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(android.animation.Animator animation) {
+                if (styled.getSpanStart(pulse) >= 0) styled.removeSpan(pulse);
+                row.body.invalidate();
+                if (row.copyFlashAnimator == animation) {
+                    row.copyFlashAnimator = null;
+                    row.copyFlashText = null;
+                    row.copyFlashSpan = null;
+                }
+            }
+        });
+        row.copyFlashAnimator = animator;
+        animator.start();
+    }
+
     private static int paletteColor(JSONObject palette, String key, int fallback) {
         if (palette == null) return fallback;
         try {
@@ -531,6 +600,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private boolean selectionGestureMoved;
         private float selectionGestureDownX, selectionGestureDownY;
         private ValueAnimator selectionAnimator;
+        private ValueAnimator copyFlashAnimator;
+        private android.text.Spannable copyFlashText;
+        private CopyFlashSpan copyFlashSpan;
         private int bubbleFillColor = DARK_BUBBLE;
         private final int[] colors = new int[4];
          private final ArgbEvaluator selectionColorEvaluator = new ArgbEvaluator();
@@ -1158,6 +1230,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
             return null;
         }
+    }
+
+    private static final class CopyFlashSpan extends android.text.style.CharacterStyle
+            implements android.text.style.UpdateAppearance {
+        private int color;
+        CopyFlashSpan(int color) { this.color = color; }
+        int getColor() { return color; }
+        void setColor(int color) { this.color = color; }
+        @Override public void updateDrawState(TextPaint textPaint) { textPaint.bgColor = color; }
     }
 
     private static final class InlineCopySpan extends ClickableSpan {
