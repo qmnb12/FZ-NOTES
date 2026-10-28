@@ -1273,6 +1273,19 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 #footer #cmp #listfab.on{background:linear-gradient(145deg,#4a91ff,#286ad1)!important;border-color:rgba(175,211,255,.65)!important;color:#fff!important}
 #chatw>#fab,#chatw>#listfab{display:none!important}
 @media(max-width:420px){#side{width:64px!important}#side .tp{min-height:64px}#footer #cmp{gap:4px!important}#footer #cmp #listfab{flex-basis:34px!important;width:34px!important;min-width:34px!important}#footer #cmp #fab{flex-basis:38px!important;width:38px!important;min-width:38px!important}}
+
+/* Brief, low-friction copy feedback: the exact Mono/code value flashes only after clipboard success. */
+#chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{
+ background:rgba(117,170,255,.30)!important;
+ color:#fff!important;
+ box-shadow:0 0 0 2px rgba(117,170,255,.36)!important;
+ border-radius:4px!important;
+ transition:background 120ms ease-out,box-shadow 160ms ease-out!important;
+}
+:root[data-theme="light"] #chat .b .mono.copy-flash,:root[data-theme="light"] #chat .b .code.copy-flash,:root[data-theme="light"] #chat .msgtext .mono.copy-flash,:root[data-theme="light"] #chat .msgtext .code.copy-flash{
+ background:rgba(40,111,219,.19)!important;color:#172235!important;box-shadow:0 0 0 2px rgba(40,111,219,.27)!important;
+}
+@media(prefers-reduced-motion:reduce){#chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{transition:none!important}}
 </style>
 </head>
 <body>
@@ -1373,8 +1386,50 @@ function redoChange(){if(!redoStack.length){toast('Redo ke liye kuch nahi hai');
 
 const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),ms||1100)}
-function copy(t,feedback='Copied'){const ok=()=>toast(feedback);const fb=()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');ok()}catch(e){}a.remove()};
-try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}}
+function legacyCopyText(value){
+ const previous=document.activeElement;
+ const field=document.createElement('textarea');
+ field.value=value;field.setAttribute('readonly','');
+ field.style.position='fixed';field.style.left='-9999px';field.style.top='0';field.style.opacity='0';field.style.pointerEvents='none';
+ document.body.appendChild(field);
+ try{field.focus({preventScroll:true})}catch(_){field.focus()}
+ field.select();field.setSelectionRange(0,field.value.length);
+ let copied=false;
+ try{copied=document.execCommand('copy')===true}catch(_){}
+ field.remove();
+ try{if(previous&&previous.isConnected)previous.focus({preventScroll:true})}catch(_){}
+ if(!copied)throw new Error('Clipboard copy command was rejected');
+}
+function flashCopiedElement(target){
+ if(!target||!target.classList)return;
+ if(target._copyFeedbackTimer)clearTimeout(target._copyFeedbackTimer);
+ target.classList.remove('copy-flash');
+ void target.offsetWidth;
+ target.classList.add('copy-flash');
+ target._copyFeedbackTimer=setTimeout(()=>{target.classList.remove('copy-flash');target._copyFeedbackTimer=0},560);
+}
+async function copy(t,feedback='Copied',flashTarget=null,nativeTarget=null){
+ const value=String(t==null?'':t);
+ if(!value.length){toast('Copy karne ke liye text nahi hai',1800);return false}
+ try{
+  if(window.Android&&typeof window.Android.run==='function'){
+   await native('clipboardwrite',{text:value});
+  }else if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+   try{await navigator.clipboard.writeText(value)}catch(_){legacyCopyText(value)}
+  }else{
+   legacyCopyText(value);
+  }
+  if(flashTarget)flashCopiedElement(flashTarget);
+  if(nativeTarget&&window.Android&&typeof window.Android.flashNativeCode==='function'){
+   try{window.Android.flashNativeCode(String(nativeTarget.id),String(nativeTarget.action),Number(nativeTarget.index)||0)}catch(_){}
+  }
+  toast(feedback);
+  return true;
+ }catch(error){
+  toast('Copy nahi ho paya. Dobara try karo.',2400);
+  return false;
+ }
+}
 const KINDS=['mono','code','spoiler','mention','quote','date'];
 function clean(n){let o='';n.childNodes.forEach(c=>{
  if(c.nodeType===3){o+=esc(c.nodeValue);return}
@@ -1827,7 +1882,7 @@ chat.addEventListener('click',e=>{
  const rp=e.target.closest('.rp');if(rp){jump(+rp.dataset.r);return}
  const photo=e.target.closest('.im');if(photo&&photo.getAttribute('src')){openPhotoViewer(photo.getAttribute('src'));return}
  const sp=e.target.closest('.spoiler');if(sp){sp.classList.toggle('on');return}
- const m=e.target.closest('.mono,.code');if(m)copy(m.textContent,m.classList.contains('code')?'Code copied':'Mono copied')});
+ const m=e.target.closest('.mono,.code');if(m)copy(m.innerText||m.textContent,m.classList.contains('code')?'Code copied':'Mono copied',m)});
 let blankTouchStart=null,blankPointerStart=null,lastBlankMenuId=null,lastBlankMenuAt=0;
 function nearestBubbleAt(x,y){
  const a=[...chat.querySelectorAll('.b')];if(!a.length)return null;
@@ -2545,7 +2600,7 @@ window.nativeChatAction=function(rawId,action,index){
   const matches=tmp.querySelectorAll(action==='code'?'.code':'.mono');
   const ix=Math.max(0,Number(index)||0);
   const el=matches[ix]||matches[0];
-  if(el)copy(el.innerText||el.textContent||'',action==='code'?'Code copied':'Mono copied');
+  if(el)copy(el.innerText||el.textContent||'',action==='code'?'Code copied':'Mono copied',null,{id:String(m.id),action,index:ix});
   else toast(action==='code'?'Code block nahi mila':'Mono text nahi mila',1800);
   return
  }
