@@ -1286,6 +1286,12 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
  background:rgba(40,111,219,.19)!important;color:#172235!important;box-shadow:0 0 0 2px rgba(40,111,219,.27)!important;
 }
 @media(prefers-reduced-motion:reduce){#chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{transition:none!important}}
+
+/* PolyDev black-gap fix: chat actions are in the footer/composer, not floating above it.
+   Remove old 96–132px FAB padding and let the native RecyclerView reach the footer. */
+#chat{padding-bottom:8px!important;scroll-padding-bottom:8px!important}
+#chatw{min-height:0!important;overflow:hidden!important}
+@media(max-width:420px){#chat{padding-bottom:8px!important;scroll-padding-bottom:8px!important}}
 </style>
 </head>
 <body>
@@ -1455,7 +1461,8 @@ function syncNativeChatOverlay(){
   // Anchor the native RecyclerView to the full chat column so message bubbles use the whole available width.
   const area=document.getElementById('chatw')||chat;
   const r=area.getBoundingClientRect();
-  window.Android.setNativeChatBounds(Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.max(0,Math.round(r.height-72)));
+  // Quick and Task buttons live in the composer row; no space needs to be reserved above the footer.
+  window.Android.setNativeChatBounds(Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.max(0,Math.round(r.height)));
   const modalIds=['sh','cfg','tgcfg','qk','lk'];
   let modalOpen=modalIds.some(id=>{const e=document.getElementById(id);return !!(e&&e.classList.contains('on'))});
   const viewer=document.getElementById('photoViewer');
