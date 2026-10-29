@@ -1402,11 +1402,9 @@ function legacyCopyText(value){
  try{if(previous&&previous.isConnected)previous.focus({preventScroll:true})}catch(_){}
  if(!copied)throw new Error('Clipboard copy command was rejected');
 }
-function resolveThemeAccentRgb(){
- const root=getComputedStyle(document.documentElement);
- const raw=(root.getPropertyValue('--acc')||'#75aaff').trim();
+function resolveCssRgb(raw,fallback=[117,170,255]){
  const probe=document.createElement('span');
- probe.style.color=raw;
+ probe.style.color=(raw||'').trim();
  probe.style.position='fixed';
  probe.style.visibility='hidden';
  probe.style.pointerEvents='none';
@@ -1414,7 +1412,17 @@ function resolveThemeAccentRgb(){
  const resolved=getComputedStyle(probe).color;
  probe.remove();
  const match=resolved.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
- return match?[Number(match[1]),Number(match[2]),Number(match[3])]:[117,170,255];
+ return match?[Number(match[1]),Number(match[2]),Number(match[3])]:fallback;
+}
+function resolveThemeAccentRgb(){
+ const root=getComputedStyle(document.documentElement);
+ return resolveCssRgb(root.getPropertyValue('--acc')||'#75aaff',[117,170,255]);
+}
+function resolveThemeSurfaceIsLight(){
+ const root=getComputedStyle(document.documentElement);
+ const rgb=resolveCssRgb(root.getPropertyValue('--bub')||root.getPropertyValue('--bg')||'#1b2b40',[27,43,64]);
+ const linear=rgb.map(value=>{const c=value/255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4)});
+ return 0.2126*linear[0]+0.7152*linear[1]+0.0722*linear[2]>=0.50;
 }
 function flashCopiedElement(target){
  if(!target||!target.classList)return;
@@ -1422,14 +1430,14 @@ function flashCopiedElement(target){
   try{target._copyFeedbackAnimation.cancel()}catch(_){}
   target._copyFeedbackAnimation=null;
  }
- const light=document.documentElement.dataset.theme==='light';
+ const light=resolveThemeSurfaceIsLight();
  const accent=resolveThemeAccentRgb();
  // Tint the actual theme accent toward the contrasting side so custom themes
  // retain a visible pulse instead of inheriting the default blue highlight.
- const contrast=light?[255,255,255]:[12,20,32];
- const tinted=accent.map((channel,i)=>Math.round(channel*.65+contrast[i]*.35));
+ const contrast=light?[12,24,48]:[255,255,255];
+ const tinted=accent.map((channel,i)=>Math.round(channel*(light?.80:.50)+contrast[i]*(light?.20:.50)));
  const rgba=a=>'rgba('+tinted.join(',')+','+a+')';
- const tint=rgba(.38),ring=rgba(.52),clear=rgba(0);
+ const tint=rgba(.62),ring=rgba(.75),clear=rgba(0);
  if(typeof target.animate==='function'){
   try{
    const pulse=target.animate([
@@ -1994,7 +2002,7 @@ function applyCustomProperties(){
   else root.style.removeProperty('--'+key);
  });
  // Keep the visible size aligned with Telegram's perceived default at the same slider value.
-  root.style.setProperty('--msg-size',(messageTextSize*0.88)+'px');
+  root.style.setProperty('--msg-size',(messageTextSize*0.90)+'px');
  root.style.setProperty('--msg-radius',messageCornerRadius+'px');
 }
 function saveCustomTheme(){
@@ -2024,11 +2032,11 @@ function openThemeCustomizer(){
   preview.style.color=p.text||customTextColor||getThemePalette().text;
   preview.style.borderColor=p.acc||getThemePalette().acc;
   preview.style.borderRadius=draft.radius+'px';
-  preview.style.fontSize=(draft.size*0.88)+'px';
+  preview.style.fontSize=(draft.size*0.90)+'px';
   $('#customMessageSizeValue').textContent=draft.size+' sp';
   $('#customRadiusValue').textContent=draft.radius+' dp';
   $('#sh').style.setProperty('--text',p.text||customTextColor||'');
-  $('#sh').style.setProperty('--msg-size',(draft.size*0.88)+'px');
+  $('#sh').style.setProperty('--msg-size',(draft.size*0.90)+'px');
   $('#sh').style.setProperty('--acc',p.acc||'');
  };
  sh.querySelectorAll('[data-theme-colour]').forEach(input=>input.addEventListener('input',()=>{
