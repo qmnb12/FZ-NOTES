@@ -131,6 +131,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         lightTheme = "light".equals(themeName);
         JSONObject palette = root.optJSONObject("palette");
         themeBg = paletteColor(palette, "bg", lightTheme ? Color.rgb(243, 246, 251) : Color.rgb(11, 17, 27));
+        // Named and custom themes must use their actual surface luminance. An id-only
+        // check misclassifies bright custom palettes and made Mono styling inconsistent.
+        lightTheme = Color.luminance(themeBg) >= 0.50f;
         themeBar = paletteColor(palette, "bar", lightTheme ? Color.WHITE : Color.rgb(17, 27, 41));
         themeBubble = paletteColor(palette, "bub", lightTheme ? LIGHT_BUBBLE : DARK_BUBBLE);
         themeText = paletteColor(palette, "text", lightTheme ? LIGHT_TEXT : DARK_TEXT);
@@ -434,32 +437,41 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 && row.copyFlashText.getSpanStart(row.copyFlashSpan) >= 0) {
             row.copyFlashText.removeSpan(row.copyFlashSpan);
         }
-        // Derive a contrasting tint from the active theme. In dark themes, lift
-        // the accent toward white; in light themes, darken it so the pulse stays visible.
-        int contrastColor = lightTheme ? Color.WHITE : Color.rgb(12, 20, 32);
-        int tintedAccent = blendColors(themeAccent, contrastColor, lightTheme ? 0.28f : 0.38f);
-        final CopyFlashSpan pulse = new CopyFlashSpan(
-                Color.argb(148, Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent)));
-        final int flashColor = pulse.getColor();
-        final int clearColor = Color.argb(0, Color.red(flashColor), Color.green(flashColor), Color.blue(flashColor));
+        // Choose a visible highlight from the actual bubble brightness, not just the theme id.
+        final boolean lightSurface = Color.luminance(themeBubble) >= 0.50f;
+        final int originalTextColor = target.fixedTextColor != Color.TRANSPARENT
+                ? target.fixedTextColor : themeText;
+        final int pulseTextColor = lightSurface ? Color.WHITE : Color.rgb(8, 16, 28);
+        final int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
+        final int tintedAccent = blendColors(themeAccent, tintBase, lightSurface ? 0.20f : 0.50f);
+        final int flashColor = Color.argb(230,
+                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
+        final int clearColor = Color.argb(0,
+                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
+        final ArgbEvaluator colorEvaluator = new ArgbEvaluator();
+        final CopyFlashSpan pulse = new CopyFlashSpan(clearColor, originalTextColor);
         styled.setSpan(pulse, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         row.copyFlashText = styled;
         row.copyFlashSpan = pulse;
 
         android.view.animation.Interpolator easeOut =
                 new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
-        ValueAnimator enter = ValueAnimator.ofObject(new ArgbEvaluator(), clearColor, flashColor);
+        ValueAnimator enter = ValueAnimator.ofObject(colorEvaluator, clearColor, flashColor);
         enter.setDuration(75L);
         enter.setInterpolator(easeOut);
         enter.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
+            pulse.setTextColor((Integer) colorEvaluator.evaluate(
+                    animation.getAnimatedFraction(), originalTextColor, pulseTextColor));
             row.body.invalidate();
         });
-        ValueAnimator exit = ValueAnimator.ofObject(new ArgbEvaluator(), flashColor, clearColor);
+        ValueAnimator exit = ValueAnimator.ofObject(colorEvaluator, flashColor, clearColor);
         exit.setDuration(165L);
         exit.setInterpolator(easeOut);
         exit.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
+            pulse.setTextColor((Integer) colorEvaluator.evaluate(
+                    1f - animation.getAnimatedFraction(), originalTextColor, pulseTextColor));
             row.body.invalidate();
         });
 
@@ -910,7 +922,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setText(parsed);
             // CSS px and Telegram-style chat sizes are density-independent; SP would
             // enlarge notes again when the Android system font scale is above 1.0.
-            body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, messageTextSizeDp * 0.88f);
+            body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, messageTextSizeDp * 0.90f);
             body.setTextColor(fg);
             body.setLinkTextColor(accent);
             body.setVisibility(TextUtils.isEmpty(note.html) ? GONE : VISIBLE);
@@ -1258,10 +1270,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private static final class CopyFlashSpan extends android.text.style.CharacterStyle
             implements android.text.style.UpdateAppearance {
         private int color;
-        CopyFlashSpan(int color) { this.color = color; }
+        private int textColor;
+        CopyFlashSpan(int color, int textColor) { this.color = color; this.textColor = textColor; }
         int getColor() { return color; }
         void setColor(int color) { this.color = color; }
-        @Override public void updateDrawState(TextPaint textPaint) { textPaint.bgColor = color; }
+        void setTextColor(int color) { this.textColor = color; }
+        @Override public void updateDrawState(TextPaint textPaint) {
+            textPaint.bgColor = color;
+            textPaint.setColor(textColor);
+        }
     }
 
     private static final class InlineCopySpan extends ClickableSpan {
