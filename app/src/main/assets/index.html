@@ -483,8 +483,8 @@ body{min-height:100dvh}
 :root[data-theme="light"] #sh[data-type="localbackup"] button.cloud-row[data-k="x"]{background:transparent;border-color:transparent}
 
 /* Polished message action sheet + compact Telegram-like message typography */
-#shBackdrop{position:fixed;inset:0;z-index:19;background:rgba(2,7,15,.48);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,visibility .22s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
-#shBackdrop.on{opacity:1;visibility:visible;pointer-events:auto}
+#shBackdrop{position:fixed;inset:0;z-index:19;background:rgba(2,7,15,.48);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,visibility .22s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);display:none}
+#shBackdrop.on{display:block;opacity:1;visibility:visible;pointer-events:auto}
 #sh{z-index:20;max-height:min(78dvh,720px);padding:0 10px calc(10px + env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:linear-gradient(155deg,#172337 0%,#111c2d 58%,#101a29 100%);border:1px solid rgba(164,190,226,.13);border-bottom:0;border-radius:24px 24px 0 0;box-shadow:0 -14px 46px rgba(0,0,0,.4);transform:translateY(18px) scale(.99);transform-origin:bottom center;transition:transform .24s cubic-bezier(.2,.82,.22,1),opacity .18s ease,visibility .24s ease;will-change:transform,opacity}
 #sh.on{transform:translateY(0) scale(1)}
 #sh .context-sheet-head{padding:10px 8px 12px;border-bottom:1px solid rgba(164,190,226,.11);margin:0 0 5px}
