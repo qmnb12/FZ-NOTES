@@ -436,7 +436,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
         // Derive a contrasting tint from the active theme. In dark themes, lift
         // the accent toward white; in light themes, darken it so the pulse stays visible.
-        int contrastColor = lightTheme ? Color.rgb(12, 20, 32) : Color.WHITE;
+        int contrastColor = lightTheme ? Color.WHITE : Color.rgb(12, 20, 32);
         int tintedAccent = blendColors(themeAccent, contrastColor, lightTheme ? 0.28f : 0.38f);
         final CopyFlashSpan pulse = new CopyFlashSpan(
                 Color.argb(148, Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent)));
@@ -910,7 +910,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setText(parsed);
             // CSS px and Telegram-style chat sizes are density-independent; SP would
             // enlarge notes again when the Android system font scale is above 1.0.
-            body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, messageTextSizeDp * 0.80f);
+            body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, messageTextSizeDp * 0.88f);
             body.setTextColor(fg);
             body.setLinkTextColor(accent);
             body.setVisibility(TextUtils.isEmpty(note.html) ? GONE : VISIBLE);
