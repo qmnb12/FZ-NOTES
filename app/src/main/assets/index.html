@@ -1276,9 +1276,9 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 
 /* Brief, low-friction copy feedback: the exact Mono/code value flashes only after clipboard success. */
 #chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{
- background:color-mix(in srgb,var(--acc) 38%,transparent)!important;
+ background:color-mix(in srgb,var(--acc) 28%,transparent)!important;
  color:var(--text)!important;
- box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 52%,transparent)!important;
+ box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 42%,transparent)!important;
  border-radius:4px!important;
  transition:background 120ms ease-out,box-shadow 160ms ease-out!important;
 }
@@ -1426,7 +1426,7 @@ function flashCopiedElement(target){
  const accent=resolveThemeAccentRgb();
  // Tint the actual theme accent toward the contrasting side so custom themes
  // retain a visible pulse instead of inheriting the default blue highlight.
- const contrast=light?[12,20,32]:[255,255,255];
+ const contrast=light?[255,255,255]:[12,20,32];
  const tinted=accent.map((channel,i)=>Math.round(channel*.65+contrast[i]*.35));
  const rgba=a=>'rgba('+tinted.join(',')+','+a+')';
  const tint=rgba(.38),ring=rgba(.52),clear=rgba(0);
@@ -1994,7 +1994,7 @@ function applyCustomProperties(){
   else root.style.removeProperty('--'+key);
  });
  // Keep the visible size aligned with Telegram's perceived default at the same slider value.
-  root.style.setProperty('--msg-size',(messageTextSize*0.80)+'px');
+  root.style.setProperty('--msg-size',(messageTextSize*0.88)+'px');
  root.style.setProperty('--msg-radius',messageCornerRadius+'px');
 }
 function saveCustomTheme(){
@@ -2024,11 +2024,11 @@ function openThemeCustomizer(){
   preview.style.color=p.text||customTextColor||getThemePalette().text;
   preview.style.borderColor=p.acc||getThemePalette().acc;
   preview.style.borderRadius=draft.radius+'px';
-  preview.style.fontSize=(draft.size*0.80)+'px';
+  preview.style.fontSize=(draft.size*0.88)+'px';
   $('#customMessageSizeValue').textContent=draft.size+' sp';
   $('#customRadiusValue').textContent=draft.radius+' dp';
   $('#sh').style.setProperty('--text',p.text||customTextColor||'');
-  $('#sh').style.setProperty('--msg-size',(draft.size*0.80)+'px');
+  $('#sh').style.setProperty('--msg-size',(draft.size*0.88)+'px');
   $('#sh').style.setProperty('--acc',p.acc||'');
  };
  sh.querySelectorAll('[data-theme-colour]').forEach(input=>input.addEventListener('input',()=>{
