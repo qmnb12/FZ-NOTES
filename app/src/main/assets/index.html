@@ -1469,9 +1469,6 @@ async function copy(t,feedback='Copied',flashTarget=null,nativeTarget=null){
    legacyCopyText(value);
   }
   if(flashTarget)flashCopiedElement(flashTarget);
-  if(nativeTarget&&window.Android&&typeof window.Android.flashNativeCode==='function'){
-   try{window.Android.flashNativeCode(String(nativeTarget.id),String(nativeTarget.action),Number(nativeTarget.index)||0,String(nativeTarget.text||''))}catch(_){}
-  }
   toast(feedback);
   return true;
  }catch(error){
@@ -2063,7 +2060,7 @@ function applyTheme(themeId){
  const theme=THEME_OPTIONS.find(t=>t.id===themeId)||THEME_OPTIONS[0];
  document.documentElement.dataset.theme=theme.id;
  customTextColor='';customThemePalette={bg:'',bar:'',bub:'',text:'',mut:'',acc:''};
- messageTextSize=16;messageCornerRadius=17;
+ // Keep the user's message size and bubble radius when switching theme palettes.
  applyCustomProperties();
  saveCustomTheme();
  try{localStorage.setItem('notes-theme',theme.id)}catch(e){}
