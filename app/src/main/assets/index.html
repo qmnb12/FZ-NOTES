@@ -52,8 +52,8 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 #ed{flex:1;min-height:22px;max-height:40vh;overflow-y:auto;padding:9px 12px;border-radius:18px;background:var(--bg);outline:0;word-break:break-word}
 #ed:empty:before{content:attr(data-ph);color:var(--mut)}
 #send{flex:none;width:42px;height:42px;border:0;border-radius:50%;background:var(--acc);color:#fff;font-size:20px}
-#sh{position:fixed;left:0;right:0;bottom:0;display:block;visibility:hidden;opacity:0;pointer-events:none;transform:translateY(14px);background:var(--bar);border:1px solid var(--ln);border-bottom:0;border-radius:22px 22px 0 0;padding:7px 9px calc(7px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 28px rgba(0,0,0,.28);z-index:5;max-height:82dvh;overflow-y:auto;overscroll-behavior:contain;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .18s ease,visibility .22s}
-#sh.on{visibility:visible;opacity:1;pointer-events:auto;transform:translateY(0)}
+#sh{position:fixed;left:0;right:0;bottom:0;display:none;visibility:hidden;opacity:0;pointer-events:none;transform:translateY(14px);background:var(--bar);border:1px solid var(--ln);border-bottom:0;border-radius:22px 22px 0 0;padding:7px 9px calc(7px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 28px rgba(0,0,0,.28);z-index:5;max-height:82dvh;overflow-y:auto;overscroll-behavior:contain;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .18s ease,visibility .22s}
+#sh.on{display:block;visibility:visible;opacity:1;pointer-events:auto;transform:translateY(0)}
 #sh button{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:8px 14px;font:inherit;font-size:16px;border-radius:12px;min-height:44px;transition:background .14s ease,transform .14s ease;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#sh button:active{background:rgba(117,170,255,.13);transform:scale(.985)}#sh button .mi{width:38px;height:38px;flex:none;display:grid;place-items:center;border:1px solid var(--ln);border-radius:12px;background:linear-gradient(145deg,rgba(117,170,255,.16),rgba(117,170,255,.04));color:var(--acc)}#sh button .mi svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#sh button .mt{flex:1}#sh button .ms{display:block;color:var(--mut);font-size:12px;margin-top:2px}#sh button[data-k="x"]{color:var(--mut)}
 #sh .del{color:#e5484d}
 #toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#222;color:#fff;padding:6px 14px;border-radius:14px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
@@ -483,8 +483,8 @@ body{min-height:100dvh}
 :root[data-theme="light"] #sh[data-type="localbackup"] button.cloud-row[data-k="x"]{background:transparent;border-color:transparent}
 
 /* Polished message action sheet + compact Telegram-like message typography */
-#shBackdrop{position:fixed;inset:0;z-index:19;background:rgba(2,7,15,.48);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,visibility .22s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
-#shBackdrop.on{opacity:1;visibility:visible;pointer-events:auto}
+#shBackdrop{position:fixed;inset:0;z-index:19;background:rgba(2,7,15,.48);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,visibility .22s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);display:none}
+#shBackdrop.on{display:block;opacity:1;visibility:visible;pointer-events:auto}
 #sh{z-index:20;max-height:min(78dvh,720px);padding:0 10px calc(10px + env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:linear-gradient(155deg,#172337 0%,#111c2d 58%,#101a29 100%);border:1px solid rgba(164,190,226,.13);border-bottom:0;border-radius:24px 24px 0 0;box-shadow:0 -14px 46px rgba(0,0,0,.4);transform:translateY(18px) scale(.99);transform-origin:bottom center;transition:transform .24s cubic-bezier(.2,.82,.22,1),opacity .18s ease,visibility .24s ease;will-change:transform,opacity}
 #sh.on{transform:translateY(0) scale(1)}
 #sh .context-sheet-head{padding:10px 8px 12px;border-bottom:1px solid rgba(164,190,226,.11);margin:0 0 5px}
@@ -1286,6 +1286,11 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
  background:rgba(40,111,219,.19)!important;color:#172235!important;box-shadow:0 0 0 2px rgba(40,111,219,.27)!important;
 }
 @media(prefers-reduced-motion:reduce){#chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{transition:none!important}}
+
+/* Master: remove legacy floating-action reserved space; Plus/Task are in the composer. */
+#chat{padding-bottom:8px!important;scroll-padding-bottom:8px!important}
+#chatw{min-height:0!important;overflow:hidden!important}
+@media(max-width:420px){#chat{padding-bottom:8px!important;scroll-padding-bottom:8px!important}}
 </style>
 </head>
 <body>
@@ -1455,7 +1460,8 @@ function syncNativeChatOverlay(){
   // Anchor the native RecyclerView to the full chat column so message bubbles use the whole available width.
   const area=document.getElementById('chatw')||chat;
   const r=area.getBoundingClientRect();
-  window.Android.setNativeChatBounds(Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.max(0,Math.round(r.height-72)));
+  // Plus and Task actions are in the composer row, so do not reserve obsolete floating-button space.
+  window.Android.setNativeChatBounds(Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.max(0,Math.round(r.height)));
   const modalIds=['sh','cfg','tgcfg','qk','lk'];
   let modalOpen=modalIds.some(id=>{const e=document.getElementById(id);return !!(e&&e.classList.contains('on'))});
   const viewer=document.getElementById('photoViewer');
