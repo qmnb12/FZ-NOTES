@@ -1,5 +1,7 @@
 package com.notes.chat;
 
+import android.animation.Animator;
+import android.animation.AnimatorSet;
 import android.animation.ValueAnimator;
 import android.animation.ArgbEvaluator;
 import android.content.Context;
@@ -432,20 +434,35 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 && row.copyFlashText.getSpanStart(row.copyFlashSpan) >= 0) {
             row.copyFlashText.removeSpan(row.copyFlashSpan);
         }
+        // A short peak followed by a softer fade feels like a deliberate tap response,
+        // rather than a bright highlight that simply disappears.
         final CopyFlashSpan pulse = new CopyFlashSpan(
-                Color.argb(112, Color.red(themeAccent), Color.green(themeAccent), Color.blue(themeAccent)));
+                Color.argb(90, Color.red(themeAccent), Color.green(themeAccent), Color.blue(themeAccent)));
         final int flashColor = pulse.getColor();
+        final int clearColor = Color.argb(0, Color.red(flashColor), Color.green(flashColor), Color.blue(flashColor));
         styled.setSpan(pulse, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         row.copyFlashText = styled;
         row.copyFlashSpan = pulse;
 
-        ValueAnimator animator = ValueAnimator.ofObject(new ArgbEvaluator(), flashColor, Color.TRANSPARENT);
-        animator.setDuration(320L);
-        animator.setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f));
-        animator.addUpdateListener(animation -> {
+        android.view.animation.Interpolator easeOut =
+                new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
+        ValueAnimator enter = ValueAnimator.ofObject(new ArgbEvaluator(), clearColor, flashColor);
+        enter.setDuration(75L);
+        enter.setInterpolator(easeOut);
+        enter.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
             row.body.invalidate();
         });
+        ValueAnimator exit = ValueAnimator.ofObject(new ArgbEvaluator(), flashColor, clearColor);
+        exit.setDuration(165L);
+        exit.setInterpolator(easeOut);
+        exit.addUpdateListener(animation -> {
+            pulse.setColor((Integer) animation.getAnimatedValue());
+            row.body.invalidate();
+        });
+
+        AnimatorSet animator = new AnimatorSet();
+        animator.playSequentially(enter, exit);
         animator.addListener(new android.animation.AnimatorListenerAdapter() {
             @Override public void onAnimationEnd(android.animation.Animator animation) {
                 if (styled.getSpanStart(pulse) >= 0) styled.removeSpan(pulse);
@@ -600,7 +617,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private boolean selectionGestureMoved;
         private float selectionGestureDownX, selectionGestureDownY;
         private ValueAnimator selectionAnimator;
-        private ValueAnimator copyFlashAnimator;
+        private Animator copyFlashAnimator;
         private android.text.Spannable copyFlashText;
         private CopyFlashSpan copyFlashSpan;
         private int bubbleFillColor = DARK_BUBBLE;
@@ -889,9 +906,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             Spanned parsed = Html.fromHtml(rich, Html.FROM_HTML_MODE_COMPACT, null,
                     new NativeRichTagHandler(context, accent, themeBg, dp(3), dp(8), NativeChatAdapter.this, note.id));
             body.setText(parsed);
-            // The WebView and Android TextView font metrics differ slightly; normalize the
-            // native rendering so a selected 16 matches Telegram's perceived 16 more closely.
-            body.setTextSize(TypedValue.COMPLEX_UNIT_SP, messageTextSizeSp * 0.92f);
+            // Keep native rendering aligned with the scaled CSS font-size used in the WebView.
+            body.setTextSize(TypedValue.COMPLEX_UNIT_SP, messageTextSizeSp * 0.875f);
             body.setTextColor(fg);
             body.setLinkTextColor(accent);
             body.setVisibility(TextUtils.isEmpty(note.html) ? GONE : VISIBLE);
