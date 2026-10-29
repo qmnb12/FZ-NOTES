@@ -463,10 +463,36 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 && row.copyFlashText.getSpanStart(row.copyFlashSpan) >= 0) {
             row.copyFlashText.removeSpan(row.copyFlashSpan);
         }
-        // Choose a visible highlight from the actual bubble brightness, not just the theme id.
+        // Remove the existing Mono background/foreground spans while the pulse runs.
+        // Otherwise Android's overlapping BackgroundColorSpan can paint over the animation.
+        final ArrayList<BackgroundColorSpan> removedBackgrounds = new ArrayList<>();
+        final ArrayList<Integer> backgroundFlags = new ArrayList<>();
+        BackgroundColorSpan[] backgrounds = styled.getSpans(start, end, BackgroundColorSpan.class);
+        for (BackgroundColorSpan span : backgrounds) {
+            if (styled.getSpanStart(span) == start && styled.getSpanEnd(span) == end) {
+                removedBackgrounds.add(span);
+                backgroundFlags.add(styled.getSpanFlags(span));
+                styled.removeSpan(span);
+            }
+        }
+        final ArrayList<ForegroundColorSpan> removedForegrounds = new ArrayList<>();
+        final ArrayList<Integer> foregroundFlags = new ArrayList<>();
+        ForegroundColorSpan[] foregrounds = styled.getSpans(start, end, ForegroundColorSpan.class);
+        for (ForegroundColorSpan span : foregrounds) {
+            if (styled.getSpanStart(span) == start && styled.getSpanEnd(span) == end) {
+                removedForegrounds.add(span);
+                foregroundFlags.add(styled.getSpanFlags(span));
+                styled.removeSpan(span);
+            }
+        }
+
+        final InlineCopySpan flashTarget = target;
+        final int originalFixedTextColor = flashTarget == null
+                ? Color.TRANSPARENT : flashTarget.fixedTextColor;
+        // Choose a visible highlight from the actual rendered bubble brightness.
         final boolean lightSurface = Color.luminance(themeBubble) >= 0.50f;
-        final int originalTextColor = target != null && target.fixedTextColor != Color.TRANSPARENT
-                ? target.fixedTextColor
+        final int originalTextColor = originalFixedTextColor != Color.TRANSPARENT
+                ? originalFixedTextColor
                 : (lightTheme ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255));
         final int pulseTextColor = lightSurface ? Color.WHITE : Color.rgb(8, 16, 28);
         final int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
@@ -477,6 +503,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
         final ArgbEvaluator colorEvaluator = new ArgbEvaluator();
         final CopyFlashSpan pulse = new CopyFlashSpan(clearColor, originalTextColor);
+        if (flashTarget != null) flashTarget.fixedTextColor = Color.TRANSPARENT;
         styled.setSpan(pulse, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         row.copyFlashText = styled;
         row.copyFlashSpan = pulse;
@@ -507,6 +534,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         animator.addListener(new android.animation.AnimatorListenerAdapter() {
             @Override public void onAnimationEnd(android.animation.Animator animation) {
                 if (styled.getSpanStart(pulse) >= 0) styled.removeSpan(pulse);
+                for (int i = 0; i < removedBackgrounds.size(); i++) {
+                    BackgroundColorSpan span = removedBackgrounds.get(i);
+                    if (styled.getSpanStart(span) < 0) styled.setSpan(span, start, end, backgroundFlags.get(i));
+                }
+                for (int i = 0; i < removedForegrounds.size(); i++) {
+                    ForegroundColorSpan span = removedForegrounds.get(i);
+                    if (styled.getSpanStart(span) < 0) styled.setSpan(span, start, end, foregroundFlags.get(i));
+                }
+                if (flashTarget != null) flashTarget.fixedTextColor = originalFixedTextColor;
                 row.body.invalidate();
                 if (row.copyFlashAnimator == animation) {
                     row.copyFlashAnimator = null;
@@ -1353,7 +1389,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private final String noteId;
         private final String action;
         private final int index;
-        private final int fixedTextColor;
+        private int fixedTextColor;
         InlineCopySpan(NativeChatAdapter adapter, String noteId, String action, int index, int fixedTextColor) {
             this.adapter = adapter; this.noteId = noteId; this.action = action; this.index = index; this.fixedTextColor = fixedTextColor;
         }
