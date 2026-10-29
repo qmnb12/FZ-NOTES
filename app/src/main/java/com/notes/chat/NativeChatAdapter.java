@@ -97,7 +97,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private boolean lightTheme;
     private boolean showTopics = true;
     private String themeName = "dark";
-    private int themeBg = Color.rgb(11, 17, 27);    private int themeBar = Color.rgb(17, 27, 41);    private int themeBubble = DARK_BUBBLE;
+    private int themeBg = Color.rgb(11, 17, 27);
+    private int themeBar = Color.rgb(17, 27, 41);
+    private int themeBubble = DARK_BUBBLE;
     private int themeText = DARK_TEXT;
     private int themeMuted = DARK_MUTED;
     private int themeAccent = DARK_ACCENT;
@@ -195,8 +197,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 note.due = o.optLong("due", 0);
                 note.reply = o.optString("reply", "");
                 JSONArray checkArray = o.optJSONArray("checks");
-                if (checkArray != null) {                    for (int c = 0; c < checkArray.length(); c++) {
-                        JSONObject check = checkArray.optJSONObject(c);                        if (check != null) {
+                if (checkArray != null) {
+                    for (int c = 0; c < checkArray.length(); c++) {
+                        JSONObject check = checkArray.optJSONObject(c);
+                        if (check != null) {
                             note.checks.add(new CheckItem(check.optString("text", ""), check.optInt("state", 0)));
                         }
                     }
@@ -293,9 +297,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     }
 
     private void toggleSelectionById(String id) {
-        if (id == null) return;        lastSelectionChangedId = id;
+        if (id == null) return;
+        lastSelectionChangedId = id;
         boolean wasSelecting = !selectedIds.isEmpty();
-        if (selectedIds.contains(id)) selectedIds.remove(id); else selectedIds.add(id);        boolean isSelecting = !selectedIds.isEmpty();
+        if (selectedIds.contains(id)) selectedIds.remove(id); else selectedIds.add(id);
+        boolean isSelecting = !selectedIds.isEmpty();
         if (wasSelecting != isSelecting) {
             if (!items.isEmpty()) notifyItemRangeChanged(0, items.size(), "selection");
         } else {
@@ -391,9 +397,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         return null;
     }
 
-    /** Flash the copied Mono/code text. Text matching is the fallback when HTML parsing changes span indexes. */    void flashInlineCode(String noteId, String kind, int index) {
+    /** Flash the copied Mono/code text. Text matching is the fallback when HTML parsing changes span indexes. */
+    void flashInlineCode(String noteId, String kind, int index) {
         flashInlineCode(noteId, kind, index, "");
     }
+
     void flashInlineCode(String noteId, String kind, int index, String requestedText) {
         if (!"mono".equals(kind) && !"code".equals(kind)) return;
         NoteRow row = findVisibleRow(noteId);
@@ -489,11 +497,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         final int pulseTextColor = lightSurface ? Color.WHITE : Color.rgb(8, 16, 28);
         final int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
         final int tintedAccent = blendColors(themeAccent, tintBase, lightSurface ? 0.20f : 0.50f);
-        final int flashColor = Color.argb(230,                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
+        final int flashColor = Color.argb(230,
+                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
         final int clearColor = Color.argb(0,
                 Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
         final ArgbEvaluator colorEvaluator = new ArgbEvaluator();
-        final CopyFlashSpan pulse = new CopyFlashSpan(clearColor, originalTextColor);        if (flashTarget != null) flashTarget.fixedTextColor = Color.TRANSPARENT;
+        final CopyFlashSpan pulse = new CopyFlashSpan(clearColor, originalTextColor);
+        if (flashTarget != null) flashTarget.fixedTextColor = Color.TRANSPARENT;
         styled.setSpan(pulse, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         row.copyFlashText = styled;
         row.copyFlashSpan = pulse;
@@ -591,10 +601,12 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     private static int paletteColor(JSONObject palette, String key, int fallback) {
         if (palette == null) return fallback;
-        try {            String value = palette.optString(key, "");
+        try {
+            String value = palette.optString(key, "");
             if (!value.isEmpty()) return Color.parseColor(value);
         } catch (Exception ignored) { }
-        return fallback;    }
+        return fallback;
+    }
 
     private static int blendColors(int base, int overlay, float amount) {
         float t = Math.max(0f, Math.min(1f, amount));
@@ -689,11 +701,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             int comma = data.indexOf(',');
             String encoded = comma >= 0 ? data.substring(comma + 1) : data;
             byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
-            BitmapFactory.Options bounds = new BitmapFactory.Options();            bounds.inJustDecodeBounds = true;
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
             int sample = 1;
             int max = Math.max(bounds.outWidth, bounds.outHeight);
-            while (max / sample > 1600) sample *= 2;            BitmapFactory.Options options = new BitmapFactory.Options();
+            while (max / sample > 1600) sample *= 2;
+            BitmapFactory.Options options = new BitmapFactory.Options();
             options.inSampleSize = sample;
             options.inPreferredConfig = Bitmap.Config.RGB_565;
             return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
@@ -787,12 +801,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             dateHeader.setOnClickListener(v -> {
                 if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
             });
-            LayoutParams dateLp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);            dateLp.gravity = Gravity.CENTER_HORIZONTAL;
+            LayoutParams dateLp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+            dateLp.gravity = Gravity.CENTER_HORIZONTAL;
             dateLp.topMargin = dp(5);
             dateLp.bottomMargin = dp(3);
             addView(dateHeader, dateLp);
 
-            row = new FrameLayout(context);            row.setClipChildren(false);
+            row = new FrameLayout(context);
+            row.setClipChildren(false);
             row.setClipToPadding(false);
             addView(row, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
@@ -885,13 +901,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             summaryLp.topMargin = dp(2);
             bubble.addView(checkSummary, summaryLp);
 
-            checks = new LinearLayout(context);            checks.setOrientation(VERTICAL);
+            checks = new LinearLayout(context);
+            checks.setOrientation(VERTICAL);
             LinearLayout.LayoutParams checksLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             checksLp.topMargin = dp(1);
             bubble.addView(checks, checksLp);
 
             LinearLayout footer = new LinearLayout(context);
-            footer.setGravity(Gravity.CENTER_VERTICAL);            footer.setOrientation(HORIZONTAL);
+            footer.setGravity(Gravity.CENTER_VERTICAL);
+            footer.setOrientation(HORIZONTAL);
             LinearLayout.LayoutParams footerLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             footerLp.topMargin = dp(2);
             bubble.addView(footer, footerLp);
@@ -983,7 +1001,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             replyView.setVisibility(TextUtils.isEmpty(note.reply) ? GONE : VISIBLE);
             replyView.setText("↪  " + note.reply);
             replyView.setTextColor(fg);
-            GradientDrawable replyBg = new GradientDrawable();            replyBg.setColor(themeBar);
+            GradientDrawable replyBg = new GradientDrawable();
+            replyBg.setColor(themeBar);
             replyBg.setCornerRadius(dp(5));
             replyView.setBackground(replyBg);
             replyView.setOnClickListener(v -> {
@@ -991,6 +1010,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 if (!selectedIds.isEmpty()) toggleSelection(note.id);
                 else listener.onAction(note.id, "reply", 0);
             });
+
             if (!TextUtils.isEmpty(note.image)) {
                 imageView.setVisibility(VISIBLE);
                 if (cachedBitmap != null) imageView.setImageBitmap(cachedBitmap); else loadImage(note, imageView);
@@ -1081,7 +1101,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 indicator.setChecked(selected, true);
             } else if (indicator.getVisibility() == VISIBLE) {
                 indicator.setChecked(false, true, true);
-            } else {                indicator.setVisibility(INVISIBLE);
+            } else {
+                indicator.setVisibility(INVISIBLE);
                 indicator.setChecked(false, false, true);
             }
             bubble.animate().cancel();
@@ -1089,7 +1110,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bubble.setScaleX(1f);
             bubble.setScaleY(1f);
             if (selected) {
-                GradientDrawable selectedBg = new GradientDrawable();                selectedBg.setColor(blendColors(bg, accent, light ? 0.14f : 0.26f));
+                GradientDrawable selectedBg = new GradientDrawable();
+                selectedBg.setColor(blendColors(bg, accent, light ? 0.14f : 0.26f));
                 bubbleFillColor = blendColors(bg, accent, light ? 0.14f : 0.26f);
                 selectedBg.setCornerRadii(new float[]{dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(5),dp(5),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp)});
                 selectedBg.setStroke(dp(1), accent);
@@ -1179,7 +1201,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             selectionAnimator.addUpdateListener(animation -> {
                 float fraction = (float) animation.getAnimatedValue();
                 bubbleFillColor = (Integer) selectionColorEvaluator.evaluate(fraction, startColor, targetColor);
-                background.setColor(bubbleFillColor);            });
+                background.setColor(bubbleFillColor);
+            });
             selectionAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
                 @Override public void onAnimationEnd(android.animation.Animator animation) {
                     if (selectionAnimator == animation) selectionAnimator = null;
@@ -1188,7 +1211,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 }
             });
             selectionAnimator.start();
-        }    }
+        }
+    }
 
     private final class MaxWidthBubble extends LinearLayout {
         MaxWidthBubble(Context context) {
@@ -1278,6 +1302,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
         }
     }
+
     private static final class NativeRichTagHandler implements Html.TagHandler {
         private static final class Mark {
             final int start;
@@ -1287,7 +1312,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
         private final Stack<Mark> marks = new Stack<>();
         private final Context context;
-        private final int accent, codeBackground, stripeWidth, gapWidth;        private final boolean lightTheme;
+        private final int accent, codeBackground, stripeWidth, gapWidth;
+        private final boolean lightTheme;
         private final NativeChatAdapter adapter;
         private final String noteId;
         private int monoIndex;
@@ -1375,7 +1401,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (adapter == null || noteId == null) return;
             if (!adapter.selectedIds.isEmpty()) adapter.toggleSelectionById(noteId);
             else if (adapter.listener != null) adapter.listener.onAction(noteId, action, index);
-        }        @Override public void updateDrawState(TextPaint ds) {
+        }
+        @Override public void updateDrawState(TextPaint ds) {
             ds.setUnderlineText(false);
             // ClickableSpan normally overwrites ForegroundColorSpan with the link color.
             // Keep Mono in its own calm code color instead of flashing blue while scrolling/tapping.
@@ -1386,7 +1413,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private static final class LeadingCodeIndent implements android.text.style.LeadingMarginSpan {
         private final int indent, color;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        LeadingCodeIndent(int indent, int color) { this.indent = indent; this.color = color; }        @Override public int getLeadingMargin(boolean first) { return indent + dpStatic(null, 4); }
+        LeadingCodeIndent(int indent, int color) { this.indent = indent; this.color = color; }
+        @Override public int getLeadingMargin(boolean first) { return indent + dpStatic(null, 4); }
         @Override public void drawLeadingMargin(Canvas c, Paint p, int x, int dir, int top, int baseline,
                                                  int bottom, CharSequence text, int start, int end, boolean first,
                                                  Layout layout) {
