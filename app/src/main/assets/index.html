@@ -1995,14 +1995,19 @@ const THEME_OPTIONS=[
 let customTextColor='',messageTextSize=16,messageCornerRadius=17,customThemePalette={bg:'',bar:'',bub:'',text:'',mut:'',acc:''};
 function applyCustomProperties(){
  const root=document.documentElement;
+ const base=THEME_OPTIONS.find(t=>t.id===(root.dataset.theme||'dark'))||THEME_OPTIONS[0];
  const keys=['bg','bar','bub','text','mut','acc'];
  keys.forEach(key=>{
-  const value=customThemePalette[key]||(key==='text'?customTextColor:'');
+  const custom=customThemePalette[key]||(key==='text'?customTextColor:'');
+  // Empty custom fields must fall back to the selected built-in theme, not the
+  // generic dark root CSS. This keeps Midnight and all other presets distinct.
+  const value=custom||base[key]||'';
   if(value&&/^#[0-9a-f]{6}$/i.test(value))root.style.setProperty('--'+key,value);
   else root.style.removeProperty('--'+key);
  });
- // Keep the visible size aligned with Telegram's perceived default at the same slider value.
-  root.style.setProperty('--msg-size',(messageTextSize*0.85)+'px');
+ root.style.setProperty('--mono',customThemePalette.mono||base.mono||'rgba(255,255,255,.075)');
+ root.style.setProperty('--ln',customThemePalette.ln||base.ln||'rgba(255,255,255,.09)');
+ root.style.setProperty('--msg-size',(messageTextSize*0.88)+'px');
  root.style.setProperty('--msg-radius',messageCornerRadius+'px');
 }
 function saveCustomTheme(){
@@ -2032,11 +2037,11 @@ function openThemeCustomizer(){
   preview.style.color=p.text||customTextColor||getThemePalette().text;
   preview.style.borderColor=p.acc||getThemePalette().acc;
   preview.style.borderRadius=draft.radius+'px';
-  preview.style.fontSize=(draft.size*0.85)+'px';
+  preview.style.fontSize=(draft.size*0.88)+'px';
   $('#customMessageSizeValue').textContent=draft.size+' sp';
   $('#customRadiusValue').textContent=draft.radius+' dp';
   $('#sh').style.setProperty('--text',p.text||customTextColor||'');
-  $('#sh').style.setProperty('--msg-size',(draft.size*0.85)+'px');
+  $('#sh').style.setProperty('--msg-size',(draft.size*0.88)+'px');
   $('#sh').style.setProperty('--acc',p.acc||'');
  };
  sh.querySelectorAll('[data-theme-colour]').forEach(input=>input.addEventListener('input',()=>{
