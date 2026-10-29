@@ -440,8 +440,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         row.copyFlashSpan = pulse;
 
         ValueAnimator animator = ValueAnimator.ofObject(new ArgbEvaluator(), flashColor, Color.TRANSPARENT);
-        animator.setDuration(460L);
-        animator.setInterpolator(new DecelerateInterpolator(1.5f));
+        animator.setDuration(320L);
+        animator.setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f));
         animator.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
             row.body.invalidate();
@@ -889,7 +889,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             Spanned parsed = Html.fromHtml(rich, Html.FROM_HTML_MODE_COMPACT, null,
                     new NativeRichTagHandler(context, accent, themeBg, dp(3), dp(8), NativeChatAdapter.this, note.id));
             body.setText(parsed);
-            body.setTextSize(TypedValue.COMPLEX_UNIT_SP, messageTextSizeSp);
+            // The WebView and Android TextView font metrics differ slightly; normalize the
+            // native rendering so a selected 16 matches Telegram's perceived 16 more closely.
+            body.setTextSize(TypedValue.COMPLEX_UNIT_SP, messageTextSizeSp * 0.92f);
             body.setTextColor(fg);
             body.setLinkTextColor(accent);
             body.setVisibility(TextUtils.isEmpty(note.html) ? GONE : VISIBLE);
