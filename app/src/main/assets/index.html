@@ -1276,14 +1276,11 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 
 /* Brief, low-friction copy feedback: the exact Mono/code value flashes only after clipboard success. */
 #chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{
- background:rgba(117,170,255,.30)!important;
- color:#fff!important;
- box-shadow:0 0 0 2px rgba(117,170,255,.36)!important;
+ background:color-mix(in srgb,var(--acc) 38%,transparent)!important;
+ color:var(--text)!important;
+ box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 52%,transparent)!important;
  border-radius:4px!important;
  transition:background 120ms ease-out,box-shadow 160ms ease-out!important;
-}
-:root[data-theme="light"] #chat .b .mono.copy-flash,:root[data-theme="light"] #chat .b .code.copy-flash,:root[data-theme="light"] #chat .msgtext .mono.copy-flash,:root[data-theme="light"] #chat .msgtext .code.copy-flash{
- background:rgba(40,111,219,.19)!important;color:#172235!important;box-shadow:0 0 0 2px rgba(40,111,219,.27)!important;
 }
 @media(prefers-reduced-motion:reduce){#chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{transition:none!important}}
 
@@ -1405,6 +1402,20 @@ function legacyCopyText(value){
  try{if(previous&&previous.isConnected)previous.focus({preventScroll:true})}catch(_){}
  if(!copied)throw new Error('Clipboard copy command was rejected');
 }
+function resolveThemeAccentRgb(){
+ const root=getComputedStyle(document.documentElement);
+ const raw=(root.getPropertyValue('--acc')||'#75aaff').trim();
+ const probe=document.createElement('span');
+ probe.style.color=raw;
+ probe.style.position='fixed';
+ probe.style.visibility='hidden';
+ probe.style.pointerEvents='none';
+ document.body.appendChild(probe);
+ const resolved=getComputedStyle(probe).color;
+ probe.remove();
+ const match=resolved.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
+ return match?[Number(match[1]),Number(match[2]),Number(match[3])]:[117,170,255];
+}
 function flashCopiedElement(target){
  if(!target||!target.classList)return;
  if(target._copyFeedbackAnimation){
@@ -1412,9 +1423,13 @@ function flashCopiedElement(target){
   target._copyFeedbackAnimation=null;
  }
  const light=document.documentElement.dataset.theme==='light';
- const tint=light?'rgba(40,111,219,.18)':'rgba(117,170,255,.25)';
- const ring=light?'rgba(40,111,219,.24)':'rgba(117,170,255,.30)';
- const clear=light?'rgba(40,111,219,0)':'rgba(117,170,255,0)';
+ const accent=resolveThemeAccentRgb();
+ // Tint the actual theme accent toward the contrasting side so custom themes
+ // retain a visible pulse instead of inheriting the default blue highlight.
+ const contrast=light?[12,20,32]:[255,255,255];
+ const tinted=accent.map((channel,i)=>Math.round(channel*.65+contrast[i]*.35));
+ const rgba=a=>'rgba('+tinted.join(',')+','+a+')';
+ const tint=rgba(.38),ring=rgba(.52),clear=rgba(0);
  if(typeof target.animate==='function'){
   try{
    const pulse=target.animate([
@@ -1979,7 +1994,7 @@ function applyCustomProperties(){
   else root.style.removeProperty('--'+key);
  });
  // Keep the visible size aligned with Telegram's perceived default at the same slider value.
-  root.style.setProperty('--msg-size',(messageTextSize*0.875)+'px');
+  root.style.setProperty('--msg-size',(messageTextSize*0.80)+'px');
  root.style.setProperty('--msg-radius',messageCornerRadius+'px');
 }
 function saveCustomTheme(){
@@ -2009,11 +2024,11 @@ function openThemeCustomizer(){
   preview.style.color=p.text||customTextColor||getThemePalette().text;
   preview.style.borderColor=p.acc||getThemePalette().acc;
   preview.style.borderRadius=draft.radius+'px';
-  preview.style.fontSize=(draft.size*0.875)+'px';
+  preview.style.fontSize=(draft.size*0.80)+'px';
   $('#customMessageSizeValue').textContent=draft.size+' sp';
   $('#customRadiusValue').textContent=draft.radius+' dp';
   $('#sh').style.setProperty('--text',p.text||customTextColor||'');
-  $('#sh').style.setProperty('--msg-size',(draft.size*0.875)+'px');
+  $('#sh').style.setProperty('--msg-size',(draft.size*0.80)+'px');
   $('#sh').style.setProperty('--acc',p.acc||'');
  };
  sh.querySelectorAll('[data-theme-colour]').forEach(input=>input.addEventListener('input',()=>{
