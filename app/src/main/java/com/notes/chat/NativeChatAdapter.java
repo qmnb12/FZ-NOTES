@@ -97,8 +97,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private boolean lightTheme;
     private boolean showTopics = true;
     private String themeName = "dark";
-    private int themeBg = Color.rgb(11, 17, 27);
-    private int themeBar = Color.rgb(17, 27, 41);
+    private int themeBg = Color.rgb(11, 17, 27);    private int themeBar = Color.rgb(17, 27, 41);
     private int themeBubble = DARK_BUBBLE;
     private int themeText = DARK_TEXT;
     private int themeMuted = DARK_MUTED;
@@ -197,8 +196,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 note.due = o.optLong("due", 0);
                 note.reply = o.optString("reply", "");
                 JSONArray checkArray = o.optJSONArray("checks");
-                if (checkArray != null) {
-                    for (int c = 0; c < checkArray.length(); c++) {
+                if (checkArray != null) {                    for (int c = 0; c < checkArray.length(); c++) {
                         JSONObject check = checkArray.optJSONObject(c);
                         if (check != null) {
                             note.checks.add(new CheckItem(check.optString("text", ""), check.optInt("state", 0)));
@@ -297,8 +295,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     }
 
     private void toggleSelectionById(String id) {
-        if (id == null) return;
-        lastSelectionChangedId = id;
+        if (id == null) return;        lastSelectionChangedId = id;
         boolean wasSelecting = !selectedIds.isEmpty();
         if (selectedIds.contains(id)) selectedIds.remove(id); else selectedIds.add(id);
         boolean isSelecting = !selectedIds.isEmpty();
@@ -397,8 +394,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         return null;
     }
 
-    /** Flash the copied Mono/code text. Text matching is the fallback when HTML parsing changes span indexes. */
-    void flashInlineCode(String noteId, String kind, int index) {
+    /** Flash the copied Mono/code text. Text matching is the fallback when HTML parsing changes span indexes. */    void flashInlineCode(String noteId, String kind, int index) {
         flashInlineCode(noteId, kind, index, "");
     }
 
@@ -497,8 +493,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         final int pulseTextColor = lightSurface ? Color.WHITE : Color.rgb(8, 16, 28);
         final int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
         final int tintedAccent = blendColors(themeAccent, tintBase, lightSurface ? 0.20f : 0.50f);
-        final int flashColor = Color.argb(230,
-                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
+        final int flashColor = Color.argb(230,                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
         final int clearColor = Color.argb(0,
                 Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
         final ArgbEvaluator colorEvaluator = new ArgbEvaluator();
@@ -529,18 +524,20 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             row.body.invalidate();
         });
 
+        // Capture the final Spannable reference for Java 8 anonymous-listener rules.
+        final android.text.Spannable flashText = styled;
         AnimatorSet animator = new AnimatorSet();
         animator.playSequentially(enter, exit);
         animator.addListener(new android.animation.AnimatorListenerAdapter() {
             @Override public void onAnimationEnd(android.animation.Animator animation) {
-                if (styled.getSpanStart(pulse) >= 0) styled.removeSpan(pulse);
+                if (flashText.getSpanStart(pulse) >= 0) flashText.removeSpan(pulse);
                 for (int i = 0; i < removedBackgrounds.size(); i++) {
                     BackgroundColorSpan span = removedBackgrounds.get(i);
-                    if (styled.getSpanStart(span) < 0) styled.setSpan(span, start, end, backgroundFlags.get(i));
+                    if (flashText.getSpanStart(span) < 0) flashText.setSpan(span, start, end, backgroundFlags.get(i));
                 }
                 for (int i = 0; i < removedForegrounds.size(); i++) {
                     ForegroundColorSpan span = removedForegrounds.get(i);
-                    if (styled.getSpanStart(span) < 0) styled.setSpan(span, start, end, foregroundFlags.get(i));
+                    if (flashText.getSpanStart(span) < 0) flashText.setSpan(span, start, end, foregroundFlags.get(i));
                 }
                 if (flashTarget != null) flashTarget.fixedTextColor = originalFixedTextColor;
                 row.body.invalidate();
@@ -597,8 +594,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     private static int paletteColor(JSONObject palette, String key, int fallback) {
         if (palette == null) return fallback;
-        try {
-            String value = palette.optString(key, "");
+        try {            String value = palette.optString(key, "");
             if (!value.isEmpty()) return Color.parseColor(value);
         } catch (Exception ignored) { }
         return fallback;
@@ -697,8 +693,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             int comma = data.indexOf(',');
             String encoded = comma >= 0 ? data.substring(comma + 1) : data;
             byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
-            BitmapFactory.Options bounds = new BitmapFactory.Options();
-            bounds.inJustDecodeBounds = true;
+            BitmapFactory.Options bounds = new BitmapFactory.Options();            bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
             int sample = 1;
             int max = Math.max(bounds.outWidth, bounds.outHeight);
@@ -797,8 +792,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             dateHeader.setOnClickListener(v -> {
                 if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
             });
-            LayoutParams dateLp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-            dateLp.gravity = Gravity.CENTER_HORIZONTAL;
+            LayoutParams dateLp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);            dateLp.gravity = Gravity.CENTER_HORIZONTAL;
             dateLp.topMargin = dp(5);
             dateLp.bottomMargin = dp(3);
             addView(dateHeader, dateLp);
@@ -897,8 +891,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             summaryLp.topMargin = dp(2);
             bubble.addView(checkSummary, summaryLp);
 
-            checks = new LinearLayout(context);
-            checks.setOrientation(VERTICAL);
+            checks = new LinearLayout(context);            checks.setOrientation(VERTICAL);
             LinearLayout.LayoutParams checksLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             checksLp.topMargin = dp(1);
             bubble.addView(checks, checksLp);
@@ -997,8 +990,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             replyView.setVisibility(TextUtils.isEmpty(note.reply) ? GONE : VISIBLE);
             replyView.setText("↪  " + note.reply);
             replyView.setTextColor(fg);
-            GradientDrawable replyBg = new GradientDrawable();
-            replyBg.setColor(themeBar);
+            GradientDrawable replyBg = new GradientDrawable();            replyBg.setColor(themeBar);
             replyBg.setCornerRadius(dp(5));
             replyView.setBackground(replyBg);
             replyView.setOnClickListener(v -> {
@@ -1097,8 +1089,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 indicator.setChecked(selected, true);
             } else if (indicator.getVisibility() == VISIBLE) {
                 indicator.setChecked(false, true, true);
-            } else {
-                indicator.setVisibility(INVISIBLE);
+            } else {                indicator.setVisibility(INVISIBLE);
                 indicator.setChecked(false, false, true);
             }
             bubble.animate().cancel();
@@ -1197,8 +1188,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             selectionAnimator.addUpdateListener(animation -> {
                 float fraction = (float) animation.getAnimatedValue();
                 bubbleFillColor = (Integer) selectionColorEvaluator.evaluate(fraction, startColor, targetColor);
-                background.setColor(bubbleFillColor);
-            });
+                background.setColor(bubbleFillColor);            });
             selectionAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
                 @Override public void onAnimationEnd(android.animation.Animator animation) {
                     if (selectionAnimator == animation) selectionAnimator = null;
@@ -1298,7 +1288,6 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
         }
     }
-
     private static final class NativeRichTagHandler implements Html.TagHandler {
         private static final class Mark {
             final int start;
@@ -1397,8 +1386,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (adapter == null || noteId == null) return;
             if (!adapter.selectedIds.isEmpty()) adapter.toggleSelectionById(noteId);
             else if (adapter.listener != null) adapter.listener.onAction(noteId, action, index);
-        }
-        @Override public void updateDrawState(TextPaint ds) {
+        }        @Override public void updateDrawState(TextPaint ds) {
             ds.setUnderlineText(false);
             // ClickableSpan normally overwrites ForegroundColorSpan with the link color.
             // Keep Mono in its own calm code color instead of flashing blue while scrolling/tapping.
