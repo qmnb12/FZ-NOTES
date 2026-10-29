@@ -244,12 +244,8 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(true);
         // Performance: disable caching to avoid stale data and memory bloat
         s.setCacheMode(WebSettings.LOAD_NO_CACHE);
-        s.setAppCacheEnabled(false);
-        s.setDatabaseEnabled(false);
-        s.setGeolocationDatabaseEnabled(false);
         // Enable hardware acceleration for better rendering
         s.setRenderPriority(WebSettings.RenderPriority.HIGH);
-        s.setEnableSmoothText(true);
         // Reduce memory usage
         s.setLoadsImagesAutomatically(true);
         s.setBlockNetworkImage(false);
