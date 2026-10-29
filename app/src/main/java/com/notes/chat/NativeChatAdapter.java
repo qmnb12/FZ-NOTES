@@ -1025,7 +1025,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setText(parsed);
             // CSS px and Telegram-style chat sizes are density-independent; SP would
             // enlarge notes again when the Android system font scale is above 1.0.
-            body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, messageTextSizeDp * 0.85f);
+            body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, messageTextSizeDp * 0.88f);
             body.setTextColor(fg);
             body.setLinkTextColor(accent);
             body.setVisibility(TextUtils.isEmpty(note.html) ? GONE : VISIBLE);
