@@ -85,8 +85,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private final Listener listener;
     private final List<Note> items = new ArrayList<>();
     private final Set<String> selectedIds = new HashSet<>();
-    private final ExecutorService imageExecutor = Executors.newSingleThreadExecutor();
-    private final LruCache<String, Bitmap> imageCache = new LruCache<String, Bitmap>(8 * 1024) {
+    private final ExecutorService imageExecutor = Executors.newFixedThreadPool(3);
+    private final LruCache<String, Bitmap> imageCache = new LruCache<String, Bitmap>(5 * 1024 * 1024) {
         @Override protected int sizeOf(String key, Bitmap value) {
             return Math.max(1, value.getByteCount() / 1024);
         }

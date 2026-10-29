@@ -1500,32 +1500,39 @@ function render(forceScrollToLatest=false){syncHiddenCredentialLifecycle();if(cu
  }else{searchResultIds=[];searchResultIndex=-1;searchHighlightedId=''}
  searchResultResetPending=false;
  updateSearchNavigation();
- if(hasNativeChat()){
-  chat.innerHTML='';
-  const visibleIds=new Set(list.map(m=>String(m.id)));
-  [...nativeImagePayloadCache.keys()].forEach(id=>{if(!visibleIds.has(id))nativeImagePayloadCache.delete(id)});
-  const items=list.map(m=>{
-   const id=String(m.id),image=typeof m.i==='string'&&m.i.length>0;
-   const reply=m.r?msgs.find(x=>Number(x.id)===Number(m.r)):null;
-   const item={id,time:Number(m.t)||Date.now(),html:m.h||'',imagePresent:image,topic:tn(m.k),edited:!!m.e,pinned:!!m.p,due:Number(m.due)||0,reply:reply?(plain(reply.h)||'Photo').slice(0,100):'',checks:Array.isArray(m.c)?m.c.map(c=>({text:String(c.x||''),state:Number(c.s)||0})):[]};
-   if(image&&nativeImagePayloadCache.get(id)!==m.i){item.image=m.i;nativeImagePayloadCache.set(id,m.i)}
-   if(!image)nativeImagePayloadCache.delete(id);
-   return item;
-  });
-  try{window.Android.setNativeChatData(JSON.stringify({forceFollowLatest:!!forceScrollToLatest,theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,messageCornerRadius:messageCornerRadius,searchHighlightId:searchHighlightedId,showTopics:cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'),selectedIds:[...sel].map(String),items}))}catch(_){}
-  syncNativeChatOverlay();
-  return
- }
- chat.innerHTML='';const fragment=document.createDocumentFragment();
- if(!list.length){chat.innerHTML='<div class="empty">Apna pehla note likho. Ye chat ki tarah send hoga.</div>';return}
- let last='';
- list.forEach(m=>{const d=new Date(m.t),ds=d.toDateString();
-  if(ds!==last){last=ds;const c=document.createElement('div');c.className='chip';c.textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});fragment.appendChild(c)}
-  const b=document.createElement('div');b.className='b'+(m.h&&m.h.includes('class="code"')?' has-code':'')+(selMode&&sel.has(Number(m.id))?' sel':'')+(String(m.id)===String(searchHighlightedId)?' search-hit':'');b.dataset.id=m.id;
-  b.innerHTML=((cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'))?'<span class="tg">'+esc(tn(m.k))+'</span>':'')+(m.i?'<img class="im" src="'+m.i+'" alt="Photo">':'')+'<div class="msgtext">'+rq(m)+m.h+'</div>'+(m.due?'<span class="due '+(m.due<Date.now()&&!(m.c&&m.c.every(i=>i.s===1))?'late':'')+'">◷ '+esc(new Date(m.due).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}))+'</span>':'')+ckHtml(m)+'<span class="tm">'+(m.e?'edited · ':'')+d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'<button class="mn" aria-label="Options">⋮</button></span>';
-  const photo=b.querySelector('.im');if(photo)photo.addEventListener('error',()=>{photo.onerror=null;photo.classList.add('image-error');photo.alt='Photo preview could not be loaded';photo.removeAttribute('src')});
-  fragment.appendChild(b)});
- chat.appendChild(fragment);chat.scrollTop=chat.scrollHeight}
+if(hasNativeChat()){
+   // Optimized: use removeChild instead of innerHTML='' to avoid full DOM reflow
+   while(chat.firstChild)chat.removeChild(chat.firstChild);
+   const visibleIds=new Set(list.map(m=>String(m.id)));
+   [...nativeImagePayloadCache.keys()].forEach(id=>{if(!visibleIds.has(id))nativeImagePayloadCache.delete(id)});
+   const items=list.map(m=>{
+    const id=String(m.id),image=typeof m.i==='string'&&m.i.length>0;
+    const reply=m.r?msgs.find(x=>Number(x.id)===Number(m.r)):null;
+    const item={id,time:Number(m.t)||Date.now(),html:m.h||'',imagePresent:image,topic:tn(m.k),edited:!!m.e,pinned:!!m.p,due:Number(m.due)||0,reply:reply?(plain(reply.h)||'Photo').slice(0,100):'',checks:Array.isArray(m.c)?m.c.map(c=>({text:String(c.x||''),state:Number(c.s)||0})):[]};
+    if(image&&nativeImagePayloadCache.get(id)!==m.i){item.image=m.i;nativeImagePayloadCache.set(id,m.i)}
+    if(!image)nativeImagePayloadCache.delete(id);
+    return item;
+   });
+   try{window.Android.setNativeChatData(JSON.stringify({forceFollowLatest:!!forceScrollToLatest,theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,messageCornerRadius:messageCornerRadius,searchHighlightId:searchHighlightedId,showTopics:cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'),selectedIds:[...sel].map(String),items}))}catch(_){}
+   syncNativeChatOverlay();
+   return
+  }
+// Optimized: use removeChild instead of innerHTML='' to avoid full DOM reflow
+  while(chat.firstChild)chat.removeChild(chat.firstChild);
+  const fragment=document.createDocumentFragment();
+  if(!list.length){chat.innerHTML='<div class="empty">Apna pehla note likho. Ye chat ki tarah send hoga.</div>';return}
+  let last='';
+  list.forEach(m=>{const d=new Date(m.t),ds=d.toDateString();
+   if(ds!==last){last=ds;const c=document.createElement('div');c.className='chip';c.textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});fragment.appendChild(c)}
+   const b=document.createElement('div');b.className='b'+(m.h&&m.h.includes('class="code"')?' has-code':'')+(selMode&&sel.has(Number(m.id))?' sel':'')+(String(m.id)===String(searchHighlightedId)?' search-hit':'');b.dataset.id=m.id;
+   // Optimized: pre-build HTML strings to reduce DOM operations
+   const tagSpan=(cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'))?'<span class="tg">'+esc(tn(m.k))+'</span>':'';
+   const imageHtml=m.i?'<img class="im" src="'+m.i+'" alt="Photo">':'';
+   const dueHtml=m.due?'<span class="due '+(m.due<Date.now()&&!(m.c&&m.c.every(i=>i.s===1))?'late':'')+'">◷ '+esc(new Date(m.due).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}))+'</span>':'';
+   b.innerHTML=tagSpan+imageHtml+'<div class="msgtext">'+rq(m)+m.h+'</div>'+dueHtml+ckHtml(m)+'<span class="tm">'+(m.e?'edited · ':'')+d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'<button class="mn" aria-label="Options">⋮</button></span>';
+   const photo=b.querySelector('.im');if(photo)photo.addEventListener('error',()=>{photo.onerror=null;photo.classList.add('image-error');photo.alt='Photo preview could not be loaded';photo.removeAttribute('src')});
+   fragment.appendChild(b)});
+  chat.appendChild(fragment);chat.scrollTop=chat.scrollHeight}
 function saveDraft(){try{const value={text:ed.innerHTML,plain:ed.innerText,listMode,listTitle,due:$('#taskdue').value,topic:cur,replyId,editId,updatedAt:Date.now()};if(value.plain.trim()||listMode||value.due)localStorage.setItem('notes-chat-draft',JSON.stringify(value));else localStorage.removeItem('notes-chat-draft')}catch(e){}}
 function clearDraft(){try{localStorage.removeItem('notes-chat-draft')}catch(e){}}
 ed.addEventListener('input',()=>{updateComposerControls();clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,180);});$('#taskdue').addEventListener('change',saveDraft);
@@ -1781,7 +1788,8 @@ const contextIcons={
 /* Robust Android WebView long-press handling */
 let timer,pressTarget=null,pressX=0,pressY=0,pressMenuArea=false;
 function noteCopyText(m){const tmp=document.createElement('div');tmp.innerHTML=m.h||'';tmp.querySelectorAll('.tg,.tm,.mn,.due,.cnt').forEach(n=>n.remove());let t=(tmp.innerText||tmp.textContent||'').trim();if(m.c)t+=(t?'\n':'')+m.c.map(i=>i.x).join('\n');return t}
-function keepSelectedVisible(id){chat.classList.add('sheet-open');if(hasNativeChat())return;const adjust=()=>{if(!sh.classList.contains('on'))return;const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b)return;const br=b.getBoundingClientRect(),sr=sh.getBoundingClientRect(),cr=chat.getBoundingClientRect();const top=Math.max(cr.top,0)+8,bottom=Math.min(cr.bottom,sr.top,window.innerHeight)-12;if(bottom<=top)return;const available=bottom-top;let desiredTop=br.top;if(br.height>=available)desiredTop=top;else if(br.bottom>bottom)desiredTop=bottom-br.height;else if(br.top<top)desiredTop=top;const delta=br.top-desiredTop;if(Math.abs(delta)>1)chat.scrollTop+=delta};requestAnimationFrame(()=>requestAnimationFrame(adjust));setTimeout(adjust,280)}
+function keepSelectedVisible(id){chat.classList.add('sheet-open');if(hasNativeChat())return;const adjust=()=>{if(!sh.classList.contains('on'))return;const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b)return;const br=b.getBoundingClientRect(),sr=sh.getBoundingClientRect(),cr=chat.getBoundingClientRect();const top=Math.max(cr.top,0)+8,bottom=Math.min(cr.bottom,sr.top,window.innerHeight)-12;if(bottom<=top)return;const available=bottom-top;let desiredTop=br.top;if(br.height>=available)desiredTop=top;else if(br.bottom>bottom)desiredTop=bottom-br.height;else if(br.top<top)desiredTop=top;const delta=br.top-desiredTop;if(Math.abs(delta)>1)chat.scrollTop+=delta};// Single rAF instead of double rAF + setTimeout
+requestAnimationFrame(adjust)}
  sh.addEventListener('transitionend',e=>{if(e.target===sh&&!sh.classList.contains('on'))chat.classList.remove('sheet-open')});
 function showNativeMessagePopup(id,mode){
   if(!hasNativeChat()||!window.Android||typeof window.Android.showNativeMessageMenu!=='function')return false;
@@ -2348,12 +2356,15 @@ function scheduleAutoBackup(){
  if(suppressAutoBackup)return;
  clearTimeout(autoBackupTimer);
  if(!cfgGet().driveOn)return;
+ // Debounce: only schedule if not already pending
+ if(autoBackupTimer)clearTimeout(autoBackupTimer);
  autoBackupTimer=setTimeout(async()=>{
   if(autoBackupBusy){autoBackupAgain=true;return}
   autoBackupBusy=true;
   try{await doGoogleBackup(true,true)}catch(_){}
-  finally{autoBackupBusy=false;if(autoBackupAgain){autoBackupAgain=false;scheduleAutoBackup()}}
- },3500);
+  finally{autoBackupBusy=false;if(autoBackupAgain){autoBackupAgain=false;// Only reschedule if we actually completed successfully
+   scheduleAutoBackup()
+  }}},3500);
 }
 async function saveTelegramSettings(){
  const c=cfgGet();
