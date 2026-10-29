@@ -104,7 +104,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private int themeMuted = DARK_MUTED;
     private int themeAccent = DARK_ACCENT;
     private int themeBorder = Color.rgb(43, 59, 79);
-    private float messageTextSizeSp = 16f;
+    private float messageTextSizeDp = 16f;
     private float messageCornerRadiusDp = 17f;
     private String searchHighlightId = "";
     private String lastSelectionChangedId = "";
@@ -137,8 +137,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         themeMuted = paletteColor(palette, "mut", lightTheme ? LIGHT_MUTED : DARK_MUTED);
         themeAccent = paletteColor(palette, "acc", lightTheme ? LIGHT_ACCENT : DARK_ACCENT);
         themeBorder = blendColors(themeBar, themeText, lightTheme ? 0.13f : 0.12f);
-        messageTextSizeSp = (float) root.optDouble("messageTextSize", 16d);
-        messageTextSizeSp = Math.max(12f, Math.min(24f, messageTextSizeSp));
+        messageTextSizeDp = (float) root.optDouble("messageTextSize", 16d);
+        messageTextSizeDp = Math.max(12f, Math.min(24f, messageTextSizeDp));
         messageCornerRadiusDp = (float) root.optDouble("messageCornerRadius", 17d);
         messageCornerRadiusDp = Math.max(4f, Math.min(28f, messageCornerRadiusDp));
         searchHighlightId = root.optString("searchHighlightId", "");
@@ -246,7 +246,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private void notifyDataSetChangedThemeIfNeeded() {
         String appearance = themeName + "|" + themeBg + "|" + themeBar + "|" + themeBubble
                 + "|" + themeText + "|" + themeMuted + "|" + themeAccent + "|"
-                + messageTextSizeSp + "|" + messageCornerRadiusDp + "|" + showTopics + "|" + searchHighlightId;
+                + messageTextSizeDp + "|" + messageCornerRadiusDp + "|" + showTopics + "|" + searchHighlightId;
         if (!lastBoundAppearance.equals(appearance)) {
             lastBoundAppearance = appearance;
             notifyItemRangeChanged(0, getItemCount());
@@ -434,10 +434,12 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 && row.copyFlashText.getSpanStart(row.copyFlashSpan) >= 0) {
             row.copyFlashText.removeSpan(row.copyFlashSpan);
         }
-        // A short peak followed by a softer fade feels like a deliberate tap response,
-        // rather than a bright highlight that simply disappears.
+        // Derive a contrasting tint from the active theme. In dark themes, lift
+        // the accent toward white; in light themes, darken it so the pulse stays visible.
+        int contrastColor = lightTheme ? Color.rgb(12, 20, 32) : Color.WHITE;
+        int tintedAccent = blendColors(themeAccent, contrastColor, lightTheme ? 0.28f : 0.38f);
         final CopyFlashSpan pulse = new CopyFlashSpan(
-                Color.argb(90, Color.red(themeAccent), Color.green(themeAccent), Color.blue(themeAccent)));
+                Color.argb(148, Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent)));
         final int flashColor = pulse.getColor();
         final int clearColor = Color.argb(0, Color.red(flashColor), Color.green(flashColor), Color.blue(flashColor));
         styled.setSpan(pulse, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -738,7 +740,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bubble.addView(imageView, imageLp);
 
             body = new TextView(context);
-            body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
             body.setIncludeFontPadding(false);
             body.setLineSpacing(dp(1), 1.02f);
             // Allow selecting/copying text inside a note. Long-press on the text
@@ -904,10 +906,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             rich = rich.replaceAll("(?is)<span\\s+class=[\"']code[\"']\\s*>(.*?)</span>", "<codeblock>$1</codeblock>");
             rich = rich.replaceAll("(?is)<span\\s+class=[\"']quote[\"']\\s*>(.*?)</span>", "<quoteblock>$1</quoteblock>");
             Spanned parsed = Html.fromHtml(rich, Html.FROM_HTML_MODE_COMPACT, null,
-                    new NativeRichTagHandler(context, accent, themeBg, dp(3), dp(8), NativeChatAdapter.this, note.id));
+                    new NativeRichTagHandler(context, accent, themeBg, lightTheme, dp(3), dp(8), NativeChatAdapter.this, note.id));
             body.setText(parsed);
-            // Keep native rendering aligned with the scaled CSS font-size used in the WebView.
-            body.setTextSize(TypedValue.COMPLEX_UNIT_SP, messageTextSizeSp * 0.875f);
+            // CSS px and Telegram-style chat sizes are density-independent; SP would
+            // enlarge notes again when the Android system font scale is above 1.0.
+            body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, messageTextSizeDp * 0.80f);
             body.setTextColor(fg);
             body.setLinkTextColor(accent);
             body.setVisibility(TextUtils.isEmpty(note.html) ? GONE : VISIBLE);
@@ -1191,14 +1194,16 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private final Stack<Mark> marks = new Stack<>();
         private final Context context;
         private final int accent, codeBackground, stripeWidth, gapWidth;
+        private final boolean lightTheme;
         private final NativeChatAdapter adapter;
         private final String noteId;
         private int monoIndex;
         private int codeIndex;
 
-        NativeRichTagHandler(Context context, int accent, int codeBackground, int stripeWidth, int gapWidth,
-                             NativeChatAdapter adapter, String noteId) {
+        NativeRichTagHandler(Context context, int accent, int codeBackground, boolean lightTheme,
+                             int stripeWidth, int gapWidth, NativeChatAdapter adapter, String noteId) {
             this.context = context; this.accent = accent; this.codeBackground = codeBackground;
+            this.lightTheme = lightTheme;
             this.stripeWidth = stripeWidth; this.gapWidth = gapWidth; this.adapter = adapter; this.noteId = noteId;
         }
         @Override public void handleTag(boolean opening, String tag, Editable output, XMLReader xmlReader) {
@@ -1225,10 +1230,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             } else if ("monospan".equals(mark.tag)) {
                 // Make inline code instantly distinguishable from prose, while keeping
                 // it as a real clickable span so one tap copies only this Mono value.
-                int monoBg = accent == Color.rgb(40, 111, 219)
-                        ? Color.rgb(226, 238, 255) : Color.rgb(12, 24, 40);
-                int monoFg = accent == Color.rgb(40, 111, 219)
-                        ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255);
+                // Theme mode, not the exact accent hex, determines the Mono surface.
+                // This keeps light custom themes light even when their accent is customized.
+                int monoBg = lightTheme ? Color.rgb(226, 238, 255) : Color.rgb(12, 24, 40);
+                int monoFg = lightTheme ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255);
                 output.setSpan(new TypefaceSpan("monospace"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new RelativeSizeSpan(0.90f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new BackgroundColorSpan(monoBg), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
