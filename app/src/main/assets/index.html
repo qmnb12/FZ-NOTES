@@ -1470,7 +1470,7 @@ async function copy(t,feedback='Copied',flashTarget=null,nativeTarget=null){
   }
   if(flashTarget)flashCopiedElement(flashTarget);
   if(nativeTarget&&window.Android&&typeof window.Android.flashNativeCode==='function'){
-   try{window.Android.flashNativeCode(String(nativeTarget.id),String(nativeTarget.action),Number(nativeTarget.index)||0)}catch(_){}
+   try{window.Android.flashNativeCode(String(nativeTarget.id),String(nativeTarget.action),Number(nativeTarget.index)||0,String(nativeTarget.text||''))}catch(_){}
   }
   toast(feedback);
   return true;
@@ -2002,7 +2002,7 @@ function applyCustomProperties(){
   else root.style.removeProperty('--'+key);
  });
  // Keep the visible size aligned with Telegram's perceived default at the same slider value.
-  root.style.setProperty('--msg-size',(messageTextSize*0.90)+'px');
+  root.style.setProperty('--msg-size',(messageTextSize*0.85)+'px');
  root.style.setProperty('--msg-radius',messageCornerRadius+'px');
 }
 function saveCustomTheme(){
@@ -2032,11 +2032,11 @@ function openThemeCustomizer(){
   preview.style.color=p.text||customTextColor||getThemePalette().text;
   preview.style.borderColor=p.acc||getThemePalette().acc;
   preview.style.borderRadius=draft.radius+'px';
-  preview.style.fontSize=(draft.size*0.90)+'px';
+  preview.style.fontSize=(draft.size*0.85)+'px';
   $('#customMessageSizeValue').textContent=draft.size+' sp';
   $('#customRadiusValue').textContent=draft.radius+' dp';
   $('#sh').style.setProperty('--text',p.text||customTextColor||'');
-  $('#sh').style.setProperty('--msg-size',(draft.size*0.90)+'px');
+  $('#sh').style.setProperty('--msg-size',(draft.size*0.85)+'px');
   $('#sh').style.setProperty('--acc',p.acc||'');
  };
  sh.querySelectorAll('[data-theme-colour]').forEach(input=>input.addEventListener('input',()=>{
@@ -2651,8 +2651,10 @@ window.nativeChatAction=function(rawId,action,index){
   const matches=tmp.querySelectorAll(action==='code'?'.code':'.mono');
   const ix=Math.max(0,Number(index)||0);
   const el=matches[ix]||matches[0];
-  if(el)copy(el.innerText||el.textContent||'',action==='code'?'Code copied':'Mono copied',null,{id:String(m.id),action,index:ix});
-  else toast(action==='code'?'Code block nahi mila':'Mono text nahi mila',1800);
+  if(el){
+   const copiedText=el.innerText||el.textContent||'';
+   copy(copiedText,action==='code'?'Code copied':'Mono copied',null,{id:String(m.id),action,index:ix,text:copiedText});
+  }else toast(action==='code'?'Code block nahi mila':'Mono text nahi mila',1800);
   return
  }
 };
