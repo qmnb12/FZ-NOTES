@@ -397,8 +397,12 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         return null;
     }
 
-    /** Flash only the exact inline Mono/code span, after the clipboard write succeeded. */
+    /** Flash the copied Mono/code text. Text matching is the fallback when HTML parsing changes span indexes. */
     void flashInlineCode(String noteId, String kind, int index) {
+        flashInlineCode(noteId, kind, index, "");
+    }
+
+    void flashInlineCode(String noteId, String kind, int index, String requestedText) {
         if (!"mono".equals(kind) && !"code".equals(kind)) return;
         NoteRow row = findVisibleRow(noteId);
         if (row == null || row.body == null) return;
@@ -416,17 +420,39 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             return;
         }
 
+        String wanted = normalizeInlineText(requestedText);
         InlineCopySpan target = null;
+        InlineCopySpan indexCandidate = null;
         InlineCopySpan[] spans = styled.getSpans(0, styled.length(), InlineCopySpan.class);
         for (InlineCopySpan span : spans) {
-            if (noteId.equals(span.noteId) && kind.equals(span.action) && index == span.index) {
+            if (!noteId.equals(span.noteId) || !kind.equals(span.action)) continue;
+            int spanStart = styled.getSpanStart(span);
+            int spanEnd = styled.getSpanEnd(span);
+            if (spanStart < 0 || spanEnd <= spanStart) continue;
+            String spanText = normalizeInlineText(styled.subSequence(spanStart, spanEnd));
+            if (index == span.index) indexCandidate = span;
+            if (index == span.index && (wanted.isEmpty() || wanted.equals(spanText))) {
+                target = span;
+                break;
+            }
+            // HTML/TextView parsing can alter span indexes; text identity is a safer fallback.
+            if (!wanted.isEmpty() && wanted.equals(spanText)) {
                 target = span;
                 break;
             }
         }
-        if (target == null) return;
-        final int start = styled.getSpanStart(target);
-        final int end = styled.getSpanEnd(target);
+        if (target == null && indexCandidate != null && wanted.isEmpty()) target = indexCandidate;
+
+        int start = target == null ? -1 : styled.getSpanStart(target);
+        int end = target == null ? -1 : styled.getSpanEnd(target);
+        if ((start < 0 || end <= start) && !wanted.isEmpty()) {
+            int[] fallbackRange = findNormalizedTextRange(styled, wanted);
+            if (fallbackRange != null) {
+                start = fallbackRange[0];
+                end = fallbackRange[1];
+            }
+        }
+        // Do not silently exit just because the parser gave the Mono span a different index.
         if (start < 0 || end <= start) return;
 
         if (row.copyFlashAnimator != null) {
@@ -439,8 +465,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
         // Choose a visible highlight from the actual bubble brightness, not just the theme id.
         final boolean lightSurface = Color.luminance(themeBubble) >= 0.50f;
-        final int originalTextColor = target.fixedTextColor != Color.TRANSPARENT
-                ? target.fixedTextColor : themeText;
+        final int originalTextColor = target != null && target.fixedTextColor != Color.TRANSPARENT
+                ? target.fixedTextColor
+                : (lightTheme ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255));
         final int pulseTextColor = lightSurface ? Color.WHITE : Color.rgb(8, 16, 28);
         final int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
         final int tintedAccent = blendColors(themeAccent, tintBase, lightSurface ? 0.20f : 0.50f);
@@ -490,6 +517,46 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         });
         row.copyFlashAnimator = animator;
         animator.start();
+    }
+
+    private static String normalizeInlineText(CharSequence value) {
+        if (value == null) return "";
+        return value.toString().replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
+    }
+
+    /**
+     * Locate a requested string while ignoring differences in whitespace/newlines.
+     * The returned offsets are mapped back to the original TextView text.
+     */
+    private static int[] findNormalizedTextRange(CharSequence source, String requested) {
+        String needle = normalizeInlineText(requested);
+        if (source == null || needle.isEmpty()) return null;
+        StringBuilder normalized = new StringBuilder();
+        ArrayList<Integer> starts = new ArrayList<>();
+        ArrayList<Integer> ends = new ArrayList<>();
+        for (int i = 0; i < source.length(); i++) {
+            char ch = source.charAt(i);
+            if (Character.isWhitespace(ch) || ch == '\u00A0') {
+                if (normalized.length() == 0) continue;
+                int last = normalized.length() - 1;
+                if (normalized.charAt(last) == ' ') {
+                    ends.set(last, i + 1);
+                } else {
+                    normalized.append(' ');
+                    starts.add(i);
+                    ends.add(i + 1);
+                }
+            } else {
+                normalized.append(ch);
+                starts.add(i);
+                ends.add(i + 1);
+            }
+        }
+        int match = normalized.indexOf(needle);
+        if (match < 0) return null;
+        int last = match + needle.length() - 1;
+        if (last >= starts.size() || last >= ends.size()) return null;
+        return new int[]{starts.get(match), ends.get(last)};
     }
 
     private static int paletteColor(JSONObject palette, String key, int fallback) {
