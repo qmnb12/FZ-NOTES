@@ -1399,8 +1399,16 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
         @Override public void onClick(View widget) {
             if (adapter == null || noteId == null) return;
-            if (!adapter.selectedIds.isEmpty()) adapter.toggleSelectionById(noteId);
-            else if (adapter.listener != null) adapter.listener.onAction(noteId, action, index);
+            if (!adapter.selectedIds.isEmpty()) {
+                adapter.toggleSelectionById(noteId);
+            } else if (adapter.listener != null) {
+                // Start the visual pulse from this exact native span immediately.
+                // Do not wait for a WebView/clipboard bridge round-trip to rediscover it.
+                if ("mono".equals(action) || "code".equals(action)) {
+                    adapter.flashInlineCode(noteId, action, index, "");
+                }
+                adapter.listener.onAction(noteId, action, index);
+            }
         }
         @Override public void updateDrawState(TextPaint ds) {
             ds.setUnderlineText(false);
