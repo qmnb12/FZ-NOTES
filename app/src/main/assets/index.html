@@ -1957,7 +1957,8 @@ function applyCustomProperties(){
   if(value&&/^#[0-9a-f]{6}$/i.test(value))root.style.setProperty('--'+key,value);
   else root.style.removeProperty('--'+key);
  });
- root.style.setProperty('--msg-size',messageTextSize+'px');
+ // Keep the visible size aligned with Telegram's perceived default at the same slider value.
+  root.style.setProperty('--msg-size',(messageTextSize*0.92)+'px');
  root.style.setProperty('--msg-radius',messageCornerRadius+'px');
 }
 function saveCustomTheme(){
@@ -1987,11 +1988,11 @@ function openThemeCustomizer(){
   preview.style.color=p.text||customTextColor||getThemePalette().text;
   preview.style.borderColor=p.acc||getThemePalette().acc;
   preview.style.borderRadius=draft.radius+'px';
-  preview.style.fontSize=draft.size+'px';
+  preview.style.fontSize=(draft.size*0.92)+'px';
   $('#customMessageSizeValue').textContent=draft.size+' sp';
   $('#customRadiusValue').textContent=draft.radius+' dp';
   $('#sh').style.setProperty('--text',p.text||customTextColor||'');
-  $('#sh').style.setProperty('--msg-size',draft.size+'px');
+  $('#sh').style.setProperty('--msg-size',(draft.size*0.92)+'px');
   $('#sh').style.setProperty('--acc',p.acc||'');
  };
  sh.querySelectorAll('[data-theme-colour]').forEach(input=>input.addEventListener('input',()=>{
