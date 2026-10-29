@@ -703,9 +703,11 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void flashNativeCode(final String noteId, final String kind, final int index) {
+        public void flashNativeCode(final String noteId, final String kind, final int index, final String copiedText) {
             runOnUiThread(() -> {
-                if (nativeChatAdapter != null) nativeChatAdapter.flashInlineCode(noteId, kind, index);
+                if (nativeChatAdapter != null) {
+                    nativeChatAdapter.flashInlineCode(noteId, kind, index, copiedText == null ? "" : copiedText);
+                }
             });
         }
 
