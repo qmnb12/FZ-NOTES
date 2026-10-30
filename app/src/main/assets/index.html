@@ -2564,6 +2564,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='cset'){openCfg();return}
   if(k==='tgcfg'){openTgCfg();return}
   if(k==='tgstatus'){toast(lastTelegramBackup()?'Last Telegram archive: '+lastTelegramBackup():'No successful archive yet',3000);return}
+  if(k==='tgRestore'){doTelegramRestore();return}
   if(k==='tgNow'){
    const c=cfgGet();
    if(!c.tgToken||!c.tgChat){openTgCfg();toast('Telegram settings mein bot token aur chat ID save karo',2800);return}
@@ -2853,6 +2854,7 @@ function openCloud(){
   cloudRow('tgstatus',icons.telegram,'Telegram archive',telegramState)+
   cloudRow('tgcfg',icons.settings,'Telegram settings','Set bot token, chat ID and schedule')+
   cloudRow('tgNow',icons.upload,'Back up to Telegram','Send an encrypted backup to your bot chat')+
+  cloudRow('tgRestore',icons.restore,'Restore from Telegram','Forward a backup file to your bot, then restore it here')+
   cloudRow('x',icons.cancel,'Back','Return to Backup');
  sh.dataset.type='cloud';sh.scrollTop=0;sh.classList.add('on');
 }
@@ -2995,6 +2997,7 @@ async function doTelegramBackup(quiet=false){
   const r=JSON.parse(await native('backup',{key,data:backupPayload(),targets:[{type:'tg',token:c.tgToken,chat:c.tgChat}]}));
   if(Number(r.successCount||0)<1)throw new Error(r.msg||'Telegram backup upload failed');
   try{localStorage.setItem('notes-last-telegram-backup',noteStamp())}catch(_){}
+  const tgStatusRow=sh.querySelector('[data-k="tgstatus"] .ms');if(tgStatusRow)tgStatusRow.textContent='Bot connected · Last archive '+noteStamp();
   if(!quiet)toast('Telegram backup saved · '+msgs.length+' notes',3500);
   return true;
  }catch(e){if(!quiet)toast('Telegram backup: '+e.message,4500);return false}
@@ -3117,6 +3120,22 @@ async function doDriveRestore(id){
  pendDriveId=id;toast('Google Drive backup restore ho raha hai…',4500);
  try{const {token,key}=await ensureDriveKey();await restoreDriveEntry(id,token,key,true)}
  catch(e){suppressAutoBackup=false;if((e.message||'').includes('LEGACY_PASSWORD_BACKUP')){legacyRestoreId=id;ask('legacyrestore','Purane backup ka password');return}toast('Restore failed: '+e.message,4500)}
+}
+async function doTelegramRestore(){
+ const c=cfgGet();
+ if(!c.tgToken||!c.tgChat){openTgCfg();toast('Pehle Telegram bot token aur chat ID save karo',3500);return false}
+ if(!c.driveOn){openCfg();toast('Telegram backup decrypt karne ke liye pehle Google account connect karo',4000);return false}
+ toast('Telegram se backup download ho raha hai…',4500);
+ try{
+  const {key}=await ensureDriveKey();
+  const raw=await native('restore',{key,source:{type:'tg',token:c.tgToken}});
+  if(!applyCloudRestore(raw))throw new Error('Telegram backup data valid FZ NOTES format mein nahi hai');
+  toast('Telegram backup restore complete · '+msgs.length+' notes',4000);
+  return true;
+ }catch(e){
+  toast('Telegram restore failed: '+e.message,5000);
+  return false;
+ }
 }
 async function restoreLegacyWithPassword(pw){
  if(!pw)return toast('Password enter karo');
