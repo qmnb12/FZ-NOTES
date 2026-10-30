@@ -4,6 +4,8 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
+import android.provider.DocumentsContract;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
@@ -373,20 +375,35 @@ public class Cloud {
 
         byte[] encrypted = encrypt(data, pw);
         String contents = LOCAL_BACKUP_HEADER + Base64.encodeToString(encrypted, Base64.NO_WRAP);
-        File target = new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE);
-        File temp = new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE + ".tmp");
-        try (FileOutputStream out = new FileOutputStream(temp, false)) {
+        String treeValue = prefs.getString("folderUri", "");
+        if (treeValue == null || treeValue.isEmpty())
+            throw new Exception("Choose a backup folder first from Local Backup settings");
+        Uri tree = Uri.parse(treeValue);
+        String treeId = DocumentsContract.getTreeDocumentId(tree);
+        Uri parent = DocumentsContract.buildDocumentUriUsingTree(tree, treeId);
+        String childrenMime = DocumentsContract.Document.MIME_TYPE_DIR;
+        Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, treeId);
+        String oldId = null;
+        try (Cursor cursor = ctx.getContentResolver().query(children,
+                new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME},
+                null, null, null)) {
+            if (cursor != null) while (cursor.moveToNext()) {
+                String name = cursor.getString(1);
+                if (LOCAL_BACKUP_FILE.equals(name)) oldId = cursor.getString(0);
+            }
+        }
+        if (oldId != null) {
+            Uri oldFile = DocumentsContract.buildDocumentUriUsingTree(tree, oldId);
+            if (!DocumentsContract.deleteDocument(ctx.getContentResolver(), oldFile))
+                throw new Exception("Previous automatic backup could not be replaced");
+        }
+        Uri target = DocumentsContract.createDocument(ctx.getContentResolver(), parent,
+                "application/octet-stream", LOCAL_BACKUP_FILE);
+        if (target == null) throw new Exception("Could not create backup file in selected folder");
+        try (OutputStream out = ctx.getContentResolver().openOutputStream(target, "wt")) {
+            if (out == null) throw new Exception("Selected backup folder is not writable");
             out.write(contents.getBytes(StandardCharsets.UTF_8));
             out.flush();
-            out.getFD().sync();
-        }
-        if (target.exists() && !target.delete()) {
-            temp.delete();
-            throw new Exception("Previous automatic backup could not be replaced");
-        }
-        if (!temp.renameTo(target)) {
-            temp.delete();
-            throw new Exception("Automatic local backup could not be saved");
         }
         prefs.edit().putLong("lastSuccess", System.currentTimeMillis()).remove("lastError").commit();
     }
@@ -397,16 +414,49 @@ public class Cloud {
         status.put("interval", prefs.getString("interval", "off"));
         status.put("lastSuccess", prefs.getLong("lastSuccess", 0L));
         status.put("lastError", prefs.getString("lastError", ""));
-        status.put("hasBackup", new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE).isFile());
+        status.put("folderLabel", prefs.getString("folderLabel", ""));
+        status.put("folderChosen", !prefs.getString("folderUri", "").isEmpty());
+        status.put("hasBackup", hasScheduledBackup(ctx, prefs));
         return status;
     }
 
+    private static boolean hasScheduledBackup(Context ctx, SharedPreferences prefs) {
+        String treeValue = prefs.getString("folderUri", "");
+        if (treeValue == null || treeValue.isEmpty()) return false;
+        try {
+            Uri tree = Uri.parse(treeValue);
+            Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree,
+                    DocumentsContract.getTreeDocumentId(tree));
+            try (Cursor cursor = ctx.getContentResolver().query(children,
+                    new String[]{DocumentsContract.Document.COLUMN_DISPLAY_NAME}, null, null, null)) {
+                if (cursor != null) while (cursor.moveToNext())
+                    if (LOCAL_BACKUP_FILE.equals(cursor.getString(0))) return true;
+            }
+        } catch (Exception ignored) { }
+        return false;
+    }
+
     static String readLocalAutoBackup(Context ctx) throws Exception {
-        File file = new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE);
-        if (!file.isFile()) throw new Exception("Automatic local backup abhi available nahi hai");
-        try (InputStream in = new FileInputStream(file)) {
-            return new String(readAll(in), StandardCharsets.UTF_8);
+        SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
+        String treeValue = prefs.getString("folderUri", "");
+        if (treeValue == null || treeValue.isEmpty()) throw new Exception("Pehle automatic backup folder select karo");
+        Uri tree = Uri.parse(treeValue);
+        Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree,
+                DocumentsContract.getTreeDocumentId(tree));
+        try (Cursor cursor = ctx.getContentResolver().query(children,
+                new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME},
+                null, null, null)) {
+            if (cursor != null) while (cursor.moveToNext()) {
+                if (LOCAL_BACKUP_FILE.equals(cursor.getString(1))) {
+                    Uri file = DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0));
+                    try (InputStream in = ctx.getContentResolver().openInputStream(file)) {
+                        if (in == null) break;
+                        return new String(readAll(in), StandardCharsets.UTF_8);
+                    }
+                }
+            }
         }
+        throw new Exception("Automatic local backup abhi selected folder mein available nahi hai");
     }
 
     // ---------- crypto ----------
