@@ -7,7 +7,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.provider.DocumentsContract;
 import android.content.SharedPreferences;
-import android.database.Cursor;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.security.keystore.KeyGenParameterSpec;
@@ -335,6 +334,9 @@ public class Cloud {
             return;
         }
 
+        String folderUri = prefs.getString("folderUri", "");
+        if (folderUri == null || folderUri.isEmpty())
+            throw new Exception("Pehle Local Backup mein Choose backup folder select karo");
         String pw = a.optString("pw", "");
         if (pw.length() < 8) throw new Exception("Local backup password must be at least 8 characters");
         if (prefs.getString("snapshot", "").trim().isEmpty())
@@ -381,7 +383,6 @@ public class Cloud {
         Uri tree = Uri.parse(treeValue);
         String treeId = DocumentsContract.getTreeDocumentId(tree);
         Uri parent = DocumentsContract.buildDocumentUriUsingTree(tree, treeId);
-        String childrenMime = DocumentsContract.Document.MIME_TYPE_DIR;
         Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, treeId);
         String oldId = null;
         try (Cursor cursor = ctx.getContentResolver().query(children,
