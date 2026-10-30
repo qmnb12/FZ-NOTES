@@ -3081,3 +3081,44 @@ if(window.Android)native('tgstatus',{}).then(v=>{const n=Number(v);if(n>0){try{l
 </script>
 </body>
 </html>
+
+
+/* Composer fix: when text is present, let the editor consume every pixel
+   released by the hidden Plus and Task actions. Keep the send button fixed. */
+#footer #cmp{
+  display:flex!important;
+  width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+}
+#footer #cmp #att{
+  flex:0 0 42px!important;
+  width:42px!important;
+  min-width:42px!important;
+}
+#footer #cmp #ed{
+  display:block!important;
+  flex:1 1 0%!important;
+  width:0!important;
+  min-width:0!important;
+  max-width:none!important;
+  box-sizing:border-box!important;
+}
+#footer #cmp.has-text #listfab,
+#footer #cmp.has-text #fab{
+  display:none!important;
+  width:0!important;
+  min-width:0!important;
+  flex:0 0 0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+}
+#footer #cmp.has-text #send{
+  display:flex!important;
+  flex:0 0 42px!important;
+  width:42px!important;
+  min-width:42px!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
