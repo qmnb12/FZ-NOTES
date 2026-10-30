@@ -2531,10 +2531,10 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(sh.dataset.type==='localbackup'){
   if(k==='x'){restoreSheetState();return}
   if(k==='localExport'){sh.classList.remove('on');syncNativeChatOverlay();exportBackupFile();return}
-  if(k==='localRestore'){restoreSheetState();pickFile();return}
+  if(k==='localRestore'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();pickFile();return}
   if(k==='localDaily'||k==='localMonthly'){pendingLocalBackupInterval=k==='localDaily'?'daily':'monthly';ask('localSchedulePw','Create a password for automatic local backups');return}
   if(k==='localAutoOff'){localStorage.setItem('notes-local-backup-schedule','off');native('localbackupconfigure',{interval:'off'}).then(()=>native('tgsnapshot',{data:backupPayload()})).then(()=>toast('Automatic local backup turned off',3000)).catch(e=>toast(e.message||'Could not turn off automatic backup',4000));return}
-  if(k==='localAutoRestore'){sh.classList.remove('on');syncNativeChatOverlay();native('localautoread',{}).then(handleLocalBackupText).catch(e=>toast(e.message||'Automatic backup restore unavailable',3500));return}
+  if(k==='localAutoRestore'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();native('localautoread',{}).then(handleLocalBackupText).catch(e=>toast(e.message||'Automatic backup restore unavailable',3500));return}
   return}
  if(sh.dataset.type==='menu'){
   if(cur==='hidden'&&k!=='hidden'&&k!=='hsettings'){hiddenUnlocked=false;cur='all';render()}
@@ -3554,11 +3554,16 @@ function handleLocalBackupText(raw){
   toast('Selected file password-encrypted .fzenc backup nahi hai. Unencrypted JSON restore disabled hai.',4500);
   return false;
  }
- pendingLocalEncryptedBackup=raw.slice(LOCAL_BACKUP_HEADER.length).trim();
- if(!pendingLocalEncryptedBackup)throw new Error('Encrypted backup file incomplete hai');
+ const encrypted=raw.slice(LOCAL_BACKUP_HEADER.length).trim();
+ if(!encrypted)throw new Error('Encrypted backup file incomplete hai');
+ pendingLocalEncryptedBackup=encrypted;
  toast('Encrypted backup selected · password required',2600);
- // Wait for Android's document picker to finish closing before showing the password modal.
- setTimeout(()=>{if(pendingLocalEncryptedBackup)ask('localRestorePw','Enter the password used for this .fzenc backup')},120);
+ // Close the document picker/sheet first, then force the password modal above the native chat overlay.
+ setTimeout(()=>{
+  if(!pendingLocalEncryptedBackup)return;
+  syncNativeChatOverlay();
+  ask('localRestorePw','Enter the password used for this .fzenc backup');
+ },450);
  return true
 }
 async function pickFile(){try{if(window.Android){toast('FZ NOTES backup file select karo',2200);const raw=await native('pickfile',{});handleLocalBackupText(raw)}else{const input=document.createElement('input');input.type='file';input.accept='.fzenc,application/octet-stream,text/plain';input.onchange=async()=>{const f=input.files&&input.files[0];if(!f)return;try{handleLocalBackupText(await f.text())}catch(e){toast(e.message||'Backup import nahi hua',3500)}};input.click()}}catch(e){toast(e.message||'Backup import nahi hua',3500)}}
