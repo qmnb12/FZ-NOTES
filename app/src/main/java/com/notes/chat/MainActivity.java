@@ -84,6 +84,12 @@ public class MainActivity extends Activity {
     private String nativeMessagePopupId = "";
     private boolean nativeMessagePopupClosing;
     private float nativeMessagePopupStartDx, nativeMessagePopupStartDy;
+    private FrameLayout appToastOverlay;
+    private LinearLayout appToastCard;
+    private TextView appToastIcon, appToastText;
+    private Runnable appToastHideRunnable;
+    private float lastInteractionY = -1f;
+    private long lastInteractionAt = 0L;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -91,6 +97,13 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         web = new SelectionWebView(this);
+        web.setOnTouchListener((view, event) -> {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                lastInteractionY = event.getY();
+                lastInteractionAt = System.currentTimeMillis();
+            }
+            return false;
+        });
         // Long-pressing an attached image should open its viewer on tap, not invoke
         // WebView's image-selection/context action mode (Cut/Copy/Mono).
         web.setOnLongClickListener(view -> {
@@ -171,6 +184,10 @@ public class MainActivity extends Activity {
             private boolean tracking, swiping;
 
             @Override public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent event) {
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    lastInteractionY = nativeChatLayer.getTop() + event.getY();
+                    lastInteractionAt = System.currentTimeMillis();
+                }
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         downX = event.getX();
@@ -235,6 +252,48 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         rootLayout.addView(nativeChatLayer, new FrameLayout.LayoutParams(0, 0));
+
+        // Native toast layer is added after the native chat RecyclerView so notifications
+        // always render above message bubbles instead of behind the transparent chat layer.
+        appToastOverlay = new FrameLayout(this);
+        appToastOverlay.setClipChildren(false);
+        appToastOverlay.setClipToPadding(false);
+        appToastOverlay.setClickable(false);
+        appToastOverlay.setFocusable(false);
+        appToastOverlay.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+
+        appToastCard = new LinearLayout(this);
+        appToastCard.setOrientation(LinearLayout.HORIZONTAL);
+        appToastCard.setGravity(Gravity.CENTER_VERTICAL);
+        appToastCard.setPadding(dp(12), dp(9), dp(15), dp(9));
+        appToastCard.setElevation(dp(16));
+        appToastCard.setClickable(false);
+        appToastCard.setFocusable(false);
+        appToastCard.setVisibility(View.GONE);
+
+        appToastIcon = new TextView(this);
+        appToastIcon.setGravity(Gravity.CENTER);
+        appToastIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        appToastIcon.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        appToastCard.addView(appToastIcon, new LinearLayout.LayoutParams(dp(34), dp(34)));
+
+        appToastText = new TextView(this);
+        appToastText.setTextColor(Color.WHITE);
+        appToastText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        appToastText.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        appToastText.setMaxLines(2);
+        appToastText.setMaxWidth(dp(270));
+        appToastText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams toastTextParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        toastTextParams.leftMargin = dp(10);
+        appToastCard.addView(appToastText, toastTextParams);
+
+        appToastOverlay.addView(appToastCard, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.CENTER_HORIZONTAL));
+        rootLayout.addView(appToastOverlay, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(rootLayout);
 
         WebSettings s = web.getSettings();
@@ -685,6 +744,12 @@ public class MainActivity extends Activity {
 
     /** JS -> Java bridge for encrypted cloud backup (runs on a background thread). */
     class Bridge {
+        @JavascriptInterface
+        public void showAppToast(final String message, final String type,
+                                 final boolean preferTop, final int durationMs) {
+            runOnUiThread(() -> showAppToastInternal(message, type, preferTop, durationMs));
+        }
+
         @JavascriptInterface
         public void showSoftKeyboard() {
             // WebView can focus a field without asking Android to display the IME.
@@ -1323,6 +1388,101 @@ public class MainActivity extends Activity {
                     }
                 })
                 .start();
+    }
+
+    private void showAppToastInternal(String message, String type,
+                                      boolean preferTop, int durationMs) {
+        if (appToastCard == null || appToastOverlay == null || isFinishing()) return;
+
+        String safeType = type == null ? "info" : type.toLowerCase();
+        int startColor, endColor, borderColor, iconColor, iconTileColor;
+        String symbol;
+        if ("success".equals(safeType)) {
+            startColor = Color.rgb(22, 75, 54);
+            endColor = Color.rgb(16, 45, 37);
+            borderColor = Color.rgb(64, 220, 145);
+            iconColor = Color.rgb(98, 230, 165);
+            iconTileColor = Color.rgb(38, 105, 75);
+            symbol = "✓";
+        } else if ("error".equals(safeType)) {
+            startColor = Color.rgb(84, 39, 44);
+            endColor = Color.rgb(50, 27, 36);
+            borderColor = Color.rgb(255, 105, 112);
+            iconColor = Color.rgb(255, 146, 152);
+            iconTileColor = Color.rgb(112, 48, 57);
+            symbol = "!";
+        } else if ("warning".equals(safeType)) {
+            startColor = Color.rgb(89, 64, 31);
+            endColor = Color.rgb(53, 39, 22);
+            borderColor = Color.rgb(255, 190, 83);
+            iconColor = Color.rgb(255, 208, 128);
+            iconTileColor = Color.rgb(112, 80, 34);
+            symbol = "!";
+        } else {
+            startColor = Color.rgb(29, 65, 105);
+            endColor = Color.rgb(20, 43, 73);
+            borderColor = Color.rgb(105, 171, 255);
+            iconColor = Color.rgb(155, 200, 255);
+            iconTileColor = Color.rgb(39, 77, 121);
+            symbol = "i";
+        }
+
+        GradientDrawable cardBackground = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR, new int[]{startColor, endColor});
+        cardBackground.setCornerRadius(dp(16));
+        cardBackground.setStroke(dp(1), borderColor);
+        appToastCard.setBackground(cardBackground);
+
+        GradientDrawable iconBackground = new GradientDrawable();
+        iconBackground.setColor(iconTileColor);
+        iconBackground.setCornerRadius(dp(11));
+        appToastIcon.setBackground(iconBackground);
+        appToastIcon.setTextColor(iconColor);
+        appToastIcon.setText(symbol);
+
+        String safeMessage = message == null ? "" : message.trim();
+        appToastText.setText(safeMessage);
+        appToastCard.setContentDescription(safeMessage);
+
+        boolean showAtTop = preferTop;
+        long interactionAge = System.currentTimeMillis() - lastInteractionAt;
+        if (lastInteractionY >= 0f && interactionAge >= 0L && interactionAge < 30000L
+                && rootLayout != null && rootLayout.getHeight() > 0) {
+            showAtTop = lastInteractionY > rootLayout.getHeight() * 0.56f;
+        }
+
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER_HORIZONTAL | (showAtTop ? Gravity.TOP : Gravity.BOTTOM));
+        if (showAtTop) {
+            params.topMargin = dp(12);
+        } else {
+            // Keep the composer and keyboard controls clear.
+            params.bottomMargin = dp(86);
+        }
+        appToastCard.setLayoutParams(params);
+
+        if (appToastHideRunnable != null) appToastCard.removeCallbacks(appToastHideRunnable);
+        appToastCard.animate().cancel();
+        appToastCard.setVisibility(View.VISIBLE);
+        appToastCard.setAlpha(0f);
+        appToastCard.setTranslationY(showAtTop ? -dp(8) : dp(8));
+        appToastCard.animate().alpha(1f).translationY(0f).setDuration(190L).start();
+
+        final float exitOffset = showAtTop ? -dp(6) : dp(6);
+        int duration = Math.max(1800, Math.min(7000, durationMs > 0 ? durationMs : 2800));
+        appToastHideRunnable = () -> {
+            if (appToastCard == null) return;
+            appToastCard.animate().cancel();
+            appToastCard.animate().alpha(0f).translationY(exitOffset).setDuration(180L)
+                    .withEndAction(() -> {
+                        if (appToastCard != null) {
+                            appToastCard.setVisibility(View.GONE);
+                            appToastCard.setTranslationY(0f);
+                        }
+                    }).start();
+        };
+        appToastCard.postDelayed(appToastHideRunnable, duration);
     }
 
     private void reply(int id, boolean ok, String data) {
