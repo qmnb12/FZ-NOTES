@@ -2088,9 +2088,10 @@ function ask(m,ph,v){
  mode=m;
  const isPin=m.startsWith('hidepin');
  const isHiddenPassword=m.startsWith('hidepw');
- lki.type=(isPin||isHiddenPassword||m==='legacyrestore')?'password':'text';
+ const isBackupPassword=m==='localBackupPw'||m==='localBackupConfirm'||m==='localRestorePw';
+ lki.type=(isPin||isHiddenPassword||m==='legacyrestore'||isBackupPassword)?'password':'text';
  lki.inputMode=isPin?'numeric':'text';
- lki.autocomplete=(m==='hidepinset'||m==='hidepwset')?'new-password':(isPin||isHiddenPassword||m==='legacyrestore')?'current-password':'off';
+ lki.autocomplete=(m==='hidepinset'||m==='hidepwset'||m==='localBackupPw'||m==='localBackupConfirm')?'new-password':(isPin||isHiddenPassword||m==='legacyrestore'||m==='localRestorePw')?'current-password':'off';
  lki.placeholder=ph;
  lki.value=v!==undefined?v:(m==='link'?'https://':m==='mention'?'@':'');
  const meta={
@@ -2107,6 +2108,9 @@ function ask(m,ph,v){
   bkpw:['Back up notes','Enter your backup password.','Back up'],
   rspw:['Restore backup','Enter your backup password.','Restore'],
   legacyrestore:['Restore older backup','Enter the old backup password.','Restore'],
+  localBackupPw:['Create local backup password','Use at least 8 characters. This password is not saved in FZ NOTES.','Continue'],
+  localBackupConfirm:['Confirm local backup password','Enter the same password again to avoid lockout.','Create backup'],
+  localRestorePw:['Unlock local backup','Enter the password used when this .fzenc file was created.','Restore'],
   topic:['Create topic','Choose a name for this topic.','Create topic'],
   rename:['Rename topic','Enter the new topic name.','Save'],
   listtitle:['Name your task list','Give this checklist a title.','Create list'],
@@ -2180,13 +2184,16 @@ window.nativeSelectionAction=function(action){
  if(sel){sel.removeAllRanges();sel.addRange(range)}
  act(action);updateComposerControls();saveDraft();return true;
 };
-function closeInputDialog(){lk.classList.remove('on');if(/^hide(pin|pw)/.test(mode)){hiddenUnlocked=false;hideTarget=null;hiddenSetupPurpose=null;if(cur==='hidden'){cur='all';clearCtx();render()}}}
+function closeInputDialog(){lk.classList.remove('on');if(mode==='localBackupPw'||mode==='localBackupConfirm'||mode==='localRestorePw'){pendingLocalBackupPassword='';pendingLocalEncryptedBackup=''}if(/^hide(pin|pw)/.test(mode)){hiddenUnlocked=false;hideTarget=null;hiddenSetupPurpose=null;if(cur==='hidden'){cur='all';clearCtx();render()}}}
  $('#lkclose').onclick=closeInputDialog;
  $('#lkok').onclick=()=>{const submittedMode=mode,v=lki.value.trim();lk.classList.remove('on');
  if(mode==='savepw'){savePw(v);return}
  if(mode==='bkpw'){doGoogleBackup();return}
  if(mode==='rspw'){doDriveRestore(pendDriveId);return}
  if(mode==='legacyrestore'){restoreLegacyWithPassword(v);return}
+ if(submittedMode==='localBackupPw'){if(v.length<8){toast('Backup password kam se kam 8 characters ka hona chahiye',2800);ask('localBackupPw','Create a password (8+ characters)');return}pendingLocalBackupPassword=v;ask('localBackupConfirm','Re-enter the same password');return}
+ if(submittedMode==='localBackupConfirm'){if(!pendingLocalBackupPassword||v!==pendingLocalBackupPassword){pendingLocalBackupPassword='';toast('Passwords match nahi hue. Dobara try karo.',3000);ask('localBackupPw','Create a password (8+ characters)');return}const password=pendingLocalBackupPassword;pendingLocalBackupPassword='';exportBackupFile(password);return}
+ if(submittedMode==='localRestorePw'){const encrypted=pendingLocalEncryptedBackup;if(!encrypted){toast('Encrypted backup dobara select karo',2800);return}native('localdecrypt',{data:encrypted,pw:v}).then(plain=>{if(!applyFile(plain))throw new Error('Decrypted file valid FZ NOTES backup nahi hai');pendingLocalEncryptedBackup='';toast('Secure restore complete · '+msgs.length+' notes',3200)}).catch(e=>{toast(e.message||'Password galat hai ya backup damaged hai',3200);ask('localRestorePw','Try the backup password again')});return}
  if(mode==='restore'){pickFile();return}
  if(mode==='topic'){if(v){const id='t'+Date.now();topics.push({id,name:v});cur=id;saveT();render();focusComposerForTyping()}return}
  if(mode==='listtitle'){if(v){listTitle=v;listMode=true;$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.innerHTML='';updateComposerControls();ed.dataset.ph='Add list items, one per line';focusComposerForTyping();saveDraft();toast('Ab list ke items likho — naam alag rahega',2200)}return}
@@ -2525,7 +2532,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(sh.dataset.type==='menu'){
   if(cur==='hidden'&&k!=='hidden'&&k!=='hsettings'){hiddenUnlocked=false;cur='all';render()}
   if(k==='cl'){pushSheetState();openCloud();return}
-  if(k==='bk'){pushSheetState();sh.dataset.type='localbackup';sh.innerHTML='<div class="cloud-sheet-head local-backup-head"><span class="cloud-eyebrow">FZ NOTES · DEVICE</span><h3>Local backup</h3><p>Your notes file stays on your device</p></div>'+cloudRow('localExport','<path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 17v3h14v-3"/>','Backup to file','Export all notes as a .json file')+cloudRow('localRestore','<path d="M3 11a9 9 0 1 0 3-6.7L3 7"/><path d="M3 3v4h4m5-1v6l4 2"/>','Restore backup file','Import an earlier FZ NOTES .json backup')+cloudRow('x','<path d="m6 6 12 12M18 6 6 18"/>','Back','Return to the menu');sh.classList.add('on');return}
+  if(k==='bk'){pushSheetState();sh.dataset.type='localbackup';sh.innerHTML='<div class="cloud-sheet-head local-backup-head"><span class="cloud-eyebrow">FZ NOTES · DEVICE</span><h3>Local backup</h3><p>AES-256 encrypted file backup · older JSON backups can still be restored</p></div>'+cloudRow('localExport','<path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 17v3h14v-3"/>','Create encrypted backup','Save a password-protected .fzenc file')+cloudRow('localRestore','<path d="M3 11a9 9 0 1 0 3-6.7L3 7"/><path d="M3 3v4h4m5-1v6l4 2"/>','Restore backup file','Open an encrypted .fzenc or older .json backup')+cloudRow('x','<path d="m6 6 12 12M18 6 6 18"/>','Back','Return to the menu');sh.classList.add('on');return}
   if(k==='rs'||k==='pf'){sh.classList.remove('on');pickFile();return}
   sh.classList.remove('on');
   if(k==='srch'){$('#sq').classList.add('on');focusWithKeyboard($('#sqi'))}
@@ -3489,9 +3496,12 @@ $('#qkx').onclick=()=>$('#qk').classList.remove('on');
 $('#qks').onclick=()=>{const t=$('#qkt').value.trim();if(!t)return;msgs.push({id:Date.now(),t:Date.now(),h:esc(t).replace(/\n/g,'<br>'),k:'quick'});save();$('#qk').classList.remove('on');toast('⚡ Quick me save hua');render()};
 let mt;
 function mirror(){if(!window.Android)return;clearTimeout(mt);mt=setTimeout(()=>{const text=JSON.stringify({msgs,topics});native('mirrorsave',{text}).catch(()=>{});native('tgsnapshot',{data:backupPayload()}).catch(()=>{})},900)}
-function applyFile(t){let d;try{d=JSON.parse(t)}catch(_){throw new Error('FZ Notes ki .json backup file chuno')}if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics)||!d.topics.length)return false;if(d.format&&d.format!=='FZ-NOTES-BACKUP')return false;if(!d.msgs.every(m=>m&&typeof m==='object'&&m.id!==undefined&&typeof m.h==='string'))return false;if(!d.topics.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))return false;msgs=d.msgs;topics=d.topics;cur='all';hiddenUnlocked=false;save();saveT();render();return true}
-async function pickFile(){try{if(window.Android){toast('Pehle FZ Notes se banayi backup file select karo',2200);const raw=await native('pickfile',{});if(applyFile(raw))toast('Restore complete · '+msgs.length+' notes',3000);else toast('Ye FZ Notes backup nahi lagti; original data safe hai',3500)}else{const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=async()=>{const f=input.files&&input.files[0];if(!f)return;try{const raw=await f.text();if(applyFile(raw))toast('Restore complete · '+msgs.length+' notes',3000);else toast('Valid FZ Notes backup select karo',3500)}catch(e){toast(e.message||'Backup import nahi hua',3500)}};input.click()}}catch(e){toast(e.message||'Backup import nahi hua',3500)}}
-async function exportBackupFile(){const payload=JSON.stringify({format:'FZ-NOTES-BACKUP',version:3,exportedAt:new Date().toISOString(),msgs,topics},null,2);const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.json';try{if(window.Android){toast('Backup save karne ke liye location choose karo',2200);const result=await native('savefile',{filename,text:payload});toast(result||'Backup file save ho gayi',3000);return true}const blob=new Blob([payload],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup download start ho gaya',3000);return true}catch(e){toast(e.message||'Backup save nahi hua',3500);return false}}
+const LOCAL_BACKUP_HEADER='FZ-NOTES-ENCRYPTED-BACKUP-V1\\n';
+let pendingLocalBackupPassword='',pendingLocalEncryptedBackup='';
+function applyFile(t){let d;try{d=JSON.parse(t)}catch(_){throw new Error('FZ Notes ki backup file chuno')}if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics)||!d.topics.length)return false;if(d.format&&d.format!=='FZ-NOTES-BACKUP')return false;if(!d.msgs.every(m=>m&&typeof m==='object'&&m.id!==undefined&&typeof m.h==='string'))return false;if(!d.topics.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))return false;msgs=d.msgs;topics=d.topics;cur='all';hiddenUnlocked=false;save();saveT();render();return true}
+function handleLocalBackupText(raw){raw=String(raw||'');if(raw.startsWith(LOCAL_BACKUP_HEADER)){pendingLocalEncryptedBackup=raw.slice(LOCAL_BACKUP_HEADER.length).trim();if(!pendingLocalEncryptedBackup)throw new Error('Encrypted backup file incomplete hai');ask('localRestorePw','Backup password');return true}if(applyFile(raw)){toast('Restore complete · '+msgs.length+' notes',3000);return true}toast('Valid FZ NOTES backup select karo; existing notes safe hain',3500);return false}
+async function pickFile(){try{if(window.Android){toast('FZ NOTES backup file select karo',2200);const raw=await native('pickfile',{});handleLocalBackupText(raw)}else{const input=document.createElement('input');input.type='file';input.accept='.fzenc,.json,application/json,application/octet-stream';input.onchange=async()=>{const f=input.files&&input.files[0];if(!f)return;try{handleLocalBackupText(await f.text())}catch(e){toast(e.message||'Backup import nahi hua',3500)}};input.click()}}catch(e){toast(e.message||'Backup import nahi hua',3500)}}
+async function exportBackupFile(password){if(!password){ask('localBackupPw','Create a password (8+ characters)');return false}if(!window.Android){toast('Encrypted local backup ke liye FZ NOTES Android app use karo',3500);return false}const payload=JSON.stringify({format:'FZ-NOTES-BACKUP',version:3,exportedAt:new Date().toISOString(),msgs,topics},null,2);const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.fzenc';try{toast('AES-256 encryption ke saath backup prepare ho raha hai…',2500);const encrypted=await native('localencrypt',{data:payload,pw:password});const text=LOCAL_BACKUP_HEADER+encrypted;toast('Backup save karne ke liye location choose karo',2200);const result=await native('savefile',{filename,mimeType:'application/octet-stream',text});toast(result||'Encrypted backup saved',3000);return true}catch(e){toast(e.message||'Backup save nahi hua',3500);return false}}
 msgs.filter(m=>m.due>Date.now()&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
 installNativeChatOverlayObservers();render();restoreDraft();updateComposerControls();lastSnapshot=snapshot();syncNativeChatOverlay();
 if(window.Android){
