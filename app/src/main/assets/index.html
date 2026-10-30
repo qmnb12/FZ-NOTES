@@ -2516,6 +2516,27 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='cloud'){
   if(k==='x'){restoreSheetState();return}
+  if(k==='localStatus'){updateLocalBackupStatus(true).catch(()=>{});return}
+  if(k==='localExport'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();exportBackupFile();return}
+  if(k==='localRestore'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();pickFile();return}
+  if(k==='localDaily'||k==='localMonthly'){
+   pendingLocalBackupInterval=k==='localDaily'?'daily':'monthly';
+   shStack=[];sh.classList.remove('on');syncNativeChatOverlay();
+   ask('localSchedulePw','Create a password for automatic local backups');return
+  }
+  if(k==='localAutoOff'){
+   localStorage.setItem('notes-local-backup-schedule','off');
+   native('localbackupconfigure',{interval:'off'})
+    .then(()=>{toast('Automatic local backup turned off',3000);openCloud()})
+    .catch(e=>toast(e.message||'Could not turn off automatic backup',4000));
+   return
+  }
+  if(k==='localAutoRestore'){
+   shStack=[];sh.classList.remove('on');syncNativeChatOverlay();
+   native('localautoread',{}).then(handleLocalBackupText)
+    .catch(e=>toast(e.message||'Automatic backup restore unavailable',3500));
+   return
+  }
   if(k==='status'){toast(lastBackup()?'Last successful Drive backup: '+lastBackup():'No successful Drive backup recorded',3000);return}
   if(k==='cset'){openCfg();return}
   if(k==='tgcfg'){openTgCfg();return}
@@ -2539,7 +2560,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(sh.dataset.type==='menu'){
   if(cur==='hidden'&&k!=='hidden'&&k!=='hsettings'){hiddenUnlocked=false;cur='all';render()}
   if(k==='cl'){pushSheetState();openCloud();return}
-  if(k==='bk'){pushSheetState();sh.dataset.type='localbackup';sh.innerHTML='<div class="cloud-sheet-head local-backup-head"><span class="cloud-eyebrow">FZ NOTES · DEVICE</span><h3>Local backup</h3><p>AES-256 encrypted file backup · password required for every restore. Automatic copies stay in private app storage.</p></div>'+cloudRow('localExport','<path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 17v3h14v-3"/>','Create encrypted backup','Save a password-protected .fzenc file')+cloudRow('localRestore','<path d="M3 11a9 9 0 1 0 3-6.7L3 7"/><path d="M3 3v4h4m5-1v6l4 2"/>','Restore backup file','Select a password-encrypted .fzenc file')+cloudRow('localDaily','<path d="M8 2v4m8-4v4M3 10h18"/><rect x="3" y="4" width="18" height="17" rx="2"/>','Automatic local backup · Daily','Create an encrypted copy every 24 hours')+cloudRow('localMonthly','<path d="M8 2v4m8-4v4M3 10h18"/><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 14h8m-8 4h5"/>','Automatic local backup · Monthly','Create an encrypted copy every 30 days')+cloudRow('localAutoRestore','<path d="M3 11a9 9 0 1 0 3-6.7L3 7"/><path d="M3 3v4h4m5-1v6l4 2"/>','Restore latest automatic backup','Unlock the latest encrypted copy stored on this device')+cloudRow('localAutoOff','<path d="M5 5l14 14M9 4.5A8 8 0 1 1 4.5 9"/>','Turn off automatic local backup','Keep existing backup files; stop future scheduled copies')+cloudRow('x','<path d="m6 6 12 12M18 6 6 18"/>','Back','Return to the menu');sh.classList.add('on');return}
+  if(k==='bk'){pushSheetState();openCloud();return}
   if(k==='rs'||k==='pf'){sh.classList.remove('on');pickFile();return}
   sh.classList.remove('on');
   if(k==='srch'){$('#sq').classList.add('on');focusWithKeyboard($('#sqi'))}
@@ -2765,6 +2786,24 @@ window.onNative=(id,ok,d)=>{const p=pend[id];delete pend[id];if(p)ok?p.res(d):p.
 function cloudRow(key, icon, title, sub) {
  return '<button type="button" class="cloud-row" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+icon+'</svg></span><span class="mt"><strong>'+title+'</strong><span class="ms">'+sub+'</span></span></button>';
 }
+async function updateLocalBackupStatus(showToast=false){
+ const row=sh.querySelector('[data-k="localStatus"] .ms');
+ try{
+  const status=JSON.parse(await native('localbackupstatus',{}));
+  const interval=status.interval==='daily'?'Daily schedule enabled':status.interval==='monthly'?'Monthly schedule enabled':'Automatic backup off';
+  const last=status.lastSuccess?new Date(Number(status.lastSuccess)).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'No automatic copy yet';
+  let detail=interval+' · '+last;
+  if(status.lastError)detail+=' · Error: '+String(status.lastError);
+  if(row&&sh.dataset.type==='cloud')row.textContent=detail;
+  if(showToast)toast(detail,4000);
+  return status;
+ }catch(e){
+  const detail='Local backup status unavailable: '+(e.message||'Unknown error');
+  if(row&&sh.dataset.type==='cloud')row.textContent=detail;
+  if(showToast)toast(detail,3500);
+  throw e;
+ }
+}
 function openCloud(){
  const lb=lastBackup(),lt=lastTelegramBackup(),c=cfgGet();
  const icons={
@@ -2776,16 +2815,26 @@ function openCloud(){
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   cancel:'<path d="m6 6 12 12M18 6 6 18"/>'
  };
- sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · BACKUP</span><h3>Cloud backup</h3><p>Google Drive sync and encrypted Telegram archive</p></div>'+
+ sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · BACKUP</span><h3>Cloud backup</h3><p>Google Drive sync, encrypted Telegram archive and on-device backups</p></div>'+
   '<div class="cloud-group-label">Google Drive</div>'+
   cloudRow('status',icons.status,'Last Drive backup',lb||'No successful backup yet')+
   cloudRow('cset',icons.settings,'Google Drive settings',c.driveOn?'Account connected':'Connect your Google account')+
   '<div class="cloud-divider"></div><div class="cloud-group-label">Telegram archive</div>'+
   cloudRow('tgstatus',icons.status,'Last Telegram archive',lt||'No successful archive yet')+
   cloudRow('tgcfg',icons.settings,'Telegram settings','Bot connection and automatic backup schedule')+
+  '<div class="cloud-divider"></div><div class="cloud-group-label">Local backup · This device</div>'+
+  cloudRow('localStatus',icons.status,'Automatic backup status','Checking on-device backup…')+
+  cloudRow('localExport',icons.drive,'Create encrypted backup file','Save a password-protected .fzenc file')+
+  cloudRow('localRestore',icons.restore,'Restore backup file','Choose a .fzenc file and enter its password')+
+  cloudRow('localDaily',icons.clock,'Automatic local backup · Daily','Save an encrypted copy every 24 hours')+
+  cloudRow('localMonthly',icons.clock,'Automatic local backup · Monthly','Save an encrypted copy every 30 days')+
+  cloudRow('localAutoRestore',icons.restore,'Restore latest automatic backup','Unlock the latest encrypted copy stored on this device')+
+  cloudRow('localAutoOff',icons.cancel,'Turn off automatic local backup','Keep existing backup; stop future scheduled copies')+
   cloudRow('x',icons.cancel,'Close','');
  sh.dataset.type='cloud';sh.classList.add('on');
+ updateLocalBackupStatus(false).catch(()=>{});
 }
+
 let driveHistoryItems=[];async function openDriveHistory(){
  try{
   toast('Google Drive backups load ho rahe hain…',3000);
@@ -3249,7 +3298,7 @@ redo:'<path d="m15 4 5 5-5 5"></path><path d="M20 9h-9a7 7 0 0 0-7 7v2"></path>'
 hidden:'<rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>',
 settings:'<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.8 1.8 0 0 0-1.9.2l-.2.1h-3.3l-.1-.2a1.8 1.8 0 0 0-1.6-1l-.2.1-2.9-1.7.1-.2a1.8 1.8 0 0 0-.2-1.9l-.1-.2v-3.3l.2-.1a1.8 1.8 0 0 0 1-1.6l-.1-.2 1.7-2.9.2.1a1.8 1.8 0 0 0 1.9-.2l.2-.1h3.3l.1.2a1.8 1.8 0 0 0 1.6 1l.2-.1 2.9 1.7-.1.2a1.8 1.8 0 0 0 .2 1.9l.1.2v3.3z"></path>',
 cancel:'<path d="m6 6 12 12M18 6 6 18"></path>'
-};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',hsettings:'settings',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Encrypted online backup')+item('bk','Local backup','Save or restore a device backup')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Themes','12 themes · customise text')+item('hidden','Hidden notes','Password-protected notes')+(cur==='hidden'&&hiddenUnlocked&&hiddenNoteCount()>0?item('hsettings','Hidden Notes settings','Change PIN/password · Lock now'):'')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
+};const iconKey={srch:'search',cl:'cloud',bk:'backup',rs:'restore',pf:'file',th:'theme',undo:'undo',redo:'redo',hidden:'hidden',hsettings:'settings',x:'cancel'};const item=(key,title,sub)=>'<button type="button" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+ico[iconKey[key]]+'</svg></span><span class="mt">'+title+(sub?'<span class="ms">'+sub+'</span>':'')+'</span></button>';sh.innerHTML='<div style="padding:8px 8px 12px"><div style="font-size:12px;letter-spacing:1.5px;color:var(--mut);font-weight:700;padding:8px 14px 12px">FZ NOTES · MENU</div>'+item('srch','Search','Find notes and tasks')+item('cl','Cloud backup','Drive, Telegram and device backups')+item('undo','Undo last change','Restore previous notes state')+item('redo','Redo change','Reapply undone change')+item('th','Themes','12 themes · customise text')+item('hidden','Hidden notes','Password-protected notes')+(cur==='hidden'&&hiddenUnlocked&&hiddenNoteCount()>0?item('hsettings','Hidden Notes settings','Change PIN/password · Lock now'):'')+'<div style="height:1px;background:var(--ln);margin:8px 10px"></div>'+item('x','Cancel','Close menu')+'</div>';sh.dataset.type='menu';sh.classList.add('on')};
 function handleSelectionToolbarAction(e){
  const target=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
  const btn=target&&target.closest('[data-s]');if(!btn)return;
