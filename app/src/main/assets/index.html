@@ -1577,6 +1577,51 @@ header .av.drive-avatar:focus-visible{
 }
 @media(prefers-reduced-motion:reduce){#toast{transition:none!important}}
 
+
+/* In WebView fallback, toast moves opposite to the last touch as well. */
+#toast[data-placement="top"]{
+ top:calc(env(safe-area-inset-top,0px) + 12px)!important;
+ bottom:auto!important;
+ transform:translate(-50%,-12px) scale(.97)!important;
+}
+#toast[data-placement="top"].on{
+ transform:translate(-50%,0) scale(1)!important;
+}
+
+/* Long topic labels scroll horizontally inside the existing title slot, without enlarging it. */
+header>.topic-title-block{
+ flex:1 1 0!important;
+ min-width:0!important;
+ max-width:none!important;
+ overflow:hidden!important;
+}
+header>.topic-title-block #ttl{
+ display:block!important;
+ width:max-content!important;
+ max-width:none!important;
+ min-width:0!important;
+ overflow:visible!important;
+ text-overflow:clip!important;
+ white-space:nowrap!important;
+ font-size:16px!important;
+}
+header>.topic-title-block.title-overflow{
+ -webkit-mask-image:linear-gradient(to right,#000 0%,#000 88%,transparent 100%);
+ mask-image:linear-gradient(to right,#000 0%,#000 88%,transparent 100%);
+}
+header>.topic-title-block.title-overflow #ttl{
+ padding-right:30px!important;
+ animation:topicTitleMarquee var(--topic-scroll-duration,10s) ease-in-out 1s infinite alternate!important;
+ will-change:transform;
+}
+@keyframes topicTitleMarquee{
+ from{transform:translateX(0)}
+ to{transform:translateX(var(--topic-scroll-distance,-120px))}
+}
+@media(prefers-reduced-motion:reduce){
+ header>.topic-title-block.title-overflow #ttl{animation:none!important;transform:none!important}
+}
+
 </style>
 </head>
 <body>
@@ -1677,9 +1722,20 @@ function redoChange(){if(!redoStack.length){toast('Redo ke liye kuch nahi hai');
 
 const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 let appToastTimer=0;
-function updateToastAnchor(){
+let lastToastInteractionY=-1,lastToastInteractionAt=0;
+function rememberToastInteraction(y){
+ const value=Number(y);
+ if(Number.isFinite(value)&&value>=0){lastToastInteractionY=value;lastToastInteractionAt=Date.now()}
+}
+document.addEventListener('pointerdown',e=>rememberToastInteraction(e.clientY),true);
+document.addEventListener('touchstart',e=>{
+ if(e.touches&&e.touches.length)rememberToastInteraction(e.touches[0].clientY);
+},{capture:true,passive:true});
+function updateToastAnchor(showAtTop){
  const e=$('#toast'),footer=$('#footer');
  if(!e||!footer)return;
+ e.dataset.placement=showAtTop?'top':'bottom';
+ if(showAtTop){e.style.removeProperty('--toast-position');return}
  const rect=footer.getBoundingClientRect();
  const bottom=Math.max(88,Math.round(window.innerHeight-rect.top+12));
  e.style.setProperty('--toast-position',bottom+'px');
@@ -1691,6 +1747,17 @@ function toast(t,ms){
  if(/not connected|disconnected|failed|error|storage full|nahi ho saka|not found|no backup|nahi mila|cancelled/.test(lower))type='error';
  else if(/copied|connected|complete|saved|restored|ho gaya|backup complete|upload complete|success/.test(lower))type='success';
  else if(/warning|expire|pending|nahi hua/.test(lower))type='warning';
+ const duration=Math.max(1800,Math.min(7000,Number(ms)||2800));
+ const recentInteraction=Date.now()-lastToastInteractionAt<30000;
+ const showAtTop=recentInteraction&&lastToastInteractionY>window.innerHeight*.56;
+ if(window.Android&&typeof window.Android.showAppToast==='function'){
+  try{
+   window.Android.showAppToast(text,type,showAtTop,duration);
+   if(appToastTimer)clearTimeout(appToastTimer);
+   e.classList.remove('on');
+   return;
+  }catch(_){}
+ }
  const icons={
   success:'<svg viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7"/></svg>',
   error:'<svg viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01"/><circle cx="12" cy="12" r="9"/></svg>',
@@ -1701,16 +1768,16 @@ function toast(t,ms){
  const icon=e.querySelector('.toast-icon'),message=e.querySelector('.toast-message');
  if(icon)icon.innerHTML=icons[type];
  if(message)message.textContent=text;
- updateToastAnchor();
+ updateToastAnchor(showAtTop);
  e.classList.remove('on');
  void e.offsetWidth;
  e.classList.add('on');
  if(appToastTimer)clearTimeout(appToastTimer);
- appToastTimer=setTimeout(()=>e.classList.remove('on'),Math.max(1800,Number(ms)||2800));
+ appToastTimer=setTimeout(()=>e.classList.remove('on'),duration);
 }
-window.addEventListener('resize',updateToastAnchor,{passive:true});
+window.addEventListener('resize',()=>updateToastAnchor(false),{passive:true});
 if(typeof ResizeObserver!=='undefined'){
- const toastFooterObserver=new ResizeObserver(updateToastAnchor);
+ const toastFooterObserver=new ResizeObserver(()=>updateToastAnchor(false));
  const toastFooter=document.querySelector('#footer');
  if(toastFooter)toastFooterObserver.observe(toastFooter);
 }
@@ -2645,6 +2712,38 @@ if(driveAvatar){
   if(e.key==='Enter'||e.key===' '){e.preventDefault();driveAvatar.click()}
  };
 }
+function updateTopicTitleMarquee(){
+ const block=document.querySelector('header .topic-title-block'),title=$('#ttl');
+ if(!block||!title)return;
+ block.classList.remove('title-overflow');
+ title.style.removeProperty('--topic-scroll-distance');
+ title.style.removeProperty('--topic-scroll-duration');
+ const overflow=title.scrollWidth-block.clientWidth;
+ if(overflow>5){
+  const distance=Math.ceil(overflow+22);
+  const seconds=Math.max(5,Math.min(16,distance/22));
+  title.style.setProperty('--topic-scroll-distance',(-distance)+'px');
+  title.style.setProperty('--topic-scroll-duration',seconds+'s');
+  block.classList.add('title-overflow');
+ }
+}
+let topicTitleMeasureFrame=0;
+function scheduleTopicTitleMeasure(){
+ if(topicTitleMeasureFrame)cancelAnimationFrame(topicTitleMeasureFrame);
+ topicTitleMeasureFrame=requestAnimationFrame(()=>{topicTitleMeasureFrame=0;updateTopicTitleMarquee()});
+}
+const topicTitleElement=$('#ttl'),topicTitleBlock=topicTitleElement&&topicTitleElement.parentElement;
+if(topicTitleElement&&typeof MutationObserver!=='undefined'){
+ const topicTitleMutationObserver=new MutationObserver(scheduleTopicTitleMeasure);
+ topicTitleMutationObserver.observe(topicTitleElement,{childList:true,characterData:true,subtree:true});
+}
+if(topicTitleBlock&&typeof ResizeObserver!=='undefined'){
+ const topicTitleResizeObserver=new ResizeObserver(scheduleTopicTitleMeasure);
+ topicTitleResizeObserver.observe(topicTitleBlock);
+}
+window.addEventListener('resize',scheduleTopicTitleMeasure,{passive:true});
+setTimeout(scheduleTopicTitleMeasure,80);
+
 function targets(c){return c.driveOn?[{type:'drive'}]:[]}
 const pend={};let nid=0;
 function native(op,args){return new Promise((res,rej)=>{if(!window.Android||typeof window.Android.run!=='function'){rej(new Error('Android bridge available nahi hai'));return}const id=++nid;pend[id]={res,rej};try{window.Android.run(id,op,JSON.stringify(args))}catch(e){delete pend[id];rej(e)}})}
