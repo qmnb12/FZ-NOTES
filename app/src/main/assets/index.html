@@ -1397,7 +1397,7 @@ shBackdrop.addEventListener('click',()=>{shStack=[];sh.classList.remove('on');ch
 function pushSheetState(){if(!sh.classList.contains('on'))return;shStack.push({html:sh.innerHTML,dataset:Object.assign({},sh.dataset)});}
 let sheetRestoreTimer=0;function restoreSheetState(){if(shStack.length){const state=shStack.pop();sh.innerHTML=state.html;Array.from(sh.attributes).forEach(a=>{if(a.name.indexOf('data-')===0)sh.removeAttribute(a.name)});Object.keys(state.dataset).forEach(k=>sh.dataset[k]=state.dataset[k]);sh.classList.add('on');sh.classList.remove('sheet-restoring');requestAnimationFrame(()=>sh.classList.add('sheet-restoring'));if(sheetRestoreTimer)clearTimeout(sheetRestoreTimer);sheetRestoreTimer=setTimeout(()=>{sh.classList.remove('sheet-restoring');sheetRestoreTimer=0},260);return true;}sh.classList.remove('on');return true;}
 let nativeSelectionMenuOpen=false,lastAnySelectionRange=null,nativeSelectionSession=false;
-function updateComposerControls(){const raw=ed.innerText||ed.textContent||'';const hasText=!!raw.replace(/[\\u200B\\uFEFF]/g,'').trim();$('#cmp').classList.toggle('has-text',hasText);document.body.classList.toggle('composer-has-text',hasText)}
+function updateComposerControls(){const raw=ed.innerText||ed.textContent||'';const hasText=!!raw.replace(/[\u200B\uFEFF]/g,'').trim();$('#cmp').classList.toggle('has-text',hasText);document.body.classList.toggle('composer-has-text',hasText)}
 window.setNativeSelectionMenuOpen=function(open){
  nativeSelectionMenuOpen=!!open;const toolbar=$('#tb');
  if(nativeSelectionMenuOpen){nativeSelectionSession=true;toolbar.classList.add('native-selection-hidden');toolbar.classList.remove('on');return}
