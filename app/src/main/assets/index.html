@@ -1382,10 +1382,67 @@ header .drive-indicator.is-on i{
  background:#35d07f!important;box-shadow:0 0 0 3px rgba(53,208,127,.14),0 0 9px rgba(53,208,127,.35)!important;
 }
 
+
+/* Refined Telegram-style header: let the topic title use the full space up to search. */
+header>.topic-title-block{
+ flex:1 1 0!important;
+ min-width:0!important;
+ max-width:none!important;
+ overflow:hidden!important;
+}
+header>.topic-title-block b,
+header #ttl{
+ display:block!important;
+ width:100%!important;
+ max-width:none!important;
+ min-width:0!important;
+ overflow:hidden!important;
+ text-overflow:ellipsis!important;
+ white-space:nowrap!important;
+ font-size:20px!important;
+ font-weight:700!important;
+ line-height:1.22!important;
+ letter-spacing:-.35px!important;
+}
+header>.topic-title-block small,
+header #sub{
+ display:block!important;
+ max-width:100%!important;
+ overflow:hidden!important;
+ text-overflow:ellipsis!important;
+ white-space:nowrap!important;
+ font-size:13px!important;
+ line-height:1.25!important;
+}
+header .drive-indicator{
+ flex:0 0 16px!important;
+ width:16px!important;
+ min-width:16px!important;
+ height:20px!important;
+ margin:0 2px 0 0!important;
+ padding:0!important;
+ display:flex!important;
+ align-items:center!important;
+ justify-content:center!important;
+}
+header .drive-indicator i{
+ width:11px!important;
+ height:11px!important;
+ border-radius:50%!important;
+ background:#d94b4b!important;
+ border:1px solid rgba(255,255,255,.20)!important;
+ box-shadow:none!important;
+}
+header .drive-indicator.is-on i{
+ background:#22a66a!important;
+ border-color:rgba(255,255,255,.24)!important;
+ box-shadow:none!important;
+}
+
 </style>
 </head>
 <body>
-<header><div class="av" id="av">N</div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><span style="flex:1"></span><span id="driveIndicator" class="drive-indicator is-off" role="img" aria-label="Google Drive not connected" title="Google Drive not connected"><i></i></span><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
+<header><div class="av" id="av">N</div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><span id="driveIndicator" class="drive-indicator is-off" role="img" aria-label="Google Drive not connected" title="Google Drive not connected"><i></i></span><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx" aria-label="Clear and close search">✕</button></div>
 <div id="searchNav" aria-label="Search scope and result navigation">
  <div class="search-scope-row">
