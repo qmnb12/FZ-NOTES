@@ -305,7 +305,7 @@ public class Cloud {
     }
 
     // ---------- scheduled encrypted local backup ----------
-    private static final String LOCAL_BACKUP_HEADER = "FZ-NOTES-ENCRYPTED-BACKUP-V1\\n";
+    private static final String LOCAL_BACKUP_HEADER = "FZ-NOTES-ENCRYPTED-BACKUP-V1\n";
     private static final String LOCAL_BACKUP_FILE = "FZ-Notes-AutoBackup.fzenc";
 
     static void configureLocalBackup(Context ctx, JSONObject a) throws Exception {
