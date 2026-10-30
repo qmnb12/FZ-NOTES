@@ -1652,12 +1652,19 @@ header>.topic-title-block.title-overflow #ttl{
 #sh[data-type="localbackup"] .local-backup-panel .lb-path{padding:10px 11px;border-radius:12px}
 #sh[data-type="localbackup"] .local-backup-panel .lb-path strong{font-size:11px!important;margin-bottom:3px}
 #sh[data-type="localbackup"] .local-backup-panel .lb-path span{font-size:12px!important;line-height:1.3}
-#sh[data-type="localbackup"] .local-backup-panel .lb-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
-#sh[data-type="localbackup"] .local-backup-panel .lb-actions button{box-sizing:border-box;min-width:0;min-height:42px!important;padding:9px 10px!important;border-radius:11px;font-size:13px!important;line-height:1.2!important;letter-spacing:0!important;font-weight:650;white-space:normal}
-#sh[data-type="localbackup"] .local-backup-panel .lb-actions button:first-child,
-#sh[data-type="localbackup"] .local-backup-panel .lb-actions button:last-child{grid-column:1/-1}
-#sh[data-type="localbackup"] .local-backup-panel .lb-actions button.primary{min-height:44px!important}
-#sh[data-type="localbackup"] .local-backup-panel .lb-actions button:last-child{min-height:36px!important;background:transparent;border-color:transparent;color:var(--mut);font-size:12px!important}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions{display:grid!important;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions button{display:flex!important;align-items:center;justify-content:flex-start;gap:10px;box-sizing:border-box;min-width:0;min-height:54px!important;width:100%;padding:10px 12px!important;margin:0!important;border:1px solid rgba(151,178,216,.16)!important;border-radius:13px!important;background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.025))!important;color:var(--text)!important;font-family:inherit!important;font-size:13px!important;font-weight:650!important;line-height:1.2!important;letter-spacing:0!important;text-align:left!important;white-space:normal!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions .lb-action-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:10px;background:rgba(117,170,255,.12);color:#8db8ff}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions .lb-action-icon svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions .lb-action-title{display:block;min-width:0;font-size:13px!important;line-height:1.2!important;font-weight:650!important;white-space:normal}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions .lb-action-save{grid-column:1/-1;justify-content:center;min-height:50px!important;background:linear-gradient(120deg,#2476df,#438df4)!important;border-color:transparent!important;color:#fff!important}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions .lb-action-save .lb-action-icon{background:rgba(255,255,255,.17);color:#fff}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions .lb-action-back{grid-column:1/-1;justify-content:center;min-height:42px!important;border-color:transparent!important;background:transparent!important;color:var(--mut)!important;box-shadow:none!important}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions .lb-action-back .lb-action-icon{width:28px;height:28px;background:rgba(255,255,255,.05);color:var(--mut)}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions button:active{transform:scale(.985);filter:brightness(1.12)}
+:root[data-theme="light"] #sh[data-type="localbackup"] .local-backup-panel .lb-actions button{background:linear-gradient(145deg,#fff,#f4f7fc)!important;border-color:#dbe4f1!important;color:#172235!important}
+:root[data-theme="light"] #sh[data-type="localbackup"] .local-backup-panel .lb-actions .lb-action-save{background:linear-gradient(120deg,#286ed0,#438ef4)!important;color:#fff!important;border-color:transparent!important}
+:root[data-theme="light"] #sh[data-type="localbackup"] .local-backup-panel .lb-actions .lb-action-back{background:transparent!important;border-color:transparent!important;color:#687891!important}
 #sh[data-type="cloud"]{max-height:min(78dvh,720px);overflow-y:auto}
 #sh[data-type="cloud"] .cloud-sheet-head h3{font-size:22px!important;line-height:1.2}
 </style>
@@ -1699,12 +1706,11 @@ header>.topic-title-block.title-overflow #ttl{
 <div id="cfg"><div class="cfgb">
   <div class="cfg-top"><div class="cfg-brand"><span class="cfg-brand-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h11a4 4 0 0 0 .3-8A6.5 6.5 0 0 0 6 8.8 4.8 4.8 0 0 0 7 18Z"/><path d="M12 11v8m-3-3 3 3 3-3"/></svg></span><div><h3>Google Drive</h3><p class="hint">Automatic notes backup and restore</p></div></div><span class="cfg-badge">FZ NOTES</span></div>
   <section class="cfg-card">
-    <div class="cfg-card-title"><span class="cfg-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"/></svg></span><div><h4>Google account sync</h4><p class="hint">Same Google account se notes automatic restore aur backup ho sakte hain.</p></div></div>
+    <div class="cfg-card-title"><span class="cfg-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18h12a4 4 0 0 0 .4-8A6.5 6.5 0 0 0 6 8.5 4.8 4.8 0 0 0 6 18Z"/></svg></span><div><h4>Automatic Google sync</h4><p class="hint">Connect once. FZ NOTES automatically backs up changes and restores the latest cloud copy on a fresh install when no local notes are present.</p></div></div>
     <div id="c_driveStatus" class="cfg-status"><span class="status-dot"></span><span>Not connected</span></div>
     <p id="c_driveDiagnostic" class="hint cfg-footnote" aria-live="polite">Last connection result: not checked yet.</p>
     <div class="row"><button id="c_driveConnect">Connect Google account</button><button id="c_driveDisconnect" class="alt cfg-danger-button">Disconnect</button></div>
-    <div class="row cfg-quick-actions"><button id="c_driveBackup" class="cfg-secondary">Back up now</button><button id="c_driveRestore" class="cfg-secondary">Restore notes</button></div>
-    <p class="hint cfg-footnote">New/edit notes ke baad backup, app open hone par backup aur app background mein jaate waqt best-effort backup. Fresh install ya Clear data ke baad connect karte hi latest Drive backup restore hoga, agar backup available hai.</p>
+    <p class="hint cfg-footnote">Backup changes sync automatically. On a fresh install or after Clear data, connect the same Google account to restore the latest cloud backup. Existing local notes are not overwritten.</p>
     <p class="hint cfg-footnote">Backup AES-GCM se encrypt hota hai. Passwordless restore ke liye random key Google ke hidden app folder mein store hoti hai; apna Google account secure rakhein.</p>
   </section>
   <div class="cfg-actions"><button id="c_close" class="alt">Close</button></div>
@@ -2564,18 +2570,11 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='cset'){openCfg();return}
   if(k==='tgcfg'){openTgCfg();return}
   if(k==='tgstatus'){toast(lastTelegramBackup()?'Last Telegram archive: '+lastTelegramBackup():'No successful archive yet',3000);return}
-  if(k==='tgRestore'){doTelegramRestore();return}
   if(k==='tgNow'){
    const c=cfgGet();
    if(!c.tgToken||!c.tgChat){openTgCfg();toast('Telegram settings mein bot token aur chat ID save karo',2800);return}
    doTelegramBackup();return
   }
-  if(k==='driveNow'){doGoogleBackup();return}
-  if(k==='crs'){
-   if(!cfgGet().driveOn){openCfg();toast('Pehle Google account connect karo',3000);return}
-   openDriveHistory();return
-  }
-  if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Drive backup nahi mila');return}restoreSheetState();doDriveRestore(driveHistoryItems[i].id);return}
   return}
  if(sh.dataset.type==='localbackup'){
    if(k==='x'){restoreSheetState();return}
@@ -2838,8 +2837,6 @@ function openCloud(){
  const telegramState=c.tgToken&&c.tgChat?'Bot connected · '+(lastTelegramBackup()?'Last archive '+lastTelegramBackup():'No archive yet'):'Bot token and chat ID not set';
  const icons={
   drive:'<path d="M8 4h8l5 14H3L8 4Z"/><path d="M8 4 3 18m10-14 8 14"/>',
-  upload:'<path d="M12 16V4m-5 5 5-5 5 5"/><path d="M4 16v4h16v-4"/>',
-  restore:'<path d="M4 7v5h5"/><path d="M5.5 12a7 7 0 1 0 2-5L4 12"/><path d="M12 8v4l3 2"/>',
   telegram:'<path d="m21 4-3.2 16-5.4-5-3 2.9.4-5.2L19 6 7.2 13.4 3 12l18-8Z"/>',
   settings:'<circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.1 1.9-1.8 1.8-1.9-1.1-.1-.1-2 .8-.6 2.1h-2.5l-.6-2.1-2-.8-.1.1-1.9 1.1-1.8-1.8 1.1-1.9.1-.1-.8-2-2.1-.6V10l2.1-.6.8-2-.1-.1-1.1-1.9 1.8-1.8 1.9 1.1.1.1 2-.8.6-2.1h2.5l.6 2.1 2 .8.1-.1 1.9-1.1 1.8 1.8-1.1 1.9-.1.1.8 2 2.1.6v2.5l-2.1.6-.8 2Z"/>',
   cancel:'<path d="m6 6 12 12M18 6 6 18"/>'
@@ -2847,14 +2844,11 @@ function openCloud(){
  sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · CLOUD</span><h3>Cloud backup</h3><p>Encrypted copies on Google Drive and Telegram. Choose a service below.</p></div>'+
   '<div class="cloud-group-label">GOOGLE DRIVE</div>'+
   cloudRow('status',icons.drive,'Google Drive',driveState)+
-  cloudRow('cset',icons.settings,'Google account settings','Connect, check or disconnect your Google account')+
-  cloudRow('driveNow',icons.upload,'Back up to Google Drive','Create an encrypted backup now')+
-  cloudRow('crs',icons.restore,'Restore from Google Drive','Choose a backup from Drive history')+
-  '<div class="cloud-group-label">TELEGRAM</div>'+
+  cloudRow('cset',icons.settings,'Google Drive settings','Connect your account · automatic backup and restore')+
+  '<div class="cloud-group-label">TELEGRAM · BACKUP ONLY</div>'+
   cloudRow('tgstatus',icons.telegram,'Telegram archive',telegramState)+
-  cloudRow('tgcfg',icons.settings,'Telegram settings','Set bot token, chat ID and schedule')+
-  cloudRow('tgNow',icons.upload,'Back up to Telegram','Send an encrypted backup to your bot chat')+
-  cloudRow('tgRestore',icons.restore,'Restore from Telegram','Forward a backup file to your bot, then restore it here')+
+  cloudRow('tgcfg',icons.settings,'Telegram settings','Set bot token, chat ID and backup schedule')+
+  cloudRow('tgNow',icons.telegram,'Back up to Telegram','Save an encrypted copy in your bot chat')+
   cloudRow('x',icons.cancel,'Back','Return to Backup');
  sh.dataset.type='cloud';sh.scrollTop=0;sh.classList.add('on');
 }
@@ -2895,10 +2889,10 @@ function openLocalBackup(){
    '<div class="lb-path"><strong>Backup folder</strong><span>Documents/FZ NOTES/Backups/</span></div>'+
    '<p class="lb-hint">Backups are protected with AES encryption. Your password is stored securely on this device.</p>'+
    '<div class="lb-actions">'+
-    '<button type="button" class="primary" data-k="localScheduleSave">Save schedule</button>'+
-    '<button type="button" data-k="localExport">Back up now</button>'+
-    '<button type="button" data-k="localRestore">Restore from backup file</button>'+
-    '<button type="button" data-k="x">Back</button>'+
+    '<button type="button" class="primary lb-action-save" data-k="localScheduleSave"><span class="lb-action-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg></span><span class="lb-action-title">Save schedule</span></button>'+
+    '<button type="button" class="lb-action-backup" data-k="localExport"><span class="lb-action-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5"/><path d="M4 16v4h16v-4"/></svg></span><span class="lb-action-title">Back up now</span></button>'+
+    '<button type="button" class="lb-action-restore" data-k="localRestore"><span class="lb-action-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7v5h5"/><path d="M5 12a7 7 0 1 0 2-5L4 12"/></svg></span><span class="lb-action-title">Restore file</span></button>'+
+    '<button type="button" class="lb-action-back" data-k="x"><span class="lb-action-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></span><span class="lb-action-title">Back</span></button>'+
    '</div>'+
   '</section>';
  sh.dataset.type='localbackup';sh.scrollTop=0;sh.classList.add('on');
@@ -3040,8 +3034,6 @@ async function saveTelegramSettings(){
  }catch(e){toast('Settings save failed: '+e.message,4500);return false}
 }
 $('#c_close').onclick=()=>$('#cfg').classList.remove('on');
-$('#c_driveBackup').onclick=()=>{if(!cfgGet().driveOn){toast('Google account connect kar raha hoon…',2500);$('#c_driveConnect').click();return}doGoogleBackup()};
-$('#c_driveRestore').onclick=()=>{if(!cfgGet().driveOn){toast('Pehle Google account connect karo',2800);return}$('#cfg').classList.remove('on');openDriveHistory()};
 $('#c_driveConnect').onclick=async()=>{
  const diagnostic=$('#c_driveDiagnostic');
  if(diagnostic)diagnostic.textContent='Opening Google authorization and checking Drive access…';
@@ -3120,22 +3112,6 @@ async function doDriveRestore(id){
  pendDriveId=id;toast('Google Drive backup restore ho raha hai…',4500);
  try{const {token,key}=await ensureDriveKey();await restoreDriveEntry(id,token,key,true)}
  catch(e){suppressAutoBackup=false;if((e.message||'').includes('LEGACY_PASSWORD_BACKUP')){legacyRestoreId=id;ask('legacyrestore','Purane backup ka password');return}toast('Restore failed: '+e.message,4500)}
-}
-async function doTelegramRestore(){
- const c=cfgGet();
- if(!c.tgToken||!c.tgChat){openTgCfg();toast('Pehle Telegram bot token aur chat ID save karo',3500);return false}
- if(!c.driveOn){openCfg();toast('Telegram backup decrypt karne ke liye pehle Google account connect karo',4000);return false}
- toast('Telegram se backup download ho raha hai…',4500);
- try{
-  const {key}=await ensureDriveKey();
-  const raw=await native('restore',{key,source:{type:'tg',token:c.tgToken}});
-  if(!applyCloudRestore(raw))throw new Error('Telegram backup data valid FZ NOTES format mein nahi hai');
-  toast('Telegram backup restore complete · '+msgs.length+' notes',4000);
-  return true;
- }catch(e){
-  toast('Telegram restore failed: '+e.message,5000);
-  return false;
- }
 }
 async function restoreLegacyWithPassword(pw){
  if(!pw)return toast('Password enter karo');
