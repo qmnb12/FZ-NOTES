@@ -30,6 +30,8 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.provider.DocumentsContract;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -62,10 +64,12 @@ public class MainActivity extends Activity {
     private static final int REQ_IMAGE = 1;
     private static final int REQ_FILE = 2;
     private static final int REQ_SAVE_FILE = 3;
+    private static final int REQ_BACKUP_FOLDER = 4;
     private static final int REQ_DRIVE_AUTH = 904;
     private int pendingDriveAuthId = -1;
     private int fileReplyId = -1;
     private int saveFileReplyId = -1;
+    private int backupFolderReplyId = -1;
     private String pendingSaveText;
     private WebView web;
     private FrameLayout rootLayout;
@@ -421,6 +425,26 @@ public class MainActivity extends Activity {
                 }).start();
             } else {
                 reply(id, false, "Backup save cancel hua");
+            }
+        } else if (requestCode == REQ_BACKUP_FOLDER) {
+            final int id = backupFolderReplyId;
+            backupFolderReplyId = -1;
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                Uri tree = data.getData();
+                try {
+                    int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    getContentResolver().takePersistableUriPermission(tree, flags);
+                    getSharedPreferences("notes_local_backup", MODE_PRIVATE).edit()
+                            .putString("folderUri", tree.toString())
+                            .putString("folderLabel", DocumentsContract.getTreeDocumentId(tree).replace(':', '/'))
+                            .commit();
+                    reply(id, true, getSharedPreferences("notes_local_backup", MODE_PRIVATE)
+                            .getString("folderLabel", "Selected folder"));
+                } catch (Exception e) {
+                    reply(id, false, "Folder permission save nahi hui: " + (e.getMessage() == null ? "Unknown error" : e.getMessage()));
+                }
+            } else {
+                reply(id, false, "Backup folder select nahi hua");
             }
         } else if (requestCode == REQ_DRIVE_AUTH) {
             int id = pendingDriveAuthId;
@@ -908,6 +932,22 @@ public class MainActivity extends Activity {
             }
             if ("reminder".equals(op)) {
                 runOnUiThread(() -> handleReminder(id, args));
+                return;
+            }
+            if ("pickbackupfolder".equals(op)) {
+                runOnUiThread(() -> {
+                    backupFolderReplyId = id;
+                    Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                            | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                    try {
+                        startActivityForResult(i, REQ_BACKUP_FOLDER);
+                    } catch (Exception e) {
+                        backupFolderReplyId = -1;
+                        reply(id, false, "Backup folder picker nahi khula");
+                    }
+                });
                 return;
             }
             if ("pickfile".equals(op)) {
