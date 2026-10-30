@@ -107,10 +107,15 @@ public class Cloud {
                 saveLocalSecret(ctx, "drive_key", key);
                 return key;
             }
-            case "tgsnapshot":
+            case "tgsnapshot": {
+                String snapshot = a.getString("data");
+                // Keep independent snapshots for cloud/Telegram and on-device scheduling.
                 ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE).edit()
-                        .putString("snapshot", a.getString("data")).apply();
+                        .putString("snapshot", snapshot).apply();
+                ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE).edit()
+                        .putString("snapshot", snapshot).apply();
                 return "ok";
+            }
             case "tgconfigure":
                 configureTelegramBackup(ctx, a);
                 return "ok";
@@ -346,8 +351,7 @@ public class Cloud {
         String interval = prefs.getString("interval", "off");
         if ("off".equals(interval)) return;
 
-        String data = ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE)
-                .getString("snapshot", "");
+        String data = prefs.getString("snapshot", "");
         if (data == null || data.trim().isEmpty())
             throw new Exception("No saved notes snapshot is available for local backup");
         String pw = loadLocalSecret(ctx, "local_backup_pw");
