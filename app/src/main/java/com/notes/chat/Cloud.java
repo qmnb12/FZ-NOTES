@@ -110,10 +110,12 @@ public class Cloud {
             case "tgsnapshot": {
                 String snapshot = a.getString("data");
                 // Keep independent snapshots for cloud/Telegram and on-device scheduling.
-                ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE).edit()
-                        .putString("snapshot", snapshot).apply();
-                ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE).edit()
-                        .putString("snapshot", snapshot).apply();
+                if (!ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE).edit()
+                        .putString("snapshot", snapshot).commit())
+                    throw new Exception("Cloud backup snapshot could not be saved");
+                if (!ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE).edit()
+                        .putString("snapshot", snapshot).commit())
+                    throw new Exception("Local backup snapshot could not be saved");
                 return "ok";
             }
             case "tgconfigure":
@@ -333,17 +335,29 @@ public class Cloud {
 
         String pw = a.optString("pw", "");
         if (pw.length() < 8) throw new Exception("Local backup password must be at least 8 characters");
+        if (prefs.getString("snapshot", "").trim().isEmpty())
+            throw new Exception("Latest notes snapshot not received yet. Save a note or reopen FZ NOTES, then enable automatic backup again.");
+
         saveLocalSecret(ctx, "local_backup_pw", pw);
         if (!prefs.edit().putString("interval", interval).remove("lastError").commit())
             throw new Exception("Local backup schedule could not be saved");
 
+        // Verify an encrypted copy can be written now before reporting that the schedule is active.
+        try {
+            createScheduledLocalBackup(ctx);
+        } catch (Exception e) {
+            String message = e.getMessage() == null ? "Initial local backup failed" : e.getMessage();
+            prefs.edit().putString("lastError", message).commit();
+            throw e;
+        }
+
         long days = "daily".equals(interval) ? 1L : 30L;
         PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
-                LocalBackupWorker.class, days, TimeUnit.DAYS).build();
+                LocalBackupWorker.class, days, TimeUnit.DAYS)
+                .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL,
+                        30L, TimeUnit.SECONDS)
+                .build();
         wm.enqueueUniquePeriodicWork("fz_notes_local_backup", ExistingPeriodicWorkPolicy.UPDATE, work);
-
-        // Create the first encrypted copy immediately; WorkManager handles later runs.
-        createScheduledLocalBackup(ctx);
     }
 
     static void createScheduledLocalBackup(Context ctx) throws Exception {
