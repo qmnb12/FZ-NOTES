@@ -2536,6 +2536,13 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   return}
  if(sh.dataset.type==='localbackup'){
   if(k==='x'){restoreSheetState();return}
+  if(k==='localChooseFolder'){
+   native('pickbackupfolder',{}).then(label=>{
+    toast('Automatic backup folder set: '+label,3500);
+    openLocalBackup();
+   }).catch(e=>toast(e.message||'Backup folder select nahi hua',3500));
+   return
+  }
   if(k==='localStatus'){updateLocalBackupStatus(true).catch(()=>{});return}
   if(k==='localExport'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();exportBackupFile();return}
   if(k==='localRestore'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();pickFile();return}
@@ -2809,7 +2816,8 @@ async function updateLocalBackupStatus(showToast=false){
   const interval=status.interval==='daily'?'Daily automatic backup':status.interval==='monthly'?'Monthly automatic backup':'Automatic backup off';
   const last=status.lastSuccess?new Date(Number(status.lastSuccess)).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}):'No automatic copy created yet';
   const file=status.hasBackup?'Encrypted backup available':'No automatic backup file yet';
-  let detail=interval+' · '+last+' · '+file;
+  const folder=status.folderChosen?'Folder: '+(status.folderLabel||'Selected folder'):'Folder not selected';
+  let detail=folder+' · '+interval+' · '+last+' · '+file;
   if(status.lastError)detail+=' · Last error: '+String(status.lastError);
   if(row&&sh.dataset.type==='localbackup')row.textContent=detail;
   if(showToast)toast(detail,4500);
@@ -2850,6 +2858,7 @@ function openLocalBackup(){
  };
  sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · THIS DEVICE</span><h3>Local backup</h3><p>Password-encrypted backups stored on this device. Restore always asks for the backup password.</p></div>'+
   cloudRow('localStatus',icons.status,'Automatic backup status','Checking schedule and latest copy…')+
+  cloudRow('localChooseFolder',icons.calendar,'Choose backup folder','Select once; Daily and Monthly backups will use this folder')+
   cloudRow('localExport',icons.export,'Create encrypted backup','Save a password-protected .fzenc file')+
   cloudRow('localRestore',icons.restore,'Restore backup file','Choose an encrypted .fzenc file')+
   '<div class="cloud-divider"></div><div class="cloud-group-label">Automatic backup schedule</div>'+
