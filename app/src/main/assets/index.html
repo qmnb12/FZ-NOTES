@@ -1284,6 +1284,20 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 }
 @media(prefers-reduced-motion:reduce){#chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{transition:none!important}}
 
+/* Animate applying Mono from the Android text-selection toolbar, not just copying existing Mono. */
+#ed .mono.mono-apply-pulse{
+ outline:2px solid transparent!important;
+ outline-offset:2px;
+ border-radius:4px!important;
+ animation:monoApplyPulse 420ms cubic-bezier(.22,1,.36,1) both!important;
+}
+@keyframes monoApplyPulse{
+ 0%{outline-color:color-mix(in srgb,var(--acc) 62%,transparent);text-shadow:0 0 7px color-mix(in srgb,var(--acc) 58%,transparent);filter:brightness(1.32)}
+ 45%{outline-color:color-mix(in srgb,var(--acc) 34%,transparent);text-shadow:0 0 4px color-mix(in srgb,var(--acc) 30%,transparent);filter:brightness(1.14)}
+ 100%{outline-color:transparent;text-shadow:none;filter:none}
+}
+@media(prefers-reduced-motion:reduce){#ed .mono.mono-apply-pulse{animation:none!important;outline-color:transparent!important;text-shadow:none!important;filter:none!important}}
+
 /* Master: remove legacy floating-action reserved space; Plus/Task are in the composer. */
 #chat{padding-bottom:8px!important;scroll-padding-bottom:8px!important}
 #chatw{min-height:0!important;overflow:hidden!important}
@@ -1667,6 +1681,13 @@ function focusComposerForTyping(){focusWithKeyboard(ed,true)}
 
 function wrap(cls){const s=getSelection();if(!s.rangeCount||s.isCollapsed)return false;
  const r=s.getRangeAt(0),sp=document.createElement('span');sp.className=cls;sp.appendChild(r.extractContents());r.insertNode(sp);
+ // Telegram-like one-shot feedback on the actual newly formatted Mono selection.
+ if(cls==='mono'){
+  const clearPulse=()=>sp.classList.remove('mono-apply-pulse');
+  sp.addEventListener('animationend',clearPulse,{once:true});
+  sp.classList.add('mono-apply-pulse');
+  setTimeout(clearPulse,520);
+ }
  s.removeAllRanges();const n=document.createRange();n.selectNodeContents(sp);s.addRange(n);return true}
 function hasSel(){const s=getSelection();return s.rangeCount&&!s.isCollapsed}
 window.applyMonoFromNative=function(){
