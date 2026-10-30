@@ -48,6 +48,15 @@ public class Cloud {
 
     static final String FILE = "notes-backup.ncb";
     static final byte[] MAGIC = {'N', 'C', 'B', '1'};
+    private static final Object TELEGRAM_DAILY_LOCK = new Object();
+
+    private static String localCalendarDate() {
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        return String.format(java.util.Locale.US, "%04d-%02d-%02d",
+                c.get(java.util.Calendar.YEAR),
+                c.get(java.util.Calendar.MONTH) + 1,
+                c.get(java.util.Calendar.DAY_OF_MONTH));
+    }
 
     // ---------- entry point (called from the JS bridge) ----------
     static String handle(Context ctx, String op, JSONObject a) throws Exception {
@@ -98,6 +107,54 @@ public class Cloud {
             case "tgstatus":
                 return String.valueOf(ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE)
                         .getLong("lastSuccess", 0L));
+            case "tgdailyclaim": {
+                SharedPreferences sp = ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE);
+                synchronized (TELEGRAM_DAILY_LOCK) {
+                    String today = localCalendarDate();
+                    String completed = sp.getString("dailyOpenDate", "");
+                    String inFlight = sp.getString("dailyOpenInFlightDate", "");
+                    long inFlightAt = sp.getLong("dailyOpenInFlightAt", 0L);
+                    boolean activeClaim = today.equals(inFlight)
+                            && System.currentTimeMillis() - inFlightAt < 30L * 60L * 1000L;
+                    JSONObject result = new JSONObject();
+                    if (today.equals(completed) || activeClaim) {
+                        result.put("run", false);
+                        result.put("date", today);
+                        result.put("reason", today.equals(completed) ? "already_done" : "already_running");
+                        return result.toString();
+                    }
+                    boolean saved = sp.edit()
+                            .putString("dailyOpenInFlightDate", today)
+                            .putLong("dailyOpenInFlightAt", System.currentTimeMillis())
+                            .commit();
+                    if (!saved) throw new Exception("Daily Telegram backup state save failed");
+                    result.put("run", true);
+                    result.put("date", today);
+                    return result.toString();
+                }
+            }
+            case "tgdailycomplete": {
+                SharedPreferences sp = ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE);
+                synchronized (TELEGRAM_DAILY_LOCK) {
+                    String date = a.optString("date", "");
+                    if (date.isEmpty() || !date.equals(sp.getString("dailyOpenInFlightDate", "")))
+                        throw new Exception("Daily Telegram backup claim expired");
+                    if (!sp.edit().putString("dailyOpenDate", date)
+                            .remove("dailyOpenInFlightDate").remove("dailyOpenInFlightAt").commit())
+                        throw new Exception("Daily Telegram backup completion could not be saved");
+                    return "ok";
+                }
+            }
+            case "tgdailyrelease": {
+                SharedPreferences sp = ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE);
+                synchronized (TELEGRAM_DAILY_LOCK) {
+                    String date = a.optString("date", "");
+                    if (date.equals(sp.getString("dailyOpenInFlightDate", ""))) {
+                        sp.edit().remove("dailyOpenInFlightDate").remove("dailyOpenInFlightAt").commit();
+                    }
+                    return "ok";
+                }
+            }
             case "drivehistory":
                 return driveHistory(a.getString("token")).toString();
             case "backup": {
