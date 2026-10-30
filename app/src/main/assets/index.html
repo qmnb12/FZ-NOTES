@@ -1366,10 +1366,26 @@ body.composer-has-text #chatw>#listfab{opacity:0!important;visibility:hidden!imp
   justify-content:center!important;
 }
 
+
+/* Header Google Drive connection indicator */
+header .drive-indicator{
+ flex:0 0 12px!important;width:12px!important;height:12px!important;
+ min-width:12px!important;display:flex!important;align-items:center!important;
+ justify-content:center!important;margin:0 5px 0 0!important;padding:0!important;
+ border:0!important;background:transparent!important;box-shadow:none!important;
+}
+header .drive-indicator i{
+ display:block!important;width:9px!important;height:9px!important;border-radius:50%!important;
+ background:#ef5350!important;box-shadow:0 0 0 3px rgba(239,83,80,.13),0 0 8px rgba(239,83,80,.28)!important;
+}
+header .drive-indicator.is-on i{
+ background:#35d07f!important;box-shadow:0 0 0 3px rgba(53,208,127,.14),0 0 9px rgba(53,208,127,.35)!important;
+}
+
 </style>
 </head>
 <body>
-<header><div class="av" id="av">N</div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><span style="flex:1"></span><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
+<header><div class="av" id="av">N</div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><span style="flex:1"></span><span id="driveIndicator" class="drive-indicator is-off" role="img" aria-label="Google Drive not connected" title="Google Drive not connected"><i></i></span><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx" aria-label="Clear and close search">✕</button></div>
 <div id="searchNav" aria-label="Search scope and result navigation">
  <div class="search-scope-row">
@@ -2379,7 +2395,16 @@ const sel=new Set();
 let pendSrc='';let autoBackupTimer=null,autoBackupBusy=false,autoBackupAgain=false,suppressAutoBackup=false;
 const NM={drive:'Google Drive'},F=['tgToken','tgChat','tgSchedule'];
 const cfgGet=()=>{try{return JSON.parse(localStorage.getItem('notes-sync')||'{}')}catch(e){return{}}};
-const cfgSet=c=>{try{localStorage.setItem('notes-sync',JSON.stringify(c))}catch(e){}};
+function updateHeaderDriveIndicator(){
+ const dot=$('#driveIndicator');if(!dot)return;
+ const connected=!!cfgGet().driveOn;
+ dot.classList.toggle('is-on',connected);
+ dot.classList.toggle('is-off',!connected);
+ const label=connected?'Google Drive connected':'Google Drive not connected';
+ dot.setAttribute('aria-label',label);dot.title=label;
+}
+const cfgSet=c=>{try{localStorage.setItem('notes-sync',JSON.stringify(c))}catch(e){}updateHeaderDriveIndicator()};
+updateHeaderDriveIndicator();
 function targets(c){return c.driveOn?[{type:'drive'}]:[]}
 const pend={};let nid=0;
 function native(op,args){return new Promise((res,rej)=>{if(!window.Android||typeof window.Android.run!=='function'){rej(new Error('Android bridge available nahi hai'));return}const id=++nid;pend[id]={res,rej};try{window.Android.run(id,op,JSON.stringify(args))}catch(e){delete pend[id];rej(e)}})}
