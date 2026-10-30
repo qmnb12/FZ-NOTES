@@ -106,8 +106,6 @@ public class Cloud {
                 return "ok";
             case "localbackupmanual":
                 return createManualLocalBackup(ctx, a);
-            case "localautoread":
-                return readLocalAutoBackup(ctx);
             case "drivekey": {
                 String key = getOrCreateDriveKey(a.getString("token"));
                 saveLocalSecret(ctx, "drive_key", key);
@@ -480,23 +478,6 @@ public class Cloud {
         status.put("hasPassword", loadLocalSecret(ctx, "local_backup_pw").length() >= 8);
         status.put("path", LOCAL_BACKUP_PATH);
         return status;
-    }
-
-    static String readLocalAutoBackup(Context ctx) throws Exception {
-        Uri uri = latestLocalBackupUri(ctx, true);
-        if (uri != null) {
-            try (InputStream in = ctx.getContentResolver().openInputStream(uri)) {
-                if (in == null) throw new Exception("Automatic backup file open nahi hui");
-                return new String(readAll(in), StandardCharsets.UTF_8);
-            }
-        }
-        File legacy = new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE);
-        if (legacy.isFile()) {
-            try (InputStream in = new FileInputStream(legacy)) {
-                return new String(readAll(in), StandardCharsets.UTF_8);
-            }
-        }
-        throw new Exception("Automatic local backup abhi available nahi hai");
     }
 
     // ---------- crypto ----------
