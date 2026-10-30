@@ -559,6 +559,134 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         animator.start();
     }
 
+    /** Animate the exact span object that LinkMovementMethod just clicked. */
+    void flashInlineCode(TextView targetView, InlineCopySpan target) {
+        if (targetView == null || target == null) return;
+        NoteRow row = findVisibleRow(target.noteId);
+        if (row == null || row.body != targetView) return;
+
+        CharSequence current = targetView.getText();
+        android.text.Spannable styled;
+        if (current instanceof android.text.Spannable) {
+            styled = (android.text.Spannable) current;
+        } else if (current instanceof Spanned) {
+            targetView.setText(new SpannableStringBuilder(current), TextView.BufferType.SPANNABLE);
+            CharSequence converted = targetView.getText();
+            if (!(converted instanceof android.text.Spannable)) return;
+            styled = (android.text.Spannable) converted;
+        } else {
+            return;
+        }
+
+        // Use the exact ClickableSpan instance, not a parsed index or text search.
+        int start = styled.getSpanStart(target);
+        int end = styled.getSpanEnd(target);
+        if (start < 0 || end <= start) return;
+
+        if (row.copyFlashAnimator != null) {
+            row.copyFlashAnimator.cancel();
+            row.copyFlashAnimator = null;
+        }
+        if (row.copyFlashText != null && row.copyFlashSpan != null
+                && row.copyFlashText.getSpanStart(row.copyFlashSpan) >= 0) {
+            row.copyFlashText.removeSpan(row.copyFlashSpan);
+        }
+        // Remove the existing Mono background/foreground spans while the pulse runs.
+        // Otherwise Android's overlapping BackgroundColorSpan can paint over the animation.
+        final ArrayList<BackgroundColorSpan> removedBackgrounds = new ArrayList<>();
+        final ArrayList<Integer> backgroundFlags = new ArrayList<>();
+        BackgroundColorSpan[] backgrounds = styled.getSpans(start, end, BackgroundColorSpan.class);
+        for (BackgroundColorSpan span : backgrounds) {
+            if (styled.getSpanStart(span) == start && styled.getSpanEnd(span) == end) {
+                removedBackgrounds.add(span);
+                backgroundFlags.add(styled.getSpanFlags(span));
+                styled.removeSpan(span);
+            }
+        }
+        final ArrayList<ForegroundColorSpan> removedForegrounds = new ArrayList<>();
+        final ArrayList<Integer> foregroundFlags = new ArrayList<>();
+        ForegroundColorSpan[] foregrounds = styled.getSpans(start, end, ForegroundColorSpan.class);
+        for (ForegroundColorSpan span : foregrounds) {
+            if (styled.getSpanStart(span) == start && styled.getSpanEnd(span) == end) {
+                removedForegrounds.add(span);
+                foregroundFlags.add(styled.getSpanFlags(span));
+                styled.removeSpan(span);
+            }
+        }
+
+        final InlineCopySpan flashTarget = target;
+        final int originalFixedTextColor = flashTarget == null
+                ? Color.TRANSPARENT : flashTarget.fixedTextColor;
+        // Choose a visible highlight from the actual rendered bubble brightness.
+        final boolean lightSurface = Color.luminance(themeBubble) >= 0.50f;
+        final int originalTextColor = originalFixedTextColor != Color.TRANSPARENT
+                ? originalFixedTextColor
+                : (lightTheme ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255));
+        final int pulseTextColor = lightSurface ? Color.WHITE : Color.rgb(8, 16, 28);
+        final int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
+        final int tintedAccent = blendColors(themeAccent, tintBase, lightSurface ? 0.20f : 0.50f);
+        final int flashColor = Color.argb(230,
+                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
+        final int clearColor = Color.argb(0,
+                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
+        final ArgbEvaluator colorEvaluator = new ArgbEvaluator();
+        final CopyFlashSpan pulse = new CopyFlashSpan(clearColor, originalTextColor);
+        if (flashTarget != null) flashTarget.fixedTextColor = Color.TRANSPARENT;
+        styled.setSpan(pulse, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        row.copyFlashText = styled;
+        row.copyFlashSpan = pulse;
+
+        android.view.animation.Interpolator easeOut =
+                new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
+        ValueAnimator enter = ValueAnimator.ofObject(colorEvaluator, clearColor, flashColor);
+        enter.setDuration(75L);
+        enter.setInterpolator(easeOut);
+        enter.addUpdateListener(animation -> {
+            pulse.setColor((Integer) animation.getAnimatedValue());
+            pulse.setTextColor((Integer) colorEvaluator.evaluate(
+                    animation.getAnimatedFraction(), originalTextColor, pulseTextColor));
+            row.body.invalidate();
+        });
+        ValueAnimator exit = ValueAnimator.ofObject(colorEvaluator, flashColor, clearColor);
+        exit.setDuration(165L);
+        exit.setInterpolator(easeOut);
+        exit.addUpdateListener(animation -> {
+            pulse.setColor((Integer) animation.getAnimatedValue());
+            pulse.setTextColor((Integer) colorEvaluator.evaluate(
+                    1f - animation.getAnimatedFraction(), originalTextColor, pulseTextColor));
+            row.body.invalidate();
+        });
+
+        // Capture final references for Java 8 anonymous-listener rules.
+        final android.text.Spannable flashText = styled;
+        final int flashStart = start;
+        final int flashEnd = end;
+        AnimatorSet animator = new AnimatorSet();
+        animator.playSequentially(enter, exit);
+        animator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(android.animation.Animator animation) {
+                if (flashText.getSpanStart(pulse) >= 0) flashText.removeSpan(pulse);
+                for (int i = 0; i < removedBackgrounds.size(); i++) {
+                    BackgroundColorSpan span = removedBackgrounds.get(i);
+                    if (flashText.getSpanStart(span) < 0) flashText.setSpan(span, flashStart, flashEnd, backgroundFlags.get(i));
+                }
+                for (int i = 0; i < removedForegrounds.size(); i++) {
+                    ForegroundColorSpan span = removedForegrounds.get(i);
+                    if (flashText.getSpanStart(span) < 0) flashText.setSpan(span, flashStart, flashEnd, foregroundFlags.get(i));
+                }
+                if (flashTarget != null) flashTarget.fixedTextColor = originalFixedTextColor;
+                row.body.invalidate();
+                if (row.copyFlashAnimator == animation) {
+                    row.copyFlashAnimator = null;
+                    row.copyFlashText = null;
+                    row.copyFlashSpan = null;
+                }
+            }
+        });
+        row.copyFlashAnimator = animator;
+        animator.start();
+    }
+
     private static String normalizeInlineText(CharSequence value) {
         if (value == null) return "";
         return value.toString().replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
@@ -1402,10 +1530,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (!adapter.selectedIds.isEmpty()) {
                 adapter.toggleSelectionById(noteId);
             } else if (adapter.listener != null) {
-                // Start the visual pulse from this exact native span immediately.
-                // Do not wait for a WebView/clipboard bridge round-trip to rediscover it.
-                if ("mono".equals(action) || "code".equals(action)) {
-                    adapter.flashInlineCode(noteId, action, index, "");
+                // Animate the exact clicked span instance; no ID/index re-search is needed.
+                if (("mono".equals(action) || "code".equals(action)) && widget instanceof TextView) {
+                    adapter.flashInlineCode((TextView) widget, this);
                 }
                 adapter.listener.onAction(noteId, action, index);
             }
