@@ -2570,11 +2570,6 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='cset'){openCfg();return}
   if(k==='tgcfg'){openTgCfg();return}
   if(k==='tgstatus'){toast(lastTelegramBackup()?'Last Telegram archive: '+lastTelegramBackup():'No successful archive yet',3000);return}
-  if(k==='tgNow'){
-   const c=cfgGet();
-   if(!c.tgToken||!c.tgChat){openTgCfg();toast('Telegram settings mein bot token aur chat ID save karo',2800);return}
-   doTelegramBackup();return
-  }
   return}
  if(sh.dataset.type==='localbackup'){
    if(k==='x'){restoreSheetState();return}
@@ -2848,7 +2843,6 @@ function openCloud(){
   '<div class="cloud-group-label">TELEGRAM · BACKUP ONLY</div>'+
   cloudRow('tgstatus',icons.telegram,'Telegram archive',telegramState)+
   cloudRow('tgcfg',icons.settings,'Telegram settings','Set bot token, chat ID and backup schedule')+
-  cloudRow('tgNow',icons.telegram,'Back up to Telegram','Save an encrypted copy in your bot chat')+
   cloudRow('x',icons.cancel,'Back','Return to Backup');
  sh.dataset.type='cloud';sh.scrollTop=0;sh.classList.add('on');
 }
