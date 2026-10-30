@@ -1313,6 +1313,16 @@ body.composer-has-text #chatw>#fab,
 body.composer-has-text #chatw>#listfab{opacity:0!important;visibility:hidden!important;pointer-events:none!important;transform:scale(.82) translateY(5px)!important;transition:opacity .14s ease,transform .14s ease,visibility .14s ease}
 #chatw>#fab,#chatw>#listfab{transition:opacity .14s ease,transform .14s ease,visibility .14s ease}
 
+
+/* Correct pin placement: it belongs to the chat column, never the topic rail */
+#pin{width:100%!important;max-width:100%!important;margin:0!important;box-sizing:border-box!important;flex:0 0 auto}
+#pin.on{display:flex!important}
+/* The quick-note and checklist controls are children of the composer */
+#cmp #listfab,#cmp #fab{display:flex!important;visibility:visible;opacity:1;pointer-events:auto}
+#cmp.has-text #listfab,#cmp.has-text #fab{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+#cmp #send{display:none!important}
+#cmp.has-text #send{display:flex!important}
+
 </style>
 </head>
 <body>
@@ -1332,9 +1342,9 @@ body.composer-has-text #chatw>#listfab{opacity:0!important;visibility:hidden!imp
  </div>
 </div>
 <div id="filters"><button data-filter="all" class="active">All</button><button data-filter="focus">Focus</button><button data-filter="pinned">Pinned</button><button data-filter="tasks">Tasks</button><button data-filter="open">Open</button><button data-filter="done">Done</button><button data-filter="overdue">Overdue</button><button data-filter="today">Today</button></div>
-<div id="pin"><div class="cx"><b id="pinTitle">Pinned note</b><span id="pinPreview"></span></div><button type="button" id="pinPrev" aria-label="Previous pinned note" title="Previous pin"><svg viewBox="0 0 24 24"><path d="m6 14 6-6 6 6"/></svg></button><button type="button" id="pinNext" aria-label="Next pinned note" title="Next pin"><svg viewBox="0 0 24 24"><path d="m6 10 6 6 6-6"/></svg></button></div>
+
 <div id="selbar"><button data-s="x" aria-label="Exit selection" title="Cancel selection">✕</button><span id="selc">1 selected</span><button data-s="reply" aria-label="Reply" title="Reply">↩</button><button data-s="copy" aria-label="Copy selected" title="Copy">▢</button><button data-s="more" aria-label="More actions" title="More actions">⋮</button><button data-s="del" aria-label="Delete selected" title="Delete">🗑</button></div>
-<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="chatw"><div id="chat"></div></div></div></div>
+<div class="main"><div id="side"></div><div class="col" style="position:relative"><div id="pin"><div class="cx"><b id="pinTitle">Pinned note</b><span id="pinPreview"></span></div><button type="button" id="pinPrev" aria-label="Previous pinned note" title="Previous pin"><svg viewBox="0 0 24 24"><path d="m6 14 6-6 6 6"/></svg></button><button type="button" id="pinNext" aria-label="Next pinned note" title="Next pin"><svg viewBox="0 0 24 24"><path d="m6 10 6 6 6-6"/></svg></button></div><div id="chatw"><div id="chat"></div></div></div></div>
 <div id="footer">
 <div id="tb">
 <button data-a="b" aria-label="Bold" title="Bold"><b class="fmticon">B</b></button><button data-a="i" aria-label="Italic" title="Italic"><i class="fmticon">I</i></button>
@@ -1387,7 +1397,7 @@ shBackdrop.addEventListener('click',()=>{shStack=[];sh.classList.remove('on');ch
 function pushSheetState(){if(!sh.classList.contains('on'))return;shStack.push({html:sh.innerHTML,dataset:Object.assign({},sh.dataset)});}
 let sheetRestoreTimer=0;function restoreSheetState(){if(shStack.length){const state=shStack.pop();sh.innerHTML=state.html;Array.from(sh.attributes).forEach(a=>{if(a.name.indexOf('data-')===0)sh.removeAttribute(a.name)});Object.keys(state.dataset).forEach(k=>sh.dataset[k]=state.dataset[k]);sh.classList.add('on');sh.classList.remove('sheet-restoring');requestAnimationFrame(()=>sh.classList.add('sheet-restoring'));if(sheetRestoreTimer)clearTimeout(sheetRestoreTimer);sheetRestoreTimer=setTimeout(()=>{sh.classList.remove('sheet-restoring');sheetRestoreTimer=0},260);return true;}sh.classList.remove('on');return true;}
 let nativeSelectionMenuOpen=false,lastAnySelectionRange=null,nativeSelectionSession=false;
-function updateComposerControls(){const hasText=!!ed.innerText.trim();$('#cmp').classList.toggle('has-text',hasText);document.body.classList.toggle('composer-has-text',hasText)}
+function updateComposerControls(){const raw=ed.innerText||ed.textContent||'';const hasText=!!raw.replace(/[\\u200B\\uFEFF]/g,'').trim();$('#cmp').classList.toggle('has-text',hasText);document.body.classList.toggle('composer-has-text',hasText)}
 window.setNativeSelectionMenuOpen=function(open){
  nativeSelectionMenuOpen=!!open;const toolbar=$('#tb');
  if(nativeSelectionMenuOpen){nativeSelectionSession=true;toolbar.classList.add('native-selection-hidden');toolbar.classList.remove('on');return}
