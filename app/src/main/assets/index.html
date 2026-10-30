@@ -1442,7 +1442,8 @@ header .drive-indicator.is-on i{
 }
 
 
-/* Header avatar replaced by a cloud-backup icon with an account connection light. */
+
+/* FZ NOTES app mark replaces the header avatar; the full logo changes with Drive status. */
 header .av.drive-avatar{
  position:relative!important;
  flex:0 0 40px!important;
@@ -1452,45 +1453,46 @@ header .av.drive-avatar{
  border-radius:50%!important;
  display:grid!important;
  place-items:center!important;
- overflow:visible!important;
- background:linear-gradient(145deg,#1d3550,#102238)!important;
- color:#c8ddf8!important;
- box-shadow:inset 0 0 0 1px rgba(157,194,240,.18)!important;
+ overflow:hidden!important;
+ background:#101a29!important;
+ color:#e85b60!important;
+ box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)!important;
 }
-header .av.drive-avatar svg{
+header .av.drive-avatar.is-on{color:#31c47b!important}
+header .av.drive-avatar.is-off{color:#e85b60!important}
+header .av.drive-avatar .fz-app-logo{
  display:block!important;
- width:25px!important;
- height:25px!important;
- fill:none!important;
+ width:31px!important;
+ height:31px!important;
+ overflow:visible!important;
+}
+header .av.drive-avatar .logo-page{
+ fill:color-mix(in srgb,currentColor 15%,transparent)!important;
  stroke:currentColor!important;
- stroke-width:1.7!important;
- stroke-linecap:round!important;
+ stroke-width:2.8!important;
  stroke-linejoin:round!important;
 }
-header .av.drive-avatar .status-dot{
- position:absolute!important;
- right:-1px!important;
- bottom:-1px!important;
- display:block!important;
- width:13px!important;
- height:13px!important;
- box-sizing:border-box!important;
- border-radius:50%!important;
- border:2px solid #101a29!important;
- background:#df5555!important;
- box-shadow:none!important;
+header .av.drive-avatar .logo-fold{
+ fill:currentColor!important;
+ opacity:.48!important;
 }
-header .av.drive-avatar.is-on .status-dot{
- background:#29b875!important;
+header .av.drive-avatar .logo-line,
+header .av.drive-avatar .logo-chat-line{
+ fill:currentColor!important;
+ stroke:none!important;
 }
-header .av.drive-avatar.is-off .status-dot{
- background:#df5555!important;
+header .av.drive-avatar .logo-line.secondary{opacity:.82!important}
+header .av.drive-avatar .logo-chat{
+ fill:color-mix(in srgb,currentColor 24%,transparent)!important;
+ stroke:currentColor!important;
+ stroke-width:2.8!important;
+ stroke-linejoin:round!important;
 }
 
 </style>
 </head>
 <body>
-<header><div class="av drive-avatar is-off" id="av" role="img" aria-label="Google Drive not connected" title="Google Drive not connected"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 18h11a4 4 0 0 0 .35-7.98A6.5 6.5 0 0 0 5.1 9.1 4.4 4.4 0 0 0 6.5 18Z"/><path d="M12 15V9m-2.4 2.4L12 9l2.4 2.4"/></svg><i class="status-dot"></i></div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
+<header><div class="av drive-avatar is-off" id="av" role="img" aria-label="Google Drive not connected" title="Google Drive not connected"><svg class="fz-app-logo" viewBox="0 0 108 108" aria-hidden="true"><path class="logo-page" d="M30 16h37l15 15v48q0 6 -6 6h-46q-6 0 -6 -6v-57q0 -6 6 -6z"/><path class="logo-fold" d="M67 16v12q0 4 4 4h11z"/><path class="logo-line" d="M37 42h30q3 0 3 3t-3 3h-30q-3 0 -3 -3t3 -3z"/><path class="logo-line secondary" d="M37 53h23q3 0 3 3t-3 3h-23q-3 0 -3 -3t3 -3zM37 64h17q3 0 3 3t-3 3h-17q-3 0 -3 -3t3 -3z"/><path class="logo-chat" d="M58 65h25q11 0 11 11v4q0 11 -11 11h-8l-9 7v-7h-8q-11 0 -11 -11v-4q0 -11 11 -11z"/><path class="logo-chat-line" d="M57 76h24q2 0 2 2t-2 2h-24q-2 0 -2 -2t2 -2zM57 83h16q2 0 2 2t-2 2h-16q-2 0 -2 -2t2 -2z"/></svg></div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx" aria-label="Clear and close search">✕</button></div>
 <div id="searchNav" aria-label="Search scope and result navigation">
  <div class="search-scope-row">
