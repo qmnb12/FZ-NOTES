@@ -485,8 +485,9 @@ body{min-height:100dvh}
 /* Local backup panel: one schedule selector and a fixed destination. */
 #sh .local-backup-panel{margin:10px 3px 5px;padding:16px;border:1px solid var(--ln);border-radius:18px;background:rgba(255,255,255,.025)}
 #sh .local-backup-panel .lb-status{padding:11px 12px;margin-bottom:15px;border:1px solid var(--ln);border-radius:13px;color:var(--mut);font-size:12px;line-height:1.5}
-#sh .local-backup-panel label{display:block;margin:12px 0 7px;color:var(--mut);font-size:12px;font-weight:700}
-#sh .local-backup-panel select{width:100%;min-height:48px;padding:0 12px;border:1px solid var(--ln);border-radius:12px;background:rgba(9,17,29,.92);color:var(--text);font:inherit}
+#sh .local-backup-panel label{display:block;margin:12px 0 5px;color:var(--mut);font-size:11px;font-weight:700}
+#sh .local-backup-panel select{width:100%;box-sizing:border-box;min-height:48px;margin:0 0 7px;padding:12px 13px;border:1px solid rgba(160,184,216,.16);border-radius:12px;background:#091321;color:var(--text);font:inherit;font-size:14px;min-width:0;outline:none;color-scheme:dark}
+#sh .local-backup-panel select:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(117,170,255,.1)}
 #sh .local-backup-panel .lb-hint{margin:9px 1px 13px;color:var(--mut);font-size:12px;line-height:1.5}
 #sh .local-backup-panel .lb-path{padding:12px;border-radius:12px;background:rgba(86,145,235,.09);border:1px solid rgba(117,170,255,.16)}
 #sh .local-backup-panel .lb-path strong,#sh .local-backup-panel .lb-path span{display:block}
@@ -2561,12 +2562,6 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
    }
    if(k==='localExport'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();exportBackupFile();return}
    if(k==='localRestore'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();pickFile();return}
-   if(k==='localAutoRestore'){
-    shStack=[];sh.classList.remove('on');syncNativeChatOverlay();
-    native('localautoread',{}).then(handleLocalBackupText)
-     .catch(e=>toast(e.message||'Automatic backup restore unavailable',3500));
-    return
-   }
    return}
 
  if(sh.dataset.type==='menu'){
@@ -2834,12 +2829,12 @@ function openLocalBackup(){
    '<div id="localBackupStatus" class="lb-status">Checking schedule and saved copies…</div>'+
    '<label for="localBackupSchedule">Automatic backup schedule</label>'+
    '<select id="localBackupSchedule">'+
-    '<option value="manual">Manual only — when I tap Back up now</option>'+
-    '<option value="onopen">Every time I open this app</option>'+
-    '<option value="dailyopen">Once a day — first app open</option>'+
+    '<option value="manual">Manual only — when I tap backup</option>'+
+    '<option value="onopen">When I open this app</option>'+
+    '<option value="dailyopen">Once a day · first app open</option>'+
     '<option value="daily">Daily</option>'+
     '<option value="weekly">Weekly</option>'+
-    '<option value="monthly">Monthly — every 30 days</option>'+
+    '<option value="monthly">Monthly (every 30 days)</option>'+
    '</select>'+
    '<p class="lb-hint">App-open options run when FZ NOTES starts. Daily, Weekly and Monthly use Android background scheduling. Manual only stops automatic copies and keeps saved files.</p>'+
    '<div class="lb-path"><strong>Fixed backup location</strong><span>Documents/FZ NOTES/Backups/</span></div>'+
@@ -2847,8 +2842,7 @@ function openLocalBackup(){
    '<div class="lb-actions">'+
     '<button type="button" class="primary" data-k="localScheduleSave">Save schedule</button>'+
     '<button type="button" data-k="localExport">Back up now</button>'+
-    '<button type="button" data-k="localAutoRestore">Restore latest automatic backup</button>'+
-    '<button type="button" data-k="localRestore">Choose backup file</button>'+
+    '<button type="button" data-k="localRestore">Restore from backup file</button>'+
     '<button type="button" data-k="x">Back</button>'+
    '</div>'+
   '</section>';
