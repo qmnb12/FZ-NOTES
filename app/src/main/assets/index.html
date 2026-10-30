@@ -3496,7 +3496,7 @@ $('#qkx').onclick=()=>$('#qk').classList.remove('on');
 $('#qks').onclick=()=>{const t=$('#qkt').value.trim();if(!t)return;msgs.push({id:Date.now(),t:Date.now(),h:esc(t).replace(/\n/g,'<br>'),k:'quick'});save();$('#qk').classList.remove('on');toast('⚡ Quick me save hua');render()};
 let mt;
 function mirror(){if(!window.Android)return;clearTimeout(mt);mt=setTimeout(()=>{const text=JSON.stringify({msgs,topics});native('mirrorsave',{text}).catch(()=>{});native('tgsnapshot',{data:backupPayload()}).catch(()=>{})},900)}
-const LOCAL_BACKUP_HEADER='FZ-NOTES-ENCRYPTED-BACKUP-V1\\n';
+const LOCAL_BACKUP_HEADER='FZ-NOTES-ENCRYPTED-BACKUP-V1\n';
 let pendingLocalBackupPassword='',pendingLocalEncryptedBackup='';
 function applyFile(t){let d;try{d=JSON.parse(t)}catch(_){throw new Error('FZ Notes ki backup file chuno')}if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics)||!d.topics.length)return false;if(d.format&&d.format!=='FZ-NOTES-BACKUP')return false;if(!d.msgs.every(m=>m&&typeof m==='object'&&m.id!==undefined&&typeof m.h==='string'))return false;if(!d.topics.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))return false;msgs=d.msgs;topics=d.topics;cur='all';hiddenUnlocked=false;save();saveT();render();return true}
 function handleLocalBackupText(raw){raw=String(raw||'');if(raw.startsWith(LOCAL_BACKUP_HEADER)){pendingLocalEncryptedBackup=raw.slice(LOCAL_BACKUP_HEADER.length).trim();if(!pendingLocalEncryptedBackup)throw new Error('Encrypted backup file incomplete hai');ask('localRestorePw','Backup password');return true}if(applyFile(raw)){toast('Restore complete · '+msgs.length+' notes',3000);return true}toast('Valid FZ NOTES backup select karo; existing notes safe hain',3500);return false}
