@@ -356,7 +356,7 @@ public class Cloud {
         String token = a.optString("token", "").trim();
         String chat = a.optString("chat", "").trim();
         String interval = a.optString("interval", "manual");
-        if (!"manual".equals(interval) && !"onopen".equals(interval)
+        if (!"manual".equals(interval) && !"onopen".equals(interval) && !"dailyopen".equals(interval)
                 && !"daily".equals(interval) && !"weekly".equals(interval) && !"monthly".equals(interval))
             throw new Exception("Unknown Telegram backup schedule");
         if (!"manual".equals(interval) && (token.isEmpty() || chat.isEmpty()))
@@ -365,7 +365,7 @@ public class Cloud {
                 .putString("token", token).putString("chat", chat).putString("interval", interval).apply();
         WorkManager wm = WorkManager.getInstance(ctx.getApplicationContext());
         // Manual and app-open schedules are triggered by the UI, not a periodic worker.
-        if ("manual".equals(interval) || "onopen".equals(interval)
+        if ("manual".equals(interval) || "onopen".equals(interval) || "dailyopen".equals(interval)
                 || token.isEmpty() || chat.isEmpty()) {
             wm.cancelUniqueWork("fz_notes_telegram_backup");
             return;
@@ -385,7 +385,7 @@ public class Cloud {
         String interval = sp.getString("interval", "manual");
         String data = sp.getString("snapshot", "");
         if (token.isEmpty() || chat.isEmpty()
-                || "manual".equals(interval) || "onopen".equals(interval))
+                || "manual".equals(interval) || "onopen".equals(interval) || "dailyopen".equals(interval))
             throw new Exception("Scheduled Telegram backup is not configured");
         if (data.isEmpty()) throw new Exception("Notes snapshot is empty");
         String key = loadDriveKey(ctx);
