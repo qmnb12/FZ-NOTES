@@ -2935,7 +2935,7 @@ function restoreTelegramSettingsFromBackup(settings){
  if(!settings||typeof settings!=='object')return;
  const token=typeof settings.token==='string'?settings.token.trim():'';
  const chat=typeof settings.chat==='string'?settings.chat.trim():'';
- const allowed=['manual','onopen','daily','weekly','monthly'];
+ const allowed=['manual','onopen','dailyopen','daily','weekly','monthly'];
  let schedule=allowed.includes(settings.schedule)?settings.schedule:'manual';
  if(schedule!=='manual'&&(!token||!chat))schedule='manual';
  const c=cfgGet();
