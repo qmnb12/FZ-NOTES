@@ -386,41 +386,59 @@ public class Cloud {
 
     static void configureLocalBackup(Context ctx, JSONObject a) throws Exception {
         String interval = a.optString("interval", "manual");
-        if ("off".equals(interval)) interval = "manual";
-        if (!"manual".equals(interval) && !"onopen".equals(interval) && !"dailyopen".equals(interval)
+        if ("off".equals(interval)) interval = "never";
+        if (!"manual".equals(interval) && !"never".equals(interval)
+                && !"onopen".equals(interval) && !"dailyopen".equals(interval)
                 && !"daily".equals(interval) && !"weekly".equals(interval) && !"monthly".equals(interval))
             throw new Exception("Unknown local backup schedule");
+
         SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
         WorkManager wm = WorkManager.getInstance(ctx.getApplicationContext());
-        wm.cancelUniqueWork("fz_notes_local_backup");
+        String previousInterval = prefs.getString("interval", "manual");
 
         String suppliedPassword = a.optString("pw", "");
         if (!suppliedPassword.isEmpty()) {
             if (suppliedPassword.length() < 8) throw new Exception("Local backup password must be at least 8 characters");
             saveLocalSecret(ctx, "local_backup_pw", suppliedPassword);
         }
-        if (!"manual".equals(interval) && loadLocalSecret(ctx, "local_backup_pw").length() < 8)
+        boolean automatic = !"manual".equals(interval) && !"never".equals(interval);
+        if (automatic && loadLocalSecret(ctx, "local_backup_pw").length() < 8)
             throw new Exception("Create a local backup password before enabling an automatic schedule");
 
         if (!prefs.edit().putString("interval", interval).remove("lastError").commit())
             throw new Exception("Local backup schedule could not be saved");
-        if ("daily".equals(interval) || "weekly".equals(interval) || "monthly".equals(interval)) {
-            long days = "daily".equals(interval) ? 1L : "weekly".equals(interval) ? 7L : 30L;
-            PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
-                    LocalBackupWorker.class, days, TimeUnit.DAYS).build();
-            wm.enqueueUniquePeriodicWork("fz_notes_local_backup", ExistingPeriodicWorkPolicy.UPDATE, work);
-        }
-        if (!"manual".equals(interval)) {
+        wm.cancelUniqueWork("fz_notes_local_backup");
+        if (!automatic) return;
+
+        try {
+            // Create the first encrypted copy before registering the repeating worker.
             createScheduledLocalBackup(ctx);
+            if ("daily".equals(interval) || "weekly".equals(interval) || "monthly".equals(interval)) {
+                long days = "daily".equals(interval) ? 1L : "weekly".equals(interval) ? 7L : 30L;
+                PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
+                        LocalBackupWorker.class, days, TimeUnit.DAYS).build();
+                wm.enqueueUniquePeriodicWork("fz_notes_local_backup", ExistingPeriodicWorkPolicy.UPDATE, work);
+            }
             if ("dailyopen".equals(interval))
                 prefs.edit().putString("dailyOpenDate", localCalendarDate()).commit();
+        } catch (Exception e) {
+            prefs.edit().putString("interval", previousInterval)
+                    .putString("lastError", e.getMessage() == null ? "Local backup setup failed" : e.getMessage())
+                    .commit();
+            if ("daily".equals(previousInterval) || "weekly".equals(previousInterval) || "monthly".equals(previousInterval)) {
+                long days = "daily".equals(previousInterval) ? 1L : "weekly".equals(previousInterval) ? 7L : 30L;
+                PeriodicWorkRequest previousWork = new PeriodicWorkRequest.Builder(
+                        LocalBackupWorker.class, days, TimeUnit.DAYS).build();
+                wm.enqueueUniquePeriodicWork("fz_notes_local_backup", ExistingPeriodicWorkPolicy.UPDATE, previousWork);
+            }
+            throw e;
         }
     }
 
     static void createScheduledLocalBackup(Context ctx) throws Exception {
         SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
         String interval = prefs.getString("interval", "manual");
-        if ("manual".equals(interval) || "off".equals(interval)) return;
+        if ("manual".equals(interval) || "never".equals(interval) || "off".equals(interval)) return;
         String data = prefs.getString("snapshot", "");
         if (data == null || data.trim().isEmpty())
             throw new Exception("No saved notes snapshot is available for local backup");
@@ -472,9 +490,10 @@ public class Cloud {
         status.put("lastSuccess", prefs.getLong("lastSuccess", 0L));
         status.put("lastManualSuccess", prefs.getLong("lastManualSuccess", 0L));
         status.put("lastError", prefs.getString("lastError", ""));
-        status.put("hasBackup", latestLocalBackupUri(ctx, false) != null
+        int backupCount = localBackupCount(ctx);
+        status.put("hasBackup", backupCount > 0
                 || new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE).isFile());
-        status.put("backupCount", localBackupCount(ctx));
+        status.put("backupCount", backupCount);
         status.put("hasPassword", loadLocalSecret(ctx, "local_backup_pw").length() >= 8);
         status.put("path", LOCAL_BACKUP_PATH);
         return status;
@@ -625,16 +644,16 @@ public class Cloud {
         String token = a.optString("token", "").trim();
         String chat = a.optString("chat", "").trim();
         String interval = a.optString("interval", "manual");
-        if (!"manual".equals(interval) && !"onopen".equals(interval) && !"dailyopen".equals(interval)
+        if (!"manual".equals(interval) && !"never".equals(interval) && !"onopen".equals(interval) && !"dailyopen".equals(interval)
                 && !"daily".equals(interval) && !"weekly".equals(interval) && !"monthly".equals(interval))
             throw new Exception("Unknown Telegram backup schedule");
-        if (!"manual".equals(interval) && (token.isEmpty() || chat.isEmpty()))
+        if (!"manual".equals(interval) && !"never".equals(interval) && (token.isEmpty() || chat.isEmpty()))
             throw new Exception("Telegram bot token aur chat ID pehle save karein");
         ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE).edit()
                 .putString("token", token).putString("chat", chat).putString("interval", interval).apply();
         WorkManager wm = WorkManager.getInstance(ctx.getApplicationContext());
         // Manual and app-open schedules are triggered by the UI, not a periodic worker.
-        if ("manual".equals(interval) || "onopen".equals(interval) || "dailyopen".equals(interval)
+        if ("manual".equals(interval) || "never".equals(interval) || "onopen".equals(interval) || "dailyopen".equals(interval)
                 || token.isEmpty() || chat.isEmpty()) {
             wm.cancelUniqueWork("fz_notes_telegram_backup");
             return;
@@ -654,7 +673,7 @@ public class Cloud {
         String interval = sp.getString("interval", "manual");
         String data = sp.getString("snapshot", "");
         if (token.isEmpty() || chat.isEmpty()
-                || "manual".equals(interval) || "onopen".equals(interval) || "dailyopen".equals(interval))
+                || "manual".equals(interval) || "never".equals(interval) || "onopen".equals(interval) || "dailyopen".equals(interval))
             throw new Exception("Scheduled Telegram backup is not configured");
         if (data.isEmpty()) throw new Exception("Notes snapshot is empty");
         String key = loadDriveKey(ctx);
