@@ -1678,7 +1678,7 @@ header>.topic-title-block.title-overflow #ttl{
     <label class="cfg-label" for="c_tgToken">Bot token</label><input id="c_tgToken" placeholder="Token from @BotFather" autocomplete="off">
     <label class="cfg-label" for="c_tgChat">Chat ID</label><div class="row"><input id="c_tgChat" placeholder="Telegram chat ID" autocomplete="off"><button id="c_tgDet" class="alt">Detect</button></div>
     <label class="cfg-label" for="c_tgSchedule">Automatic backup schedule</label>
-    <select id="c_tgSchedule"><option value="manual">Manual only — when I tap backup</option><option value="onopen">When I open this app</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly (every 30 days)</option></select>
+    <select id="c_tgSchedule"><option value="manual">Manual only — when I tap backup</option><option value="onopen">When I open this app</option><option value="dailyopen">Once a day · first app open</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly (every 30 days)</option></select>
     <p class="hint cfg-footnote">“When I open this app” sends one Telegram backup each time the app launches. Telegram settings (bot token, chat ID and schedule) are included in the encrypted Google Drive backup when Google sync is connected.</p>
     <button id="c_tgNow" class="cfg-primary-action">Save backup to Telegram</button>
   </section>
@@ -2879,7 +2879,7 @@ async function saveTelegramSettings(){
  F.forEach(f=>{const el=$('#c_'+f);if(el)c[f]=el.value.trim()});
  c.tgSchedule=c.tgSchedule||'manual';
  if(c.tgSchedule!=='manual'&&(!c.tgToken||!c.tgChat)){toast('Schedule ke liye Telegram token aur chat ID zaroori hain');return false}
- if(c.tgSchedule==='onopen'&&!c.driveOn){toast('When app opens backup ke liye pehle Google account connect karo');return false}
+ if((c.tgSchedule==='onopen'||c.tgSchedule==='dailyopen')&&!c.driveOn){toast('App-open Telegram backup ke liye pehle Google account connect karo');return false}
  try{
   if(c.tgSchedule!=='manual'&&c.tgToken&&c.tgChat)await ensureDriveKey();
   cfgSet(c);
@@ -3029,12 +3029,19 @@ let telegramOpenBackupStarted=false;
 async function runTelegramBackupOnOpen(){
  if(telegramOpenBackupStarted)return;
  const c=cfgGet();
- if(c.tgSchedule!=='onopen'||!c.tgToken||!c.tgChat)return;
- if(!c.driveOn){toast('Telegram app-open backup needs a connected Google account',4500);return}
+ const schedule=c.tgSchedule||'manual';
+ if(!['onopen','dailyopen'].includes(schedule)||!c.tgToken||!c.tgChat)return;
+ if(!c.driveOn){toast('App-open Telegram backup needs a connected Google account',4500);return}
+ const today=new Date().toLocaleDateString('en-CA');
+ if(schedule==='dailyopen'&&localStorage.getItem('notes-tg-daily-open-date')===today)return;
  telegramOpenBackupStarted=true;
  try{
-  toast('App opened · Telegram backup starting',3000);
-  await doTelegramBackup(false);
+  toast(schedule==='dailyopen'?'First app open today · Telegram backup starting':'App opened · Telegram backup starting',3000);
+  const saved=await doTelegramBackup(true);
+  if(saved){
+   if(schedule==='dailyopen')localStorage.setItem('notes-tg-daily-open-date',today);
+   toast(schedule==='dailyopen'?'Daily Telegram backup complete':'Telegram backup complete',3200);
+  }else toast('Telegram app-open backup failed · will retry next app open',4500);
  }catch(e){toast('App-open Telegram backup failed: '+e.message,4500)}
 }
 async function startupCloudSync(){
