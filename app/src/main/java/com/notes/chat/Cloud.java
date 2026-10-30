@@ -62,6 +62,24 @@ public class Cloud {
                 return "ok";
             case "mirrorload":
                 return mirrorLoad(ctx);
+            case "localencrypt": {
+                String pw = a.getString("pw");
+                if (pw.length() < 8) throw new Exception("Backup password must be at least 8 characters");
+                byte[] encrypted = encrypt(a.getString("data"), pw);
+                return Base64.encodeToString(encrypted, Base64.NO_WRAP);
+            }
+            case "localdecrypt": {
+                String encoded = a.getString("data");
+                String pw = a.getString("pw");
+                if (pw.length() < 8) throw new Exception("Backup password is too short");
+                byte[] encrypted;
+                try {
+                    encrypted = Base64.decode(encoded, Base64.DEFAULT);
+                } catch (IllegalArgumentException e) {
+                    throw new Exception("Encrypted backup file is damaged");
+                }
+                return decrypt(encrypted, pw);
+            }
             case "pwdel":
                 ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE).edit().remove("pw").apply();
                 return "ok";
