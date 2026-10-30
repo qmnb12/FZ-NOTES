@@ -916,7 +916,7 @@ public class MainActivity extends Activity {
                     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     i.addCategory(Intent.CATEGORY_OPENABLE);
                     i.setType("*/*");
-                    i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/json", "text/json", "text/plain", "application/octet-stream"});
+                    i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/octet-stream", "text/plain", "application/x-fz-notes"});
                     i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     try {
                         startActivityForResult(i, REQ_FILE);
@@ -934,8 +934,8 @@ public class MainActivity extends Activity {
                 try {
                     JSONObject payload = new JSONObject(args);
                     text = payload.optString("text", "");
-                    filename = payload.optString("filename", "FZ-Notes-backup.json");
-                    mimeType = payload.optString("mimeType", "application/json");
+                    filename = payload.optString("filename", "FZ-Notes-backup.fzenc");
+                    mimeType = payload.optString("mimeType", "application/octet-stream");
                 } catch (Exception e) {
                     reply(id, false, "Backup data invalid hai");
                     return;
