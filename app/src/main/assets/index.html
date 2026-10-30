@@ -14,7 +14,7 @@ html,body{height:100%;margin:0}
 body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
 header{display:flex;align-items:center;gap:12px;padding:12px 14px;background:linear-gradient(135deg,var(--bar),var(--bg));border-bottom:1px solid var(--ln);box-shadow:0 4px 18px rgba(0,0,0,.12)}
 .av{width:40px;height:40px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:700}
-header b{display:block;font-size:17px}header small{color:var(--mut)}
+header b{display:block;font-size:16px}header small{color:var(--mut)}
 #chat{flex:1;overflow-y:auto;padding:14px 12px 6px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:var(--ln) transparent}
 .chip{align-self:center;background:var(--mono);color:var(--mut);font-size:13px;padding:2px 10px;border-radius:12px;margin:6px 0}
 .empty{margin:auto;text-align:center;color:var(--mut);max-width:260px}
@@ -91,8 +91,8 @@ header b{display:block;font-size:17px}header small{color:var(--mut)}
 
 .topic-switcher{border:0;background:transparent;color:inherit;padding:0;display:flex;align-items:center;gap:7px;min-width:0;text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .topic-switcher-text{display:block;min-width:0}
-.topic-switcher b{display:block;font-size:17px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topic-switcher small{display:block;color:var(--mut);font-size:13px;font-weight:400}
+.topic-switcher b{display:block;font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topic-switcher small{display:block;color:var(--mut);font-size:12px;font-weight:400}
 .topic-chevron{width:17px;height:17px;flex:none;fill:none;stroke:var(--mut);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s}
 .topic-switcher:active .topic-chevron{transform:translateY(2px)}
 .header-action-icon{width:25px;height:25px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -1302,6 +1302,17 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 #chat{padding-bottom:8px!important;scroll-padding-bottom:8px!important}
 #chatw{min-height:0!important;overflow:hidden!important}
 @media(max-width:420px){#chat{padding-bottom:8px!important;scroll-padding-bottom:8px!important}}
+
+/* Telegram-proportioned chat typography and pinned bar scoped to chat column */
+#pin{margin-left:68px!important;width:calc(100% - 68px)!important;box-sizing:border-box!important;min-width:0}
+#pin .cx{min-width:0}
+.topic-switcher b{font-size:15px!important;line-height:1.3!important}
+.topic-switcher small{font-size:12px!important}
+header b{font-size:16px!important}
+body.composer-has-text #chatw>#fab,
+body.composer-has-text #chatw>#listfab{opacity:0!important;visibility:hidden!important;pointer-events:none!important;transform:scale(.82) translateY(5px)!important;transition:opacity .14s ease,transform .14s ease,visibility .14s ease}
+#chatw>#fab,#chatw>#listfab{transition:opacity .14s ease,transform .14s ease,visibility .14s ease}
+
 </style>
 </head>
 <body>
@@ -1376,7 +1387,7 @@ shBackdrop.addEventListener('click',()=>{shStack=[];sh.classList.remove('on');ch
 function pushSheetState(){if(!sh.classList.contains('on'))return;shStack.push({html:sh.innerHTML,dataset:Object.assign({},sh.dataset)});}
 let sheetRestoreTimer=0;function restoreSheetState(){if(shStack.length){const state=shStack.pop();sh.innerHTML=state.html;Array.from(sh.attributes).forEach(a=>{if(a.name.indexOf('data-')===0)sh.removeAttribute(a.name)});Object.keys(state.dataset).forEach(k=>sh.dataset[k]=state.dataset[k]);sh.classList.add('on');sh.classList.remove('sheet-restoring');requestAnimationFrame(()=>sh.classList.add('sheet-restoring'));if(sheetRestoreTimer)clearTimeout(sheetRestoreTimer);sheetRestoreTimer=setTimeout(()=>{sh.classList.remove('sheet-restoring');sheetRestoreTimer=0},260);return true;}sh.classList.remove('on');return true;}
 let nativeSelectionMenuOpen=false,lastAnySelectionRange=null,nativeSelectionSession=false;
-function updateComposerControls(){const hasText=!!ed.innerText.trim();$('#cmp').classList.toggle('has-text',hasText)}
+function updateComposerControls(){const hasText=!!ed.innerText.trim();$('#cmp').classList.toggle('has-text',hasText);document.body.classList.toggle('composer-has-text',hasText)}
 window.setNativeSelectionMenuOpen=function(open){
  nativeSelectionMenuOpen=!!open;const toolbar=$('#tb');
  if(nativeSelectionMenuOpen){nativeSelectionSession=true;toolbar.classList.add('native-selection-hidden');toolbar.classList.remove('on');return}
@@ -1590,7 +1601,7 @@ function render(forceScrollToLatest=false){syncHiddenCredentialLifecycle();if(cu
 function saveDraft(){try{const value={text:ed.innerHTML,plain:ed.innerText,listMode,listTitle,due:$('#taskdue').value,topic:cur,replyId,editId,updatedAt:Date.now()};if(value.plain.trim()||listMode||value.due)localStorage.setItem('notes-chat-draft',JSON.stringify(value));else localStorage.removeItem('notes-chat-draft')}catch(e){}}
 function clearDraft(){try{localStorage.removeItem('notes-chat-draft')}catch(e){}}
 ed.addEventListener('input',()=>{updateComposerControls();clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,180);});$('#taskdue').addEventListener('change',saveDraft);
-function restoreDraft(){try{const d=JSON.parse(localStorage.getItem('notes-chat-draft')||'null');if(!d)return;if(d.text)ed.innerHTML=d.text;if(d.listMode){listMode=true;listTitle=d.listTitle||'';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.dataset.ph='Add list items, one per line'}if(d.due)$('#taskdue').value=d.due;if(d.topic==='hidden'){cur='all';hiddenUnlocked=false}else if(d.topic&&((d.topic==='all')||d.topic==='quick'||topics.some(t=>t.id===d.topic)))cur=d.topic;replyId=d.replyId||null;editId=d.editId||null;if(replyId||editId)setCtx();if(d.plain&&d.plain.trim())toast('Draft restored',1800)}catch(e){}}
+function restoreDraft(){try{const d=JSON.parse(localStorage.getItem('notes-chat-draft')||'null');if(!d){updateComposerControls();return;}if(d.text)ed.innerHTML=d.text;if(d.listMode){listMode=true;listTitle=d.listTitle||'';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.dataset.ph='Add list items, one per line'}if(d.due)$('#taskdue').value=d.due;if(d.topic==='hidden'){cur='all';hiddenUnlocked=false}else if(d.topic&&((d.topic==='all')||d.topic==='quick'||topics.some(t=>t.id===d.topic)))cur=d.topic;replyId=d.replyId||null;editId=d.editId||null;if(replyId||editId)setCtx();if(d.plain&&d.plain.trim())toast('Draft restored',1800)}catch(e){}finally{updateComposerControls()}}
 function clearSelection(){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop()}
 function handleAppBack(){
  // The photo viewer sits above the chat and must close before the Activity handles Back.
@@ -2025,7 +2036,7 @@ function applyCustomProperties(){
  });
  root.style.setProperty('--mono',customThemePalette.mono||base.mono||'rgba(255,255,255,.075)');
  root.style.setProperty('--ln',customThemePalette.ln||base.ln||'rgba(255,255,255,.09)');
- root.style.setProperty('--msg-size',(messageTextSize*0.88)+'px');
+ root.style.setProperty('--msg-size',(messageTextSize*0.78)+'px');
  root.style.setProperty('--msg-radius',messageCornerRadius+'px');
 }
 function saveCustomTheme(){
@@ -2055,7 +2066,7 @@ function openThemeCustomizer(){
   preview.style.color=p.text||customTextColor||getThemePalette().text;
   preview.style.borderColor=p.acc||getThemePalette().acc;
   preview.style.borderRadius=draft.radius+'px';
-  preview.style.fontSize=(draft.size*0.88)+'px';
+  preview.style.fontSize=(draft.size*0.78)+'px';
   $('#customMessageSizeValue').textContent=draft.size+' sp';
   $('#customRadiusValue').textContent=draft.radius+' dp';
   $('#sh').style.setProperty('--text',p.text||customTextColor||'');
