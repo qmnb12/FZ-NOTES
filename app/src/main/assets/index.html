@@ -3039,17 +3039,36 @@ async function runTelegramBackupOnOpen(){
  const schedule=c.tgSchedule||'manual';
  if(!['onopen','dailyopen'].includes(schedule)||!c.tgToken||!c.tgChat)return;
  if(!c.driveOn){toast('App-open Telegram backup needs a connected Google account',4500);return}
- const today=new Date().toLocaleDateString('en-CA');
- if(schedule==='dailyopen'&&localStorage.getItem('notes-tg-daily-open-date')===today)return;
+ let dailyClaim=null;
+ if(schedule==='dailyopen'){
+  if(window.Android){
+   try{dailyClaim=JSON.parse(await native('tgdailyclaim',{}));}
+   catch(e){toast('Daily backup check failed · '+e.message,4500);return}
+   if(!dailyClaim||!dailyClaim.run)return;
+  }else{
+   const today=[new Date().getFullYear(),String(new Date().getMonth()+1).padStart(2,'0'),String(new Date().getDate()).padStart(2,'0')].join('-');
+   if(localStorage.getItem('notes-tg-daily-open-date')===today)return;
+   dailyClaim={date:today};
+  }
+ }
  telegramOpenBackupStarted=true;
  try{
   toast(schedule==='dailyopen'?'First app open today · Telegram backup starting':'App opened · Telegram backup starting',3000);
   const saved=await doTelegramBackup(true);
   if(saved){
-   if(schedule==='dailyopen')localStorage.setItem('notes-tg-daily-open-date',today);
+   if(schedule==='dailyopen'){
+    if(window.Android)await native('tgdailycomplete',{date:dailyClaim.date});
+    else localStorage.setItem('notes-tg-daily-open-date',dailyClaim.date);
+   }
    toast(schedule==='dailyopen'?'Daily Telegram backup complete':'Telegram backup complete',3200);
-  }else toast('Telegram app-open backup failed · will retry next app open',4500);
- }catch(e){toast('App-open Telegram backup failed: '+e.message,4500)}
+  }else{
+   if(schedule==='dailyopen'&&window.Android)await native('tgdailyrelease',{date:dailyClaim.date}).catch(()=>{});
+   toast('Telegram app-open backup failed · will retry next app open',4500);
+  }
+ }catch(e){
+  if(schedule==='dailyopen'&&window.Android&&dailyClaim)await native('tgdailyrelease',{date:dailyClaim.date}).catch(()=>{});
+  toast('App-open Telegram backup failed: '+e.message,4500);
+ }
 }
 async function startupCloudSync(){
  const c=cfgGet();if(!c.driveOn)return;
