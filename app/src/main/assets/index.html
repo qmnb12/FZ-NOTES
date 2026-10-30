@@ -1637,6 +1637,29 @@ header>.topic-title-block.title-overflow #ttl{
  header>.topic-title-block.title-overflow #ttl{animation:none!important;transform:none!important}
 }
 
+
+/* Backup sheet refinements: compact controls, predictable scrolling, readable actions. */
+#sh{ -webkit-text-size-adjust:100%;text-size-adjust:100%; }
+#sh[data-type="localbackup"]{max-height:min(74dvh,680px)!important;overflow-y:auto!important;overscroll-behavior:contain}
+#sh[data-type="localbackup"] .cloud-sheet-head{padding:12px 14px 11px;margin-bottom:2px}
+#sh[data-type="localbackup"] .cloud-sheet-head h3{font-size:21px!important;line-height:1.2;margin:3px 0 5px}
+#sh[data-type="localbackup"] .cloud-sheet-head p{font-size:12px!important;line-height:1.4;margin:0}
+#sh[data-type="localbackup"] .local-backup-panel{margin:7px 2px 3px;padding:13px;border-radius:16px}
+#sh[data-type="localbackup"] .local-backup-panel .lb-status{font-size:11px!important;line-height:1.35;padding:9px 10px;margin-bottom:10px}
+#sh[data-type="localbackup"] .local-backup-panel label{font-size:11px!important;margin:9px 0 5px}
+#sh[data-type="localbackup"] .local-backup-panel select{min-height:44px!important;padding:9px 12px!important;font-size:14px!important;line-height:1.2!important}
+#sh[data-type="localbackup"] .local-backup-panel .lb-hint{font-size:11px!important;line-height:1.4;margin:7px 1px 10px}
+#sh[data-type="localbackup"] .local-backup-panel .lb-path{padding:10px 11px;border-radius:12px}
+#sh[data-type="localbackup"] .local-backup-panel .lb-path strong{font-size:11px!important;margin-bottom:3px}
+#sh[data-type="localbackup"] .local-backup-panel .lb-path span{font-size:12px!important;line-height:1.3}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions button{box-sizing:border-box;min-width:0;min-height:42px!important;padding:9px 10px!important;border-radius:11px;font-size:13px!important;line-height:1.2!important;letter-spacing:0!important;font-weight:650;white-space:normal}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions button:first-child,
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions button:last-child{grid-column:1/-1}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions button.primary{min-height:44px!important}
+#sh[data-type="localbackup"] .local-backup-panel .lb-actions button:last-child{min-height:36px!important;background:transparent;border-color:transparent;color:var(--mut);font-size:12px!important}
+#sh[data-type="cloud"]{max-height:min(78dvh,720px);overflow-y:auto}
+#sh[data-type="cloud"] .cloud-sheet-head h3{font-size:22px!important;line-height:1.2}
 </style>
 </head>
 <body>
@@ -1693,7 +1716,7 @@ header>.topic-title-block.title-overflow #ttl{
     <label class="cfg-label" for="c_tgToken">Bot token</label><input id="c_tgToken" placeholder="Token from @BotFather" autocomplete="off">
     <label class="cfg-label" for="c_tgChat">Chat ID</label><div class="row"><input id="c_tgChat" placeholder="Telegram chat ID" autocomplete="off"><button id="c_tgDet" class="alt">Detect</button></div>
     <label class="cfg-label" for="c_tgSchedule">Automatic backup schedule</label>
-    <select id="c_tgSchedule"><option value="manual">Manual only — when I tap backup</option><option value="onopen">When I open this app</option><option value="dailyopen">Once a day · first app open</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly (every 30 days)</option></select>
+    <select id="c_tgSchedule"><option value="never">Never — stop automatic backups</option><option value="manual">Manual only — when I tap backup</option><option value="onopen">When I open this app</option><option value="dailyopen">Once a day · first app open</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly (every 30 days)</option></select>
     <p class="hint cfg-footnote">“When I open this app” sends one Telegram backup each time the app launches. Telegram settings (bot token, chat ID and schedule) are included in the encrypted Google Drive backup when Google sync is connected.</p>
     <button id="c_tgNow" class="cfg-primary-action">Save backup to Telegram</button>
   </section>
@@ -2544,9 +2567,13 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='tgNow'){
    const c=cfgGet();
    if(!c.tgToken||!c.tgChat){openTgCfg();toast('Telegram settings mein bot token aur chat ID save karo',2800);return}
-   shStack=[];sh.classList.remove('on');doTelegramBackup();return
+   doTelegramBackup();return
   }
-  if(k==='crs'){openDriveHistory();return}
+  if(k==='driveNow'){doGoogleBackup();return}
+  if(k==='crs'){
+   if(!cfgGet().driveOn){openCfg();toast('Pehle Google account connect karo',3000);return}
+   openDriveHistory();return
+  }
   if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Drive backup nahi mila');return}restoreSheetState();doDriveRestore(driveHistoryItems[i].id);return}
   return}
  if(sh.dataset.type==='localbackup'){
@@ -2554,7 +2581,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
    if(k==='localScheduleSave'){
     const select=$('#localBackupSchedule'),interval=select?select.value:'manual';
     pendingLocalBackupInterval=interval;
-    if(!['manual','off'].includes(interval)&&sh.dataset.localHasPassword!=='1'){
+    if(!['manual','never','off'].includes(interval)&&sh.dataset.localHasPassword!=='1'){
      shStack=[];sh.classList.remove('on');syncNativeChatOverlay();
      ask('localSchedulePw','Create a password for automatic local backups');return
     }
@@ -2802,9 +2829,34 @@ function openBackupHub(){
   cloudRow('cloudBackup',icons.cloud,'Cloud backup','Google Drive and Telegram')+
   cloudRow('localBackup',icons.local,'Local backup','Encrypted files and automatic backups on this device')+
   cloudRow('x',icons.cancel,'Back','Return to the 3-dot menu');
- sh.dataset.type='backup-hub';sh.classList.add('on');
+ sh.dataset.type='backup-hub';sh.scrollTop=0;sh.classList.add('on');
 }
-const localScheduleNames={manual:'Manual only',onopen:'Every time the app opens',dailyopen:'Once a day · first app open',daily:'Daily',weekly:'Weekly',monthly:'Monthly · every 30 days',off:'Manual only'};
+function openCloud(){
+ const c=cfgGet();
+ const driveState=c.driveOn?'Connected · '+(lastBackup()?'Last backup '+lastBackup():'No backup yet'):'Not connected · connect your Google account';
+ const telegramState=c.tgToken&&c.tgChat?'Bot connected · '+(lastTelegramBackup()?'Last archive '+lastTelegramBackup():'No archive yet'):'Bot token and chat ID not set';
+ const icons={
+  drive:'<path d="M8 4h8l5 14H3L8 4Z"/><path d="M8 4 3 18m10-14 8 14"/>',
+  upload:'<path d="M12 16V4m-5 5 5-5 5 5"/><path d="M4 16v4h16v-4"/>',
+  restore:'<path d="M4 7v5h5"/><path d="M5.5 12a7 7 0 1 0 2-5L4 12"/><path d="M12 8v4l3 2"/>',
+  telegram:'<path d="m21 4-3.2 16-5.4-5-3 2.9.4-5.2L19 6 7.2 13.4 3 12l18-8Z"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.1 1.9-1.8 1.8-1.9-1.1-.1-.1-2 .8-.6 2.1h-2.5l-.6-2.1-2-.8-.1.1-1.9 1.1-1.8-1.8 1.1-1.9.1-.1-.8-2-2.1-.6V10l2.1-.6.8-2-.1-.1-1.1-1.9 1.8-1.8 1.9 1.1.1.1 2-.8.6-2.1h2.5l.6 2.1 2 .8.1-.1 1.9-1.1 1.8 1.8-1.1 1.9-.1.1.8 2 2.1.6v2.5l-2.1.6-.8 2Z"/>',
+  cancel:'<path d="m6 6 12 12M18 6 6 18"/>'
+ };
+ sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · CLOUD</span><h3>Cloud backup</h3><p>Encrypted copies on Google Drive and Telegram. Choose a service below.</p></div>'+
+  '<div class="cloud-group-label">GOOGLE DRIVE</div>'+
+  cloudRow('status',icons.drive,'Google Drive',driveState)+
+  cloudRow('cset',icons.settings,'Google account settings','Connect, check or disconnect your Google account')+
+  cloudRow('driveNow',icons.upload,'Back up to Google Drive','Create an encrypted backup now')+
+  cloudRow('crs',icons.restore,'Restore from Google Drive','Choose a backup from Drive history')+
+  '<div class="cloud-group-label">TELEGRAM</div>'+
+  cloudRow('tgstatus',icons.telegram,'Telegram archive',telegramState)+
+  cloudRow('tgcfg',icons.settings,'Telegram settings','Set bot token, chat ID and schedule')+
+  cloudRow('tgNow',icons.upload,'Back up to Telegram','Send an encrypted backup to your bot chat')+
+  cloudRow('x',icons.cancel,'Back','Return to Backup');
+ sh.dataset.type='cloud';sh.scrollTop=0;sh.classList.add('on');
+}
+const localScheduleNames={never:'Never · automatic backups off',manual:'Manual only',onopen:'Every time the app opens',dailyopen:'Once a day · first app open',daily:'Daily',weekly:'Weekly',monthly:'Monthly · every 30 days',off:'Never · automatic backups off'};
 async function updateLocalBackupStatus(showToast=false){
  try{
   const status=JSON.parse(await native('localbackupstatus',{}));
@@ -2829,6 +2881,7 @@ function openLocalBackup(){
    '<div id="localBackupStatus" class="lb-status">Checking schedule and saved copies…</div>'+
    '<label for="localBackupSchedule">Automatic backup schedule</label>'+
    '<select id="localBackupSchedule">'+
+    '<option value="never">Never — turn off automatic backups</option>'+
     '<option value="manual">Manual only — when I tap backup</option>'+
     '<option value="onopen">When I open this app</option>'+
     '<option value="dailyopen">Once a day · first app open</option>'+
@@ -2836,9 +2889,9 @@ function openLocalBackup(){
     '<option value="weekly">Weekly</option>'+
     '<option value="monthly">Monthly (every 30 days)</option>'+
    '</select>'+
-   '<p class="lb-hint">App-open options run when FZ NOTES starts. Daily, Weekly and Monthly use Android background scheduling. Manual only stops automatic copies and keeps saved files.</p>'+
-   '<div class="lb-path"><strong>Fixed backup location</strong><span>Documents/FZ NOTES/Backups/</span></div>'+
-   '<p class="lb-hint">Each copy is password-protected with AES encryption. The password is stored securely using Android Keystore after the first setup.</p>'+
+   '<p class="lb-hint">Choose how often encrypted backups are created. Manual and Never stop scheduled copies; your existing backup files remain safe.</p>'+
+   '<div class="lb-path"><strong>Backup folder</strong><span>Documents/FZ NOTES/Backups/</span></div>'+
+   '<p class="lb-hint">Backups are protected with AES encryption. Your password is stored securely on this device.</p>'+
    '<div class="lb-actions">'+
     '<button type="button" class="primary" data-k="localScheduleSave">Save schedule</button>'+
     '<button type="button" data-k="localExport">Back up now</button>'+
@@ -2846,10 +2899,10 @@ function openLocalBackup(){
     '<button type="button" data-k="x">Back</button>'+
    '</div>'+
   '</section>';
- sh.dataset.type='localbackup';sh.classList.add('on');
+ sh.dataset.type='localbackup';sh.scrollTop=0;sh.classList.add('on');
  native('localbackupstatus',{}).then(raw=>{
   const status=JSON.parse(raw),select=$('#localBackupSchedule');
-  if(select)select.value=['manual','onopen','dailyopen','daily','weekly','monthly'].includes(status.interval)?status.interval:'manual';
+  if(select)select.value=['never','manual','onopen','dailyopen','daily','weekly','monthly'].includes(status.interval)?status.interval:'manual';
   sh.dataset.localHasPassword=status.hasPassword?'1':'0';
   const last=status.lastSuccess?new Date(Number(status.lastSuccess)).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}):'No automatic backup yet';
   const box=$('#localBackupStatus');
@@ -2866,7 +2919,7 @@ let driveHistoryItems=[];async function openDriveHistory(){
   sh.innerHTML='<div style="padding:8px 14px;color:var(--mut);font-size:13px">Google Drive backup history · newest first</div>'+
    (driveHistoryItems.length?driveHistoryItems.map((x,i)=>'<button data-k="drv:'+i+'">📦 '+esc(x.name||'FZ Notes backup')+'<span class="ms">'+esc(x.modifiedTime||x.createdTime||'Google Drive backup')+'</span></button>').join(''):'<div style="padding:12px;color:var(--mut)">Koi Google Drive backup nahi mila. Pehle Backup now karein.</div>')+
    '<button data-k="x">Cancel</button>';
-  sh.dataset.type='cloud';sh.classList.add('on');
+  sh.dataset.type='cloud';sh.scrollTop=0;sh.classList.add('on');
  }catch(e){toast('Google Drive: '+e.message,4000)}
 }
 function openSrc(){openDriveHistory()}
@@ -2902,7 +2955,7 @@ function backupPayload(){
    chat:c.tgChat||'',
    schedule:c.tgSchedule||'manual'
   },
-  localBackupSettings:{schedule:localStorage.getItem('notes-local-backup-schedule')||'off'}
+  localBackupSettings:{schedule:localStorage.getItem('notes-local-backup-schedule')||'never'}
  });
 }
 let cachedDriveAuth=null;
@@ -2935,6 +2988,7 @@ async function doGoogleBackup(quiet=false,automatic=false,cachedOnly=false){
 async function doTelegramBackup(quiet=false){
  const c=cfgGet();
  if(!c.tgToken||!c.tgChat){if(!quiet){openTgCfg();toast('Telegram archive ke liye bot token aur chat ID set karo',3000)}return false}
+ if(!c.driveOn){if(!quiet){openCfg();toast('Telegram backup encryption key ke liye pehle Google account connect karo',4000)}return false}
  if(!quiet)toast('Encrypted Telegram archive bana raha hoon…',4500);
  try{
   const {key}=await ensureDriveKey();
@@ -2964,10 +3018,11 @@ async function saveTelegramSettings(){
  const c=cfgGet();
  F.forEach(f=>{const el=$('#c_'+f);if(el)c[f]=el.value.trim()});
  c.tgSchedule=c.tgSchedule||'manual';
- if(c.tgSchedule!=='manual'&&(!c.tgToken||!c.tgChat)){toast('Schedule ke liye Telegram token aur chat ID zaroori hain');return false}
+ const telegramScheduleDisabled=['manual','never'].includes(c.tgSchedule);
+ if(!telegramScheduleDisabled&&(!c.tgToken||!c.tgChat)){toast('Schedule ke liye Telegram token aur chat ID zaroori hain');return false}
  if((c.tgSchedule==='onopen'||c.tgSchedule==='dailyopen')&&!c.driveOn){toast('App-open Telegram backup ke liye pehle Google account connect karo');return false}
  try{
-  if(c.tgSchedule!=='manual'&&c.tgToken&&c.tgChat)await ensureDriveKey();
+  if(!telegramScheduleDisabled&&c.tgToken&&c.tgChat)await ensureDriveKey();
   cfgSet(c);
   await native('tgsnapshot',{data:backupPayload()});
   await native('tgconfigure',{token:c.tgToken||'',chat:c.tgChat||'',interval:c.tgSchedule});
@@ -3021,9 +3076,9 @@ function restoreTelegramSettingsFromBackup(settings){
  if(!settings||typeof settings!=='object')return;
  const token=typeof settings.token==='string'?settings.token.trim():'';
  const chat=typeof settings.chat==='string'?settings.chat.trim():'';
- const allowed=['manual','onopen','dailyopen','daily','weekly','monthly'];
+ const allowed=['never','manual','onopen','dailyopen','daily','weekly','monthly'];
  let schedule=allowed.includes(settings.schedule)?settings.schedule:'manual';
- if(schedule!=='manual'&&(!token||!chat))schedule='manual';
+ if(!['manual','never'].includes(schedule)&&(!token||!chat))schedule='manual';
  const c=cfgGet();
  c.tgToken=token;c.tgChat=chat;c.tgSchedule=schedule;
  cfgSet(c);
@@ -3622,8 +3677,8 @@ function applyFile(t,password){
    else native('tgsnapshot',{data:backupPayload()}).then(()=>native('localbackupconfigure',{interval:schedule,pw:password}))
     .then(()=>toast('Local auto-backup schedule restored',3200))
     .catch(e=>toast('Local backup schedule restore failed: '+e.message,4500));
-  }else if(window.Android&&['off','manual'].includes(schedule)){
-   native('localbackupconfigure',{interval:'manual'}).catch(()=>{});
+  }else if(window.Android&&['off','manual','never'].includes(schedule)){
+   native('localbackupconfigure',{interval:schedule==='manual'?'manual':'never'}).catch(()=>{});
   }
  }
  return true
@@ -3651,12 +3706,12 @@ async function pickFile(){try{if(window.Android){toast('FZ NOTES backup file sel
 async function saveLocalBackupSchedule(interval,password){
  if(!window.Android){toast('Automatic local backup ke liye FZ NOTES Android app use karo',3500);return false}
  const previous=localStorage.getItem('notes-local-backup-schedule')||'manual';
- if(interval==='off')interval='manual';
+ if(interval==='off')interval='never';
  try{
   localStorage.setItem('notes-local-backup-schedule',interval);
   await native('tgsnapshot',{data:backupPayload()});
   await native('localbackupconfigure',{interval,pw:password||''});
-  const labels={manual:'Manual only',onopen:'Every app open',dailyopen:'Once a day on first app open',daily:'Daily',weekly:'Weekly',monthly:'Monthly'};
+  const labels={never:'Never · automatic backups off',manual:'Manual only',onopen:'Every app open',dailyopen:'Once a day on first app open',daily:'Daily',weekly:'Weekly',monthly:'Monthly'};
   toast('Local backup schedule saved · '+(labels[interval]||interval),3500);
   pendingLocalBackupInterval='manual';
   await updateLocalBackupStatus(false).catch(()=>{});
