@@ -1502,7 +1502,7 @@ header .av.drive-avatar:focus-visible{
  position:fixed!important;
  top:auto!important;
  left:50%!important;
- bottom:calc(var(--toast-bottom,100px) + env(safe-area-inset-bottom,0px))!important;
+ bottom:var(--toast-position,100px)!important;
  z-index:10000!important;
  display:flex!important;
  align-items:center!important;
@@ -1682,7 +1682,7 @@ function updateToastAnchor(){
  if(!e||!footer)return;
  const rect=footer.getBoundingClientRect();
  const bottom=Math.max(88,Math.round(window.innerHeight-rect.top+12));
- e.style.bottom=bottom+'px';
+ e.style.setProperty('--toast-position',bottom+'px');
 }
 function toast(t,ms){
  const e=$('#toast');if(!e)return;
