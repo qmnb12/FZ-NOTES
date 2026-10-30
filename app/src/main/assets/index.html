@@ -1441,10 +1441,56 @@ header .drive-indicator.is-on i{
  box-shadow:none!important;
 }
 
+
+/* Header avatar replaced by a cloud-backup icon with an account connection light. */
+header .av.drive-avatar{
+ position:relative!important;
+ flex:0 0 40px!important;
+ width:40px!important;
+ min-width:40px!important;
+ height:40px!important;
+ border-radius:50%!important;
+ display:grid!important;
+ place-items:center!important;
+ overflow:visible!important;
+ background:linear-gradient(145deg,#1d3550,#102238)!important;
+ color:#c8ddf8!important;
+ box-shadow:inset 0 0 0 1px rgba(157,194,240,.18)!important;
+}
+header .av.drive-avatar svg{
+ display:block!important;
+ width:25px!important;
+ height:25px!important;
+ fill:none!important;
+ stroke:currentColor!important;
+ stroke-width:1.7!important;
+ stroke-linecap:round!important;
+ stroke-linejoin:round!important;
+}
+header .av.drive-avatar .status-dot{
+ position:absolute!important;
+ right:-1px!important;
+ bottom:-1px!important;
+ display:block!important;
+ width:13px!important;
+ height:13px!important;
+ box-sizing:border-box!important;
+ border-radius:50%!important;
+ border:2px solid #101a29!important;
+ background:#df5555!important;
+ box-shadow:none!important;
+}
+header .av.drive-avatar.is-on .status-dot{
+ background:#29b875!important;
+}
+header .av.drive-avatar.is-off .status-dot{
+ background:#df5555!important;
+}
+
 </style>
 </head>
 <body>
-<header><div class="av" id="av">N</div><span id="driveIndicator" class="drive-indicator is-off" role="img" aria-label="Google Drive not connected" title="Google Drive not connected"><i></i></span><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
+<header><div class="av drive-avatar is-off" id="av" role="img" aria-label="Google Drive not connected" title="Google Drive not connected"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 18h11a4 4 0 0 0 .35-7.98A6.5 6.5 0 0 0 5.1 9.1 4.4 4.4 0 0 0 6.5 18Z"/><path d="M12 15V9m-2.4 2.4L12 9l2.4 2.4"/></svg><i class="status-dot"></i></div><div class="topic-title-block"><b id="ttl">All notes</b><small id="sub">saved on this device</small></div><button class="hb" id="hs" aria-label="Search"><svg class="header-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></button><button class="hb all-notes-btn" id="allNotesBtn" aria-label="All Notes" title="All Notes"><svg class="all-notes-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v12.8H4z"/><path d="M7.5 9h9M7.5 12.2h6.5M7.5 15.4h4"/></svg></button><button class="hb" id="hm" aria-label="Menu">⋮</button></header>
 <div id="sq"><input id="sqi" type="text" placeholder="Search notes and tasks" autocomplete="off"><button id="sqx" aria-label="Clear and close search">✕</button></div>
 <div id="searchNav" aria-label="Search scope and result navigation">
  <div class="search-scope-row">
@@ -2399,7 +2445,7 @@ function renderSide(){
  }
  if(cur==='hidden'){
   $('#ttl').textContent=hiddenTopicFilter?(topics.find(t=>t.id===hiddenTopicFilter)?.name||'Hidden notes'):'All hidden notes';
-  $('#av').textContent='🔒';
+  updateHeaderDriveIndicator();
   const hiddenTopics=topics.filter(t=>msgs.some(m=>m.hidden&&(m.k||'gen')===t.id));
   hiddenTopics.forEach(t=>{
    const b=document.createElement('button');
@@ -2437,7 +2483,7 @@ function renderSide(){
  addButton.onclick=()=>{if(cur==='hidden'){hiddenUnlocked=false;cur='all';hiddenTopicFilter='';render()}ask('topic','New topic name','')};
  bottomSlot.appendChild(addButton);
  $('#ttl').textContent=cur==='all'?'All notes':cur==='quick'?'Quick notes':tn(cur);
- if(cur==='all'){$('#av').innerHTML='<svg class="header-chat-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M9 9h25a8 8 0 0 1 8 8v10a8 8 0 0 1-8 8H22l-10 6v-7a8 8 0 0 1-8-8V17a8 8 0 0 1 5-8Z" fill="currentColor"/><circle cx="16" cy="22" r="2.4" fill="#287bd4"/><circle cx="24" cy="22" r="2.4" fill="#287bd4"/><circle cx="32" cy="22" r="2.4" fill="#287bd4"/></svg>'}else $('#av').innerHTML=cur==='quick'?'<svg class="quick-bolt header-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2.5 4.8 13h5.8l-.7 8.5L19.3 10h-6z"/></svg>':first(tn(cur));
+ updateHeaderDriveIndicator();
  $('#sub').textContent=msgs.filter(inView).length+(cur==='hidden'?' hidden notes':' notes')
 }
 function openTopicSheet(t){sh.innerHTML='<button data-k="ren">Rename topic</button><button data-k="up">Move up</button><button data-k="dn">Move down</button>'+(t.id==='gen'?'':'<button data-k="tdel" class="del">Delete topic and its notes</button>')+'<button data-k="x">Cancel</button>';
@@ -2455,12 +2501,12 @@ let pendSrc='';let autoBackupTimer=null,autoBackupBusy=false,autoBackupAgain=fal
 const NM={drive:'Google Drive'},F=['tgToken','tgChat','tgSchedule'];
 const cfgGet=()=>{try{return JSON.parse(localStorage.getItem('notes-sync')||'{}')}catch(e){return{}}};
 function updateHeaderDriveIndicator(){
- const dot=$('#driveIndicator');if(!dot)return;
+ const avatar=$('#av');if(!avatar)return;
  const connected=!!cfgGet().driveOn;
- dot.classList.toggle('is-on',connected);
- dot.classList.toggle('is-off',!connected);
+ avatar.classList.toggle('is-on',connected);
+ avatar.classList.toggle('is-off',!connected);
  const label=connected?'Google Drive connected':'Google Drive not connected';
- dot.setAttribute('aria-label',label);dot.title=label;
+ avatar.setAttribute('aria-label',label);avatar.title=label;
 }
 const cfgSet=c=>{try{localStorage.setItem('notes-sync',JSON.stringify(c))}catch(e){}updateHeaderDriveIndicator()};
 updateHeaderDriveIndicator();
