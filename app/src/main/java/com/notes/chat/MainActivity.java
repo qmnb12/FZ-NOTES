@@ -930,10 +930,12 @@ public class MainActivity extends Activity {
             if ("savefile".equals(op)) {
                 final String text;
                 final String filename;
+                final String mimeType;
                 try {
                     JSONObject payload = new JSONObject(args);
                     text = payload.optString("text", "");
                     filename = payload.optString("filename", "FZ-Notes-backup.json");
+                    mimeType = payload.optString("mimeType", "application/json");
                 } catch (Exception e) {
                     reply(id, false, "Backup data invalid hai");
                     return;
@@ -943,7 +945,7 @@ public class MainActivity extends Activity {
                     pendingSaveText = text;
                     Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
                     i.addCategory(Intent.CATEGORY_OPENABLE);
-                    i.setType("application/json");
+                    i.setType(mimeType);
                     i.putExtra(Intent.EXTRA_TITLE, filename);
                     try {
                         startActivityForResult(i, REQ_SAVE_FILE);
