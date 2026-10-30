@@ -6,7 +6,7 @@ import androidx.annotation.NonNull;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
-/** Creates password-encrypted local snapshots on the configured daily or 30-day schedule. */
+/** Creates password-encrypted local snapshots on the configured daily, weekly or monthly schedule. */
 public final class LocalBackupWorker extends Worker {
     public LocalBackupWorker(@NonNull Context context, @NonNull WorkerParameters params) {
         super(context, params);

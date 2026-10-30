@@ -482,6 +482,20 @@ body{min-height:100dvh}
 :root[data-theme="light"] #sh[data-type="localbackup"] button.cloud-row{background:#fff;border-color:#e0e8f4}
 :root[data-theme="light"] #sh[data-type="localbackup"] button.cloud-row[data-k="x"]{background:transparent;border-color:transparent}
 
+/* Local backup panel: one schedule selector and a fixed destination. */
+#sh .local-backup-panel{margin:10px 3px 5px;padding:16px;border:1px solid var(--ln);border-radius:18px;background:rgba(255,255,255,.025)}
+#sh .local-backup-panel .lb-status{padding:11px 12px;margin-bottom:15px;border:1px solid var(--ln);border-radius:13px;color:var(--mut);font-size:12px;line-height:1.5}
+#sh .local-backup-panel label{display:block;margin:12px 0 7px;color:var(--mut);font-size:12px;font-weight:700}
+#sh .local-backup-panel select{width:100%;min-height:48px;padding:0 12px;border:1px solid var(--ln);border-radius:12px;background:rgba(9,17,29,.92);color:var(--text);font:inherit}
+#sh .local-backup-panel .lb-hint{margin:9px 1px 13px;color:var(--mut);font-size:12px;line-height:1.5}
+#sh .local-backup-panel .lb-path{padding:12px;border-radius:12px;background:rgba(86,145,235,.09);border:1px solid rgba(117,170,255,.16)}
+#sh .local-backup-panel .lb-path strong,#sh .local-backup-panel .lb-path span{display:block}
+#sh .local-backup-panel .lb-path strong{font-size:12px;margin-bottom:4px}
+#sh .local-backup-panel .lb-path span{color:var(--acc);font-size:12px;overflow-wrap:anywhere}
+#sh .local-backup-panel .lb-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+#sh .local-backup-panel .lb-actions button{min-height:46px;padding:10px;border:1px solid var(--ln);border-radius:12px;background:rgba(255,255,255,.045);color:var(--text);font:inherit;font-size:13px;font-weight:650}
+#sh .local-backup-panel .lb-actions button.primary{background:linear-gradient(135deg,#286ed0,#438ef4);border-color:transparent;color:#fff}
+
 /* Polished message action sheet + compact Telegram-like message typography */
 #shBackdrop{position:fixed;inset:0;z-index:19;background:rgba(2,7,15,.48);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,visibility .22s ease;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);display:none}
 #shBackdrop.on{display:block;opacity:1;visibility:visible;pointer-events:auto}
@@ -2108,7 +2122,7 @@ function ask(m,ph,v){
   bkpw:['Back up notes','Enter your backup password.','Back up'],
   rspw:['Restore backup','Enter your backup password.','Restore'],
   legacyrestore:['Restore older backup','Enter the old backup password.','Restore'],
-  localBackupPw:['Create local backup password','Use at least 8 characters. This password is not saved in FZ NOTES.','Continue'],
+  localBackupPw:['Create local backup password','Use at least 8 characters. It is stored securely with Android Keystore for future local backups.','Continue'],
   localBackupConfirm:['Confirm local backup password','Enter the same password again to avoid lockout.','Create backup'],
   localSchedulePw:['Create automatic backup password','Use at least 8 characters. This password is stored encrypted by Android Keystore.','Continue'],
   localScheduleConfirm:['Confirm automatic backup password','Enter the same password again to enable scheduled backups.','Enable backup'],
@@ -2196,7 +2210,7 @@ function closeInputDialog(){lk.classList.remove('on');syncNativeChatOverlay();if
  if(submittedMode==='localBackupPw'){if(v.length<8){toast('Backup password kam se kam 8 characters ka hona chahiye',2800);ask('localBackupPw','Create a password (8+ characters)');return}pendingLocalBackupPassword=v;ask('localBackupConfirm','Re-enter the same password');return}
  if(submittedMode==='localBackupConfirm'){if(!pendingLocalBackupPassword||v!==pendingLocalBackupPassword){pendingLocalBackupPassword='';toast('Passwords match nahi hue. Dobara try karo.',3000);ask('localBackupPw','Create a password (8+ characters)');return}const password=pendingLocalBackupPassword;pendingLocalBackupPassword='';exportBackupFile(password);return}
  if(submittedMode==='localSchedulePw'){if(v.length<8){toast('Backup password kam se kam 8 characters ka hona chahiye',2800);ask('localSchedulePw','Create a local auto-backup password');return}pendingLocalBackupPassword=v;ask('localScheduleConfirm','Re-enter the same password');return}
- if(submittedMode==='localScheduleConfirm'){if(!pendingLocalBackupPassword||v!==pendingLocalBackupPassword){pendingLocalBackupPassword='';toast('Passwords match nahi hue. Dobara try karo.',3000);ask('localSchedulePw','Create a local auto-backup password');return}const password=pendingLocalBackupPassword,interval=pendingLocalBackupInterval;pendingLocalBackupPassword='';pendingLocalBackupInterval='off';saveLocalBackupSchedule(interval,password);return}
+ if(submittedMode==='localScheduleConfirm'){if(!pendingLocalBackupPassword||v!==pendingLocalBackupPassword){pendingLocalBackupPassword='';toast('Passwords match nahi hue. Dobara try karo.',3000);ask('localSchedulePw','Create a local auto-backup password');return}const password=pendingLocalBackupPassword,interval=pendingLocalBackupInterval;pendingLocalBackupPassword='';pendingLocalBackupInterval='manual';saveLocalBackupSchedule(interval,password);return}
  if(submittedMode==='localRestorePw'){const encrypted=pendingLocalEncryptedBackup;if(!encrypted){toast('Encrypted backup dobara select karo',2800);return}if(v.length<8){toast('Backup password kam se kam 8 characters ka hona chahiye',2800);ask('localRestorePw','Enter the backup password');return}native('localdecrypt',{data:encrypted,pw:v}).then(plain=>{if(!applyFile(plain,v))throw new Error('Decrypted file valid FZ NOTES backup nahi hai');pendingLocalEncryptedBackup='';toast('Secure restore complete · '+msgs.length+' notes',3200)}).catch(e=>{toast(e.message||'Password galat hai ya backup damaged hai',3200);ask('localRestorePw','Try the backup password again')});return}
  if(mode==='restore'){pickFile();return}
  if(mode==='topic'){if(v){const id='t'+Date.now();topics.push({id,name:v});cur=id;saveT();render();focusComposerForTyping()}return}
@@ -2535,39 +2549,25 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k.startsWith('drv:')){const i=Number(k.slice(4));if(!Number.isInteger(i)||!driveHistoryItems[i]){toast('Drive backup nahi mila');return}restoreSheetState();doDriveRestore(driveHistoryItems[i].id);return}
   return}
  if(sh.dataset.type==='localbackup'){
-  if(k==='x'){restoreSheetState();return}
-  if(k==='localChooseFolder'){
-   native('pickbackupfolder',{}).then(label=>{
-    toast('Automatic backup folder set: '+label,3500);
-    openLocalBackup();
-   }).catch(e=>toast(e.message||'Backup folder select nahi hua',3500));
-   return
-  }
-  if(k==='localStatus'){updateLocalBackupStatus(true).catch(()=>{});return}
-  if(k==='localExport'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();exportBackupFile();return}
-  if(k==='localRestore'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();pickFile();return}
-  if(k==='localDaily'||k==='localMonthly'){
-   pendingLocalBackupInterval=k==='localDaily'?'daily':'monthly';
-   shStack=[];sh.classList.remove('on');syncNativeChatOverlay();
-   ask('localSchedulePw','Create a password for automatic local backups');return
-  }
-  if(k==='localAutoOff'){
-   native('localbackupconfigure',{interval:'off'})
-    .then(()=>{
-     localStorage.setItem('notes-local-backup-schedule','off');
-     toast('Automatic local backup turned off',3000);
-     openLocalBackup();
-    })
-    .catch(e=>toast(e.message||'Could not turn off automatic backup',4000));
-   return
-  }
-  if(k==='localAutoRestore'){
-   shStack=[];sh.classList.remove('on');syncNativeChatOverlay();
-   native('localautoread',{}).then(handleLocalBackupText)
-    .catch(e=>toast(e.message||'Automatic backup restore unavailable',3500));
-   return
-  }
-  return}
+   if(k==='x'){restoreSheetState();return}
+   if(k==='localScheduleSave'){
+    const select=$('#localBackupSchedule'),interval=select?select.value:'manual';
+    pendingLocalBackupInterval=interval;
+    if(!['manual','off'].includes(interval)&&sh.dataset.localHasPassword!=='1'){
+     shStack=[];sh.classList.remove('on');syncNativeChatOverlay();
+     ask('localSchedulePw','Create a password for automatic local backups');return
+    }
+    saveLocalBackupSchedule(interval,'');return
+   }
+   if(k==='localExport'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();exportBackupFile();return}
+   if(k==='localRestore'){shStack=[];sh.classList.remove('on');syncNativeChatOverlay();pickFile();return}
+   if(k==='localAutoRestore'){
+    shStack=[];sh.classList.remove('on');syncNativeChatOverlay();
+    native('localautoread',{}).then(handleLocalBackupText)
+     .catch(e=>toast(e.message||'Automatic backup restore unavailable',3500));
+    return
+   }
+   return}
 
  if(sh.dataset.type==='menu'){
   if(cur==='hidden'&&k!=='hidden'&&k!=='hsettings'){hiddenUnlocked=false;cur='all';render()}
@@ -2809,66 +2809,58 @@ function openBackupHub(){
   cloudRow('x',icons.cancel,'Back','Return to the 3-dot menu');
  sh.dataset.type='backup-hub';sh.classList.add('on');
 }
+const localScheduleNames={manual:'Manual only',onopen:'Every time the app opens',dailyopen:'Once a day · first app open',daily:'Daily',weekly:'Weekly',monthly:'Monthly · every 30 days',off:'Manual only'};
 async function updateLocalBackupStatus(showToast=false){
- const row=sh.querySelector('[data-k="localStatus"] .ms');
  try{
   const status=JSON.parse(await native('localbackupstatus',{}));
-  const interval=status.interval==='daily'?'Daily automatic backup':status.interval==='monthly'?'Monthly automatic backup':'Automatic backup off';
-  const last=status.lastSuccess?new Date(Number(status.lastSuccess)).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}):'No automatic copy created yet';
-  const file=status.hasBackup?'Encrypted backup available':'No automatic backup file yet';
-  const folder=status.folderChosen?'Folder: '+(status.folderLabel||'Selected folder'):'Folder not selected';
-  let detail=folder+' · '+interval+' · '+last+' · '+file;
+  const schedule=localScheduleNames[status.interval]||'Manual only';
+  const last=status.lastSuccess?new Date(Number(status.lastSuccess)).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}):'No automatic backup yet';
+  const detail=schedule+' · '+last+' · '+Number(status.backupCount||0)+' backup file(s)';
   if(status.lastError)detail+=' · Last error: '+String(status.lastError);
-  if(row&&sh.dataset.type==='localbackup')row.textContent=detail;
+  const row=sh.querySelector('[data-k="localStatus"] .ms');if(row&&sh.dataset.type==='localbackup')row.textContent=detail;
+  const box=$('#localBackupStatus');if(box)box.textContent=detail;
   if(showToast)toast(detail,4500);
   return status;
  }catch(e){
   const detail='Status unavailable: '+(e.message||'Unknown error');
-  if(row&&sh.dataset.type==='localbackup')row.textContent=detail;
-  if(showToast)toast(detail,3500);
-  throw e;
+  const row=sh.querySelector('[data-k="localStatus"] .ms');if(row&&sh.dataset.type==='localbackup')row.textContent=detail;
+  const box=$('#localBackupStatus');if(box)box.textContent=detail;
+  if(showToast)toast(detail,3500);throw e;
  }
 }
-function openCloud(){
- const lb=lastBackup(),lt=lastTelegramBackup(),c=cfgGet();
- const icons={
-  status:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',
-  settings:'<circle cx="12" cy="12" r="3"/><path d="M19 13.5l1.2 1-.9 1.6-1.5-.3a7 7 0 0 1-1.5.9l-.3 1.5h-2l-.5-1.5a7 7 0 0 1-1.7-.1l-1 1.2-1.6-.9.3-1.5a7 7 0 0 1-.9-1.5l-1.5-.3v-2l1.5-.5a7 7 0 0 1 .1-1.7l-1.2-1 .9-1.6 1.5.3a7 7 0 0 1 1.5-.9l.3-1.5h2l.5 1.5a7 7 0 0 1 1.7.1l1-1.2 1.6.9-.3 1.5a7 7 0 0 1 .9 1.5l1.5.3v2z"/>',
-  cancel:'<path d="m6 6 12 12M18 6 6 18"/>'
- };
- sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · BACKUP</span><h3>Cloud backup</h3><p>Encrypted online backups using your Google Drive account or Telegram bot</p></div>'+
-  '<div class="cloud-group-label">Google Drive</div>'+
-  cloudRow('status',icons.status,'Last Drive backup',lb||'No successful backup yet')+
-  cloudRow('cset',icons.settings,'Google Drive settings',c.driveOn?'Account connected':'Connect your Google account')+
-  '<div class="cloud-divider"></div><div class="cloud-group-label">Telegram archive</div>'+
-  cloudRow('tgstatus',icons.status,'Last Telegram archive',lt||'No successful archive yet')+
-  cloudRow('tgcfg',icons.settings,'Telegram settings','Bot connection and automatic backup schedule')+
-  cloudRow('x',icons.cancel,'Back','Return to Backup options');
- sh.dataset.type='cloud';sh.classList.add('on');
-}
 function openLocalBackup(){
- const icons={
-  status:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',
-  export:'<path d="M12 3v12m-4-4 4 4 4-4"/><path d="M5 17v3h14v-3"/>',
-  restore:'<path d="M3 11a9 9 0 1 0 3-6.7L3 7"/><path d="M3 3v4h4m5-1v6l4 2"/>',
-  calendar:'<path d="M8 2v4m8-4v4M3 10h18"/><rect x="3" y="4" width="18" height="17" rx="2"/>',
-  monthly:'<path d="M8 2v4m8-4v4M3 10h18"/><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 14h8m-8 4h5"/>',
-  off:'<path d="M5 5l14 14M9 4.5A8 8 0 1 1 4.5 9"/>',
-  cancel:'<path d="m6 6 12 12M18 6 6 18"/>'
- };
- sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · THIS DEVICE</span><h3>Local backup</h3><p>Password-encrypted backups stored on this device. Restore always asks for the backup password.</p></div>'+
-  cloudRow('localStatus',icons.status,'Automatic backup status','Checking schedule and latest copy…')+
-  cloudRow('localChooseFolder',icons.calendar,'Choose backup folder','Select once; Daily and Monthly backups will use this folder')+
-  cloudRow('localExport',icons.export,'Create encrypted backup','Save a password-protected .fzenc file')+
-  cloudRow('localRestore',icons.restore,'Restore backup file','Choose an encrypted .fzenc file')+
-  '<div class="cloud-divider"></div><div class="cloud-group-label">Automatic backup schedule</div>'+
-  cloudRow('localDaily',icons.calendar,'Daily','Create an encrypted copy every 24 hours')+
-  cloudRow('localMonthly',icons.monthly,'Monthly','Create an encrypted copy every 30 days')+
-  cloudRow('localAutoRestore',icons.restore,'Restore latest automatic backup','Restore the newest encrypted copy stored privately on this device')+
-  cloudRow('localAutoOff',icons.off,'Turn off automatic backup','Stop future scheduled copies; keep the existing backup file')+
-  cloudRow('x',icons.cancel,'Back','Return to Backup options');
+ sh.innerHTML='<div class="cloud-sheet-head"><span class="cloud-eyebrow">FZ NOTES · THIS DEVICE</span><h3>Local backup</h3><p>Encrypted backups are saved in one fixed folder. Choose an automatic schedule, just like Telegram.</p></div>'+
+  '<section class="local-backup-panel">'+
+   '<div id="localBackupStatus" class="lb-status">Checking schedule and saved copies…</div>'+
+   '<label for="localBackupSchedule">Automatic backup schedule</label>'+
+   '<select id="localBackupSchedule">'+
+    '<option value="manual">Manual only — when I tap Back up now</option>'+
+    '<option value="onopen">Every time I open this app</option>'+
+    '<option value="dailyopen">Once a day — first app open</option>'+
+    '<option value="daily">Daily</option>'+
+    '<option value="weekly">Weekly</option>'+
+    '<option value="monthly">Monthly — every 30 days</option>'+
+   '</select>'+
+   '<p class="lb-hint">App-open options run when FZ NOTES starts. Daily, Weekly and Monthly use Android background scheduling. Manual only stops automatic copies and keeps saved files.</p>'+
+   '<div class="lb-path"><strong>Fixed backup location</strong><span>Documents/FZ NOTES/Backups/</span></div>'+
+   '<p class="lb-hint">Each copy is password-protected with AES encryption. The password is stored securely using Android Keystore after the first setup.</p>'+
+   '<div class="lb-actions">'+
+    '<button type="button" class="primary" data-k="localScheduleSave">Save schedule</button>'+
+    '<button type="button" data-k="localExport">Back up now</button>'+
+    '<button type="button" data-k="localAutoRestore">Restore latest automatic backup</button>'+
+    '<button type="button" data-k="localRestore">Choose backup file</button>'+
+    '<button type="button" data-k="x">Back</button>'+
+   '</div>'+
+  '</section>';
  sh.dataset.type='localbackup';sh.classList.add('on');
- updateLocalBackupStatus(false).catch(()=>{});
+ native('localbackupstatus',{}).then(raw=>{
+  const status=JSON.parse(raw),select=$('#localBackupSchedule');
+  if(select)select.value=['manual','onopen','dailyopen','daily','weekly','monthly'].includes(status.interval)?status.interval:'manual';
+  sh.dataset.localHasPassword=status.hasPassword?'1':'0';
+  const last=status.lastSuccess?new Date(Number(status.lastSuccess)).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}):'No automatic backup yet';
+  const box=$('#localBackupStatus');
+  if(box)box.textContent=(localScheduleNames[status.interval]||'Manual only')+' · '+last+' · '+Number(status.backupCount||0)+' backup file(s)'+(status.lastError?' · '+status.lastError:'');
+ }).catch(e=>{const box=$('#localBackupStatus');if(box)box.textContent='Status unavailable: '+(e.message||'Unknown error')});
 }
 
 let driveHistoryItems=[];async function openDriveHistory(){
@@ -3631,13 +3623,13 @@ function applyFile(t,password){
  if(d.localBackupSettings&&typeof d.localBackupSettings.schedule==='string'){
   const schedule=d.localBackupSettings.schedule;
   try{localStorage.setItem('notes-local-backup-schedule',schedule)}catch(_){}
-  if(window.Android&&['daily','monthly'].includes(schedule)){
+  if(window.Android&&['onopen','dailyopen','daily','weekly','monthly'].includes(schedule)){
    if(!password||password.length<8){toast('Local auto-backup schedule restore ke liye backup password dobara set karna hoga',4000)}
    else native('tgsnapshot',{data:backupPayload()}).then(()=>native('localbackupconfigure',{interval:schedule,pw:password}))
     .then(()=>toast('Local auto-backup schedule restored',3200))
     .catch(e=>toast('Local backup schedule restore failed: '+e.message,4500));
-  }else if(window.Android&&schedule==='off'){
-   native('localbackupconfigure',{interval:'off'}).catch(()=>{});
+  }else if(window.Android&&['off','manual'].includes(schedule)){
+   native('localbackupconfigure',{interval:'manual'}).catch(()=>{});
   }
  }
  return true
@@ -3664,12 +3656,16 @@ function handleLocalBackupText(raw){
 async function pickFile(){try{if(window.Android){toast('FZ NOTES backup file select karo',2200);const raw=await native('pickfile',{});handleLocalBackupText(raw)}else{const input=document.createElement('input');input.type='file';input.accept='.fzenc,application/octet-stream,text/plain';input.onchange=async()=>{const f=input.files&&input.files[0];if(!f)return;try{handleLocalBackupText(await f.text())}catch(e){toast(e.message||'Backup import nahi hua',3500)}};input.click()}}catch(e){toast(e.message||'Backup import nahi hua',3500)}}
 async function saveLocalBackupSchedule(interval,password){
  if(!window.Android){toast('Automatic local backup ke liye FZ NOTES Android app use karo',3500);return false}
- const previous=localStorage.getItem('notes-local-backup-schedule')||'off';
+ const previous=localStorage.getItem('notes-local-backup-schedule')||'manual';
+ if(interval==='off')interval='manual';
  try{
   localStorage.setItem('notes-local-backup-schedule',interval);
   await native('tgsnapshot',{data:backupPayload()});
-  await native('localbackupconfigure',{interval,pw:password});
-  toast(interval==='daily'?'Daily encrypted local backup enabled':'30-day encrypted local backup enabled',3500);
+  await native('localbackupconfigure',{interval,pw:password||''});
+  const labels={manual:'Manual only',onopen:'Every app open',dailyopen:'Once a day on first app open',daily:'Daily',weekly:'Weekly',monthly:'Monthly'};
+  toast('Local backup schedule saved · '+(labels[interval]||interval),3500);
+  pendingLocalBackupInterval='manual';
+  await updateLocalBackupStatus(false).catch(()=>{});
   return true;
  }catch(e){
   localStorage.setItem('notes-local-backup-schedule',previous);
@@ -3677,7 +3673,22 @@ async function saveLocalBackupSchedule(interval,password){
   return false;
  }
 }
-async function exportBackupFile(password){if(!password){ask('localBackupPw','Create a password (8+ characters)');return false}if(!window.Android){toast('Encrypted local backup ke liye FZ NOTES Android app use karo',3500);return false}const payload=backupPayload();const filename='FZ-Notes-backup-'+new Date().toISOString().slice(0,10)+'.fzenc';let stage='Encryption';try{toast('AES-256 encryption ke saath backup prepare ho raha hai…',3000);const encrypted=await native('localencrypt',{data:payload,pw:password});if(typeof encrypted!=='string'||encrypted.length<64||!/^[A-Za-z0-9+/=]+$/.test(encrypted))throw new Error('Android ne valid encrypted data return nahi kiya');const text=LOCAL_BACKUP_HEADER+encrypted;stage='File save';toast('Backup save karne ke liye location choose karo',2200);const result=await native('savefile',{filename,mimeType:'application/octet-stream',text});toast(result||'Encrypted backup saved',3000);return true}catch(e){toast(stage+' failed: '+(e.message||'Unknown error'),5000);return false}}
+async function exportBackupFile(password){
+ if(!window.Android){toast('Encrypted local backup ke liye FZ NOTES Android app use karo',3500);return false}
+ try{
+  toast('AES-256 encryption ke saath backup save ho raha hai…',3000);
+  const result=await native('localbackupmanual',{data:backupPayload(),pw:password||''});
+  toast(result||'Encrypted backup saved to Documents/FZ NOTES/Backups/',4500);
+  pendingLocalBackupPassword='';
+  return true;
+ }catch(e){
+  if(!password&&(e.message||'').includes('Create a local backup password')){
+   ask('localBackupPw','Create a password for local backups (8+ characters)');return false;
+  }
+  toast('Local backup failed: '+(e.message||'Unknown error'),5000);
+  return false;
+ }
+}
 msgs.filter(m=>m.due>Date.now()&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
 installNativeChatOverlayObservers();render();restoreDraft();updateComposerControls();lastSnapshot=snapshot();if(window.Android)native('tgsnapshot',{data:backupPayload()}).catch(()=>{});syncNativeChatOverlay();
 if(window.Android){
@@ -3734,6 +3745,8 @@ if(window.Android)native('tgstatus',{}).then(v=>{const n=Number(v);if(n>0){try{l
  if(!msgs.length&&topics.length<=1&&topics[0].name==='General'){
   try{const t=await native('mirrorload',{});if(t&&applyFile(t))toast('Phone storage se data wapas aaya',3000)}catch(e){}
  }
+ await native('tgsnapshot',{data:backupPayload()}).catch(()=>{});
+ await native('localbackupopen',{}).catch(e=>toast('Local backup: '+e.message,3500));
  if(cfgGet().driveOn)await startupCloudSync();
  await runTelegramBackupOnOpen();
 })();

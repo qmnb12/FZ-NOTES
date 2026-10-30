@@ -101,6 +101,11 @@ public class Cloud {
                 return "ok";
             case "localbackupstatus":
                 return localBackupStatus(ctx).toString();
+            case "localbackupopen":
+                createLocalBackupOnAppOpen(ctx);
+                return "ok";
+            case "localbackupmanual":
+                return createManualLocalBackup(ctx, a);
             case "localautoread":
                 return readLocalAutoBackup(ctx);
             case "drivekey": {
@@ -315,149 +320,183 @@ public class Cloud {
         }
     }
 
-    // ---------- scheduled encrypted local backup ----------
+    // ---------- encrypted local backups in Documents/FZ NOTES/Backups ----------
     private static final String LOCAL_BACKUP_HEADER = "FZ-NOTES-ENCRYPTED-BACKUP-V1\n";
-    private static final String LOCAL_BACKUP_FILE = "FZ-Notes-AutoBackup.fzenc";
+    private static final String LOCAL_BACKUP_FILE = "FZ-Notes-AutoBackup.fzenc"; // legacy private copy
+    private static final String LOCAL_BACKUP_PATH = "Documents/FZ NOTES/Backups/";
+    private static final String LOCAL_AUTO_PREFIX = "FZ-Notes-AutoBackup-";
 
-    static void configureLocalBackup(Context ctx, JSONObject a) throws Exception {
-        String interval = a.optString("interval", "off");
-        if (!"off".equals(interval) && !"daily".equals(interval) && !"monthly".equals(interval))
-            throw new Exception("Unknown local backup schedule");
-
-        WorkManager wm = WorkManager.getInstance(ctx.getApplicationContext());
-        SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
-        if ("off".equals(interval)) {
-            wm.cancelUniqueWork("fz_notes_local_backup");
-            prefs.edit().putString("interval", "off").remove("lastError").commit();
-            ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE).edit()
-                    .remove("local_backup_pw").apply();
-            return;
-        }
-
-        String folderUri = prefs.getString("folderUri", "");
-        if (folderUri == null || folderUri.isEmpty())
-            throw new Exception("Pehle Local Backup mein Choose backup folder select karo");
-        String pw = a.optString("pw", "");
-        if (pw.length() < 8) throw new Exception("Local backup password must be at least 8 characters");
-        if (prefs.getString("snapshot", "").trim().isEmpty())
-            throw new Exception("Latest notes snapshot not received yet. Save a note or reopen FZ NOTES, then enable automatic backup again.");
-
-        saveLocalSecret(ctx, "local_backup_pw", pw);
-        if (!prefs.edit().putString("interval", interval).remove("lastError").commit())
-            throw new Exception("Local backup schedule could not be saved");
-
-        // Verify an encrypted copy can be written now before reporting that the schedule is active.
+    static String saveLocalBackupFile(Context ctx, String filename, String contents) throws Exception {
+        if (filename == null || filename.trim().isEmpty()) filename = "FZ-Notes-backup.fzenc";
+        filename = filename.replaceAll("[^A-Za-z0-9._-]", "_");
+        if (!filename.endsWith(".fzenc")) filename += ".fzenc";
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
+        values.put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream");
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH, LOCAL_BACKUP_PATH);
+        values.put(MediaStore.MediaColumns.IS_PENDING, 1);
+        ContentResolver resolver = ctx.getContentResolver();
+        Uri uri = resolver.insert(MediaStore.Files.getContentUri("external"), values);
+        if (uri == null) throw new Exception("Documents/FZ NOTES/Backups folder mein file nahi ban payi");
         try {
-            createScheduledLocalBackup(ctx);
+            try (OutputStream out = resolver.openOutputStream(uri, "w")) {
+                if (out == null) throw new Exception("Backup file write nahi ho payi");
+                out.write((contents == null ? "" : contents).getBytes(StandardCharsets.UTF_8));
+                out.flush();
+            }
+            ContentValues ready = new ContentValues();
+            ready.put(MediaStore.MediaColumns.IS_PENDING, 0);
+            resolver.update(uri, ready, null, null);
         } catch (Exception e) {
-            String message = e.getMessage() == null ? "Initial local backup failed" : e.getMessage();
-            prefs.edit().putString("lastError", message).commit();
+            try { resolver.delete(uri, null, null); } catch (Exception ignored) { }
             throw e;
         }
+        return LOCAL_BACKUP_PATH + filename;
+    }
 
-        long days = "daily".equals(interval) ? 1L : 30L;
-        PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
-                LocalBackupWorker.class, days, TimeUnit.DAYS)
-                .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL,
-                        30L, TimeUnit.SECONDS)
-                .build();
-        wm.enqueueUniquePeriodicWork("fz_notes_local_backup", ExistingPeriodicWorkPolicy.UPDATE, work);
+    private static String localBackupStamp() {
+        return new java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US)
+                .format(new java.util.Date());
+    }
+
+    private static Uri latestLocalBackupUri(Context ctx, boolean automaticOnly) {
+        Uri base = MediaStore.Files.getContentUri("external");
+        String pattern = automaticOnly ? LOCAL_AUTO_PREFIX + "%.fzenc" : "%.fzenc";
+        Cursor cursor = ctx.getContentResolver().query(base,
+                new String[]{MediaStore.MediaColumns._ID},
+                MediaStore.MediaColumns.RELATIVE_PATH + "=? AND "
+                        + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?",
+                new String[]{LOCAL_BACKUP_PATH, pattern},
+                MediaStore.MediaColumns.DATE_MODIFIED + " DESC");
+        if (cursor == null) return null;
+        try {
+            if (cursor.moveToFirst()) return ContentUris.withAppendedId(base, cursor.getLong(0));
+        } finally { cursor.close(); }
+        return null;
+    }
+
+    private static int localBackupCount(Context ctx) {
+        Cursor cursor = ctx.getContentResolver().query(MediaStore.Files.getContentUri("external"),
+                new String[]{MediaStore.MediaColumns._ID},
+                MediaStore.MediaColumns.RELATIVE_PATH + "=? AND "
+                        + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ?",
+                new String[]{LOCAL_BACKUP_PATH, "%.fzenc"}, null);
+        if (cursor == null) return 0;
+        try { return cursor.getCount(); }
+        finally { cursor.close(); }
+    }
+
+    static void configureLocalBackup(Context ctx, JSONObject a) throws Exception {
+        String interval = a.optString("interval", "manual");
+        if ("off".equals(interval)) interval = "manual";
+        if (!"manual".equals(interval) && !"onopen".equals(interval) && !"dailyopen".equals(interval)
+                && !"daily".equals(interval) && !"weekly".equals(interval) && !"monthly".equals(interval))
+            throw new Exception("Unknown local backup schedule");
+        SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
+        WorkManager wm = WorkManager.getInstance(ctx.getApplicationContext());
+        wm.cancelUniqueWork("fz_notes_local_backup");
+
+        String suppliedPassword = a.optString("pw", "");
+        if (!suppliedPassword.isEmpty()) {
+            if (suppliedPassword.length() < 8) throw new Exception("Local backup password must be at least 8 characters");
+            saveLocalSecret(ctx, "local_backup_pw", suppliedPassword);
+        }
+        if (!"manual".equals(interval) && loadLocalSecret(ctx, "local_backup_pw").length() < 8)
+            throw new Exception("Create a local backup password before enabling an automatic schedule");
+
+        if (!prefs.edit().putString("interval", interval).remove("lastError").commit())
+            throw new Exception("Local backup schedule could not be saved");
+        if ("daily".equals(interval) || "weekly".equals(interval) || "monthly".equals(interval)) {
+            long days = "daily".equals(interval) ? 1L : "weekly".equals(interval) ? 7L : 30L;
+            PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
+                    LocalBackupWorker.class, days, TimeUnit.DAYS).build();
+            wm.enqueueUniquePeriodicWork("fz_notes_local_backup", ExistingPeriodicWorkPolicy.UPDATE, work);
+        }
+        if (!"manual".equals(interval)) {
+            createScheduledLocalBackup(ctx);
+            if ("dailyopen".equals(interval))
+                prefs.edit().putString("dailyOpenDate", localCalendarDate()).commit();
+        }
     }
 
     static void createScheduledLocalBackup(Context ctx) throws Exception {
         SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
-        String interval = prefs.getString("interval", "off");
-        if ("off".equals(interval)) return;
-
+        String interval = prefs.getString("interval", "manual");
+        if ("manual".equals(interval) || "off".equals(interval)) return;
         String data = prefs.getString("snapshot", "");
         if (data == null || data.trim().isEmpty())
             throw new Exception("No saved notes snapshot is available for local backup");
         String pw = loadLocalSecret(ctx, "local_backup_pw");
         if (pw.length() < 8) throw new Exception("Scheduled local backup password is unavailable");
+        String contents = LOCAL_BACKUP_HEADER
+                + Base64.encodeToString(encrypt(data, pw), Base64.NO_WRAP);
+        String filename = LOCAL_AUTO_PREFIX + localBackupStamp() + ".fzenc";
+        saveLocalBackupFile(ctx, filename, contents);
+        prefs.edit().putLong("lastSuccess", System.currentTimeMillis())
+                .putString("lastFileName", filename).remove("lastError").commit();
+    }
 
-        byte[] encrypted = encrypt(data, pw);
-        String contents = LOCAL_BACKUP_HEADER + Base64.encodeToString(encrypted, Base64.NO_WRAP);
-        String treeValue = prefs.getString("folderUri", "");
-        if (treeValue == null || treeValue.isEmpty())
-            throw new Exception("Choose a backup folder first from Local Backup settings");
-        Uri tree = Uri.parse(treeValue);
-        String treeId = DocumentsContract.getTreeDocumentId(tree);
-        Uri parent = DocumentsContract.buildDocumentUriUsingTree(tree, treeId);
-        Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, treeId);
-        String oldId = null;
-        try (Cursor cursor = ctx.getContentResolver().query(children,
-                new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME},
-                null, null, null)) {
-            if (cursor != null) while (cursor.moveToNext()) {
-                String name = cursor.getString(1);
-                if (LOCAL_BACKUP_FILE.equals(name)) oldId = cursor.getString(0);
+    static void createLocalBackupOnAppOpen(Context ctx) throws Exception {
+        SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
+        String interval = prefs.getString("interval", "manual");
+        if ("onopen".equals(interval)) {
+            createScheduledLocalBackup(ctx);
+        } else if ("dailyopen".equals(interval)) {
+            String today = localCalendarDate();
+            if (!today.equals(prefs.getString("dailyOpenDate", ""))) {
+                createScheduledLocalBackup(ctx);
+                prefs.edit().putString("dailyOpenDate", today).apply();
             }
         }
-        if (oldId != null) {
-            Uri oldFile = DocumentsContract.buildDocumentUriUsingTree(tree, oldId);
-            if (!DocumentsContract.deleteDocument(ctx.getContentResolver(), oldFile))
-                throw new Exception("Previous automatic backup could not be replaced");
-        }
-        Uri target = DocumentsContract.createDocument(ctx.getContentResolver(), parent,
-                "application/octet-stream", LOCAL_BACKUP_FILE);
-        if (target == null) throw new Exception("Could not create backup file in selected folder");
-        try (OutputStream out = ctx.getContentResolver().openOutputStream(target, "wt")) {
-            if (out == null) throw new Exception("Selected backup folder is not writable");
-            out.write(contents.getBytes(StandardCharsets.UTF_8));
-            out.flush();
-        }
-        prefs.edit().putLong("lastSuccess", System.currentTimeMillis()).remove("lastError").commit();
+    }
+
+    static String createManualLocalBackup(Context ctx, JSONObject a) throws Exception {
+        String pw = a.optString("pw", "");
+        if (!pw.isEmpty()) {
+            if (pw.length() < 8) throw new Exception("Local backup password must be at least 8 characters");
+            saveLocalSecret(ctx, "local_backup_pw", pw);
+        } else pw = loadLocalSecret(ctx, "local_backup_pw");
+        if (pw.length() < 8) throw new Exception("Create a local backup password before the first backup");
+        String contents = LOCAL_BACKUP_HEADER
+                + Base64.encodeToString(encrypt(a.getString("data"), pw), Base64.NO_WRAP);
+        String filename = "FZ-Notes-Backup-" + localBackupStamp() + ".fzenc";
+        String path = saveLocalBackupFile(ctx, filename, contents);
+        ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE).edit()
+                .putLong("lastManualSuccess", System.currentTimeMillis())
+                .putString("lastManualFileName", filename).apply();
+        return "Encrypted backup saved: " + path;
     }
 
     static JSONObject localBackupStatus(Context ctx) throws Exception {
         SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
         JSONObject status = new JSONObject();
-        status.put("interval", prefs.getString("interval", "off"));
+        status.put("interval", prefs.getString("interval", "manual"));
         status.put("lastSuccess", prefs.getLong("lastSuccess", 0L));
+        status.put("lastManualSuccess", prefs.getLong("lastManualSuccess", 0L));
         status.put("lastError", prefs.getString("lastError", ""));
-        status.put("folderLabel", prefs.getString("folderLabel", ""));
-        status.put("folderChosen", !prefs.getString("folderUri", "").isEmpty());
-        status.put("hasBackup", hasScheduledBackup(ctx, prefs));
+        status.put("hasBackup", latestLocalBackupUri(ctx, false) != null
+                || new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE).isFile());
+        status.put("backupCount", localBackupCount(ctx));
+        status.put("hasPassword", loadLocalSecret(ctx, "local_backup_pw").length() >= 8);
+        status.put("path", LOCAL_BACKUP_PATH);
         return status;
     }
 
-    private static boolean hasScheduledBackup(Context ctx, SharedPreferences prefs) {
-        String treeValue = prefs.getString("folderUri", "");
-        if (treeValue == null || treeValue.isEmpty()) return false;
-        try {
-            Uri tree = Uri.parse(treeValue);
-            Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree,
-                    DocumentsContract.getTreeDocumentId(tree));
-            try (Cursor cursor = ctx.getContentResolver().query(children,
-                    new String[]{DocumentsContract.Document.COLUMN_DISPLAY_NAME}, null, null, null)) {
-                if (cursor != null) while (cursor.moveToNext())
-                    if (LOCAL_BACKUP_FILE.equals(cursor.getString(0))) return true;
-            }
-        } catch (Exception ignored) { }
-        return false;
-    }
-
     static String readLocalAutoBackup(Context ctx) throws Exception {
-        SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
-        String treeValue = prefs.getString("folderUri", "");
-        if (treeValue == null || treeValue.isEmpty()) throw new Exception("Pehle automatic backup folder select karo");
-        Uri tree = Uri.parse(treeValue);
-        Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree,
-                DocumentsContract.getTreeDocumentId(tree));
-        try (Cursor cursor = ctx.getContentResolver().query(children,
-                new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME},
-                null, null, null)) {
-            if (cursor != null) while (cursor.moveToNext()) {
-                if (LOCAL_BACKUP_FILE.equals(cursor.getString(1))) {
-                    Uri file = DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0));
-                    try (InputStream in = ctx.getContentResolver().openInputStream(file)) {
-                        if (in == null) break;
-                        return new String(readAll(in), StandardCharsets.UTF_8);
-                    }
-                }
+        Uri uri = latestLocalBackupUri(ctx, true);
+        if (uri != null) {
+            try (InputStream in = ctx.getContentResolver().openInputStream(uri)) {
+                if (in == null) throw new Exception("Automatic backup file open nahi hui");
+                return new String(readAll(in), StandardCharsets.UTF_8);
             }
         }
-        throw new Exception("Automatic local backup abhi selected folder mein available nahi hai");
+        File legacy = new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE);
+        if (legacy.isFile()) {
+            try (InputStream in = new FileInputStream(legacy)) {
+                return new String(readAll(in), StandardCharsets.UTF_8);
+            }
+        }
+        throw new Exception("Automatic local backup abhi available nahi hai");
     }
 
     // ---------- crypto ----------

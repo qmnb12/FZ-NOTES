@@ -970,31 +970,23 @@ public class MainActivity extends Activity {
             if ("savefile".equals(op)) {
                 final String text;
                 final String filename;
-                final String mimeType;
                 try {
                     JSONObject payload = new JSONObject(args);
                     text = payload.optString("text", "");
                     filename = payload.optString("filename", "FZ-Notes-backup.fzenc");
-                    mimeType = payload.optString("mimeType", "application/octet-stream");
                 } catch (Exception e) {
                     reply(id, false, "Backup data invalid hai");
                     return;
                 }
-                runOnUiThread(() -> {
-                    saveFileReplyId = id;
-                    pendingSaveText = text;
-                    Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-                    i.addCategory(Intent.CATEGORY_OPENABLE);
-                    i.setType(mimeType);
-                    i.putExtra(Intent.EXTRA_TITLE, filename);
+                new Thread(() -> {
                     try {
-                        startActivityForResult(i, REQ_SAVE_FILE);
+                        String path = Cloud.saveLocalBackupFile(MainActivity.this, filename, text);
+                        reply(id, true, "Backup saved: " + path);
                     } catch (Exception e) {
-                        saveFileReplyId = -1;
-                        pendingSaveText = null;
-                        reply(id, false, "Backup save dialog nahi khula");
+                        String message = e.getMessage() == null ? "Backup save failed" : e.getMessage();
+                        reply(id, false, message);
                     }
-                });
+                }).start();
                 return;
             }
             new Thread(() -> {
