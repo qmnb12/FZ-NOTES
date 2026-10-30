@@ -1678,8 +1678,8 @@ header>.topic-title-block.title-overflow #ttl{
     <label class="cfg-label" for="c_tgToken">Bot token</label><input id="c_tgToken" placeholder="Token from @BotFather" autocomplete="off">
     <label class="cfg-label" for="c_tgChat">Chat ID</label><div class="row"><input id="c_tgChat" placeholder="Telegram chat ID" autocomplete="off"><button id="c_tgDet" class="alt">Detect</button></div>
     <label class="cfg-label" for="c_tgSchedule">Automatic backup schedule</label>
-    <select id="c_tgSchedule"><option value="manual">Manual only — when I tap backup</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly (every 30 days)</option></select>
-    <p class="hint cfg-footnote">Scheduled archive needs a network connection. Google Drive remains the automatic restore source.</p>
+    <select id="c_tgSchedule"><option value="manual">Manual only — when I tap backup</option><option value="onopen">When I open this app</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly (every 30 days)</option></select>
+    <p class="hint cfg-footnote">“When I open this app” sends one Telegram backup each time the app launches. Telegram settings (bot token, chat ID and schedule) are included in the encrypted Google Drive backup when Google sync is connected.</p>
     <button id="c_tgNow" class="cfg-primary-action">Save backup to Telegram</button>
   </section>
   <div class="cfg-actions"><button id="c_save" class="alt">Save Telegram settings</button><button id="c_tgClose" class="alt">Close</button></div>
@@ -2805,7 +2805,20 @@ function openTgCfg(){
 }
 const lastBackup=()=>{try{return localStorage.getItem('notes-last-backup')||''}catch(e){return ''}};
 const lastTelegramBackup=()=>{try{return localStorage.getItem('notes-last-telegram-backup')||''}catch(e){return ''}};
-function backupPayload(){return JSON.stringify({format:'FZ-NOTES-BACKUP',version:4,exportedAt:new Date().toISOString(),msgs,topics})}
+function backupPayload(){
+ const c=cfgGet();
+ return JSON.stringify({
+  format:'FZ-NOTES-BACKUP',
+  version:5,
+  exportedAt:new Date().toISOString(),
+  msgs,topics,
+  telegramSettings:{
+   token:c.tgToken||'',
+   chat:c.tgChat||'',
+   schedule:c.tgSchedule||'manual'
+  }
+ });
+}
 let cachedDriveAuth=null;
 async function ensureDriveKey(){
  const token=await native('driveauth',{});
@@ -2853,7 +2866,11 @@ function scheduleAutoBackup(){
  autoBackupTimer=setTimeout(async()=>{
   if(autoBackupBusy){autoBackupAgain=true;return}
   autoBackupBusy=true;
-  try{await doGoogleBackup(true,true)}catch(_){}
+  try{
+   // Keep the WorkManager Telegram snapshot fresh for daily/weekly/monthly runs.
+   await native('tgsnapshot',{data:backupPayload()});
+   await doGoogleBackup(true,true);
+  }catch(_){}
   finally{autoBackupBusy=false;if(autoBackupAgain){autoBackupAgain=false;scheduleAutoBackup()}}
  },3500);
 }
@@ -2862,12 +2879,19 @@ async function saveTelegramSettings(){
  F.forEach(f=>{const el=$('#c_'+f);if(el)c[f]=el.value.trim()});
  c.tgSchedule=c.tgSchedule||'manual';
  if(c.tgSchedule!=='manual'&&(!c.tgToken||!c.tgChat)){toast('Schedule ke liye Telegram token aur chat ID zaroori hain');return false}
+ if(c.tgSchedule==='onopen'&&!c.driveOn){toast('When app opens backup ke liye pehle Google account connect karo');return false}
  try{
   if(c.tgSchedule!=='manual'&&c.tgToken&&c.tgChat)await ensureDriveKey();
   cfgSet(c);
   await native('tgsnapshot',{data:backupPayload()});
   await native('tgconfigure',{token:c.tgToken||'',chat:c.tgChat||'',interval:c.tgSchedule});
-  toast(c.tgSchedule==='manual'?'Backup settings saved':'Telegram schedule saved · '+c.tgSchedule,3000);
+  if(c.driveOn){
+   const synced=await doGoogleBackup(true,true);
+   if(!synced)toast('Telegram settings saved, but Google sync failed',4000);
+   else toast(c.tgSchedule==='manual'?'Telegram settings saved · Google synced':'Telegram schedule saved · Google synced',3200);
+  }else{
+   toast(c.tgSchedule==='manual'?'Telegram settings saved on this device':'Telegram schedule saved · connect Google to sync settings',4000);
+  }
   return true;
  }catch(e){toast('Settings save failed: '+e.message,4500);return false}
 }
@@ -2907,11 +2931,27 @@ $('#c_tgDet').onclick=async()=>{
  try{$('#c_tgChat').value=await native('tgchat',{token:tk})}catch(e){toast(e.message,3500)}
 };
 let pendDriveId='',legacyRestoreId='';
+function restoreTelegramSettingsFromBackup(settings){
+ if(!settings||typeof settings!=='object')return;
+ const token=typeof settings.token==='string'?settings.token.trim():'';
+ const chat=typeof settings.chat==='string'?settings.chat.trim():'';
+ const allowed=['manual','onopen','daily','weekly','monthly'];
+ let schedule=allowed.includes(settings.schedule)?settings.schedule:'manual';
+ if(schedule!=='manual'&&(!token||!chat))schedule='manual';
+ const c=cfgGet();
+ c.tgToken=token;c.tgChat=chat;c.tgSchedule=schedule;
+ cfgSet(c);
+ native('tgsnapshot',{data:backupPayload()})
+  .then(()=>native('tgconfigure',{token:c.tgToken,chat:c.tgChat,interval:c.tgSchedule}))
+  .then(()=>toast('Telegram settings restored from Google',3500))
+  .catch(e=>toast('Telegram settings restore failed: '+e.message,4500));
+}
 function applyCloudRestore(raw){
  const d=JSON.parse(raw);
  if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){
   suppressAutoBackup=true;msgs=d.msgs;topics=d.topics;cur='all';hiddenUnlocked=false;lastSnapshot=snapshot();undoStack=[];redoStack=[];
   try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics));localStorage.setItem('notes-last-backup',noteStamp())}catch(_){}
+  if(d.telegramSettings)restoreTelegramSettingsFromBackup(d.telegramSettings);
   hadLocalNotesState=true;mirror();render();suppressAutoBackup=false;return true;
  }
  suppressAutoBackup=false;toast('Backup data format valid nahi hai');return false;
@@ -2984,6 +3024,18 @@ async function onGoogleConnected(token,key){
   toast('Google Drive connect/test failed: '+e.message,5000);
   return false;
  }
+}
+let telegramOpenBackupStarted=false;
+async function runTelegramBackupOnOpen(){
+ if(telegramOpenBackupStarted)return;
+ const c=cfgGet();
+ if(c.tgSchedule!=='onopen'||!c.tgToken||!c.tgChat)return;
+ if(!c.driveOn){toast('Telegram app-open backup needs a connected Google account',4500);return}
+ telegramOpenBackupStarted=true;
+ try{
+  toast('App opened · Telegram backup starting',3000);
+  await doTelegramBackup(false);
+ }catch(e){toast('App-open Telegram backup failed: '+e.message,4500)}
 }
 async function startupCloudSync(){
  const c=cfgGet();if(!c.driveOn)return;
@@ -3478,13 +3530,20 @@ if(window.Android){
  setTimeout(scheduleDriveAuthRecovery,1000);
  window.addEventListener('focus',()=>setTimeout(scheduleDriveAuthRecovery,300));
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(scheduleDriveAuthRecovery,300)});
- if(cfgGet().driveOn)setTimeout(()=>startupCloudSync(),1100);
+ 
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&cur==='hidden'){hiddenUnlocked=false;cur='all';clearCtx();render()}});
 window.addEventListener('pagehide',()=>{if(cur==='hidden'){hiddenUnlocked=false;cur='all'}});
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!ed.contains(document.activeElement)){e.preventDefault();e.shiftKey?redoChange():undoChange()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'&&!ed.contains(document.activeElement)){e.preventDefault();redoChange()}});
 if(window.Android)native('tgstatus',{}).then(v=>{const n=Number(v);if(n>0){try{localStorage.setItem('notes-last-telegram-backup',new Date(n).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}))}catch(_){}}}).catch(()=>{});
-(async()=>{if(!window.Android||msgs.length||topics.length>1||topics[0].name!=='General')return;try{const t=await native('mirrorload',{});if(t&&applyFile(t))toast('Phone storage se data wapas aaya',3000)}catch(e){}})();
+(async()=>{
+ if(!window.Android)return;
+ if(!msgs.length&&topics.length<=1&&topics[0].name==='General'){
+  try{const t=await native('mirrorload',{});if(t&&applyFile(t))toast('Phone storage se data wapas aaya',3000)}catch(e){}
+ }
+ if(cfgGet().driveOn)await startupCloudSync();
+ await runTelegramBackupOnOpen();
+})();
 </script>
 </body>
 </html>
