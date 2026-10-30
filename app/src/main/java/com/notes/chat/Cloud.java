@@ -21,7 +21,7 @@ import androidx.work.WorkManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayOutputStream;\nimport java.io.File;\nimport java.io.FileInputStream;\nimport java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -92,6 +92,13 @@ public class Cloud {
             case "pwdel":
                 ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE).edit().remove("pw").apply();
                 return "ok";
+            case "localbackupconfigure":
+                configureLocalBackup(ctx, a);
+                return "ok";
+            case "localbackupstatus":
+                return localBackupStatus(ctx).toString();
+            case "localautoread":
+                return readLocalAutoBackup(ctx);
             case "drivekey": {
                 String key = getOrCreateDriveKey(a.getString("token"));
                 saveLocalSecret(ctx, "drive_key", key);
@@ -297,6 +304,90 @@ public class Cloud {
         }
     }
 
+    // ---------- scheduled encrypted local backup ----------
+    private static final String LOCAL_BACKUP_HEADER = "FZ-NOTES-ENCRYPTED-BACKUP-V1\\n";
+    private static final String LOCAL_BACKUP_FILE = "FZ-Notes-AutoBackup.fzenc";
+
+    static void configureLocalBackup(Context ctx, JSONObject a) throws Exception {
+        String interval = a.optString("interval", "off");
+        if (!"off".equals(interval) && !"daily".equals(interval) && !"monthly".equals(interval))
+            throw new Exception("Unknown local backup schedule");
+
+        WorkManager wm = WorkManager.getInstance(ctx.getApplicationContext());
+        SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
+        if ("off".equals(interval)) {
+            wm.cancelUniqueWork("fz_notes_local_backup");
+            prefs.edit().putString("interval", "off").remove("lastError").commit();
+            ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE).edit()
+                    .remove("local_backup_pw").apply();
+            return;
+        }
+
+        String pw = a.optString("pw", "");
+        if (pw.length() < 8) throw new Exception("Local backup password must be at least 8 characters");
+        saveLocalSecret(ctx, "local_backup_pw", pw);
+        if (!prefs.edit().putString("interval", interval).remove("lastError").commit())
+            throw new Exception("Local backup schedule could not be saved");
+
+        long days = "daily".equals(interval) ? 1L : 30L;
+        PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
+                LocalBackupWorker.class, days, TimeUnit.DAYS).build();
+        wm.enqueueUniquePeriodicWork("fz_notes_local_backup", ExistingPeriodicWorkPolicy.UPDATE, work);
+
+        // Create the first encrypted copy immediately; WorkManager handles later runs.
+        createScheduledLocalBackup(ctx);
+    }
+
+    static void createScheduledLocalBackup(Context ctx) throws Exception {
+        SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
+        String interval = prefs.getString("interval", "off");
+        if ("off".equals(interval)) return;
+
+        String data = ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE)
+                .getString("snapshot", "");
+        if (data == null || data.trim().isEmpty())
+            throw new Exception("No saved notes snapshot is available for local backup");
+        String pw = loadLocalSecret(ctx, "local_backup_pw");
+        if (pw.length() < 8) throw new Exception("Scheduled local backup password is unavailable");
+
+        byte[] encrypted = encrypt(data, pw);
+        String contents = LOCAL_BACKUP_HEADER + Base64.encodeToString(encrypted, Base64.NO_WRAP);
+        File target = new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE);
+        File temp = new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE + ".tmp");
+        try (FileOutputStream out = new FileOutputStream(temp, false)) {
+            out.write(contents.getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            out.getFD().sync();
+        }
+        if (target.exists() && !target.delete()) {
+            temp.delete();
+            throw new Exception("Previous automatic backup could not be replaced");
+        }
+        if (!temp.renameTo(target)) {
+            temp.delete();
+            throw new Exception("Automatic local backup could not be saved");
+        }
+        prefs.edit().putLong("lastSuccess", System.currentTimeMillis()).remove("lastError").commit();
+    }
+
+    static JSONObject localBackupStatus(Context ctx) throws Exception {
+        SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
+        JSONObject status = new JSONObject();
+        status.put("interval", prefs.getString("interval", "off"));
+        status.put("lastSuccess", prefs.getLong("lastSuccess", 0L));
+        status.put("lastError", prefs.getString("lastError", ""));
+        status.put("hasBackup", new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE).isFile());
+        return status;
+    }
+
+    static String readLocalAutoBackup(Context ctx) throws Exception {
+        File file = new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE);
+        if (!file.isFile()) throw new Exception("Automatic local backup abhi available nahi hai");
+        try (InputStream in = new FileInputStream(file)) {
+            return new String(readAll(in), StandardCharsets.UTF_8);
+        }
+    }
+
     // ---------- crypto ----------
     static SecretKeySpec key(String pw, byte[] salt) throws Exception {
         SecretKeyFactory f = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
@@ -379,6 +470,17 @@ public class Cloud {
         System.arraycopy(ct, 0, all, iv.length, ct.length);
         ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE).edit()
                 .putString(prefName, Base64.encodeToString(all, Base64.NO_WRAP)).apply();
+    }
+
+    static String loadLocalSecret(Context ctx, String prefName) throws Exception {
+        String value = ctx.getSharedPreferences("notes_sec", Context.MODE_PRIVATE)
+                .getString(prefName, null);
+        if (value == null || value.isEmpty()) return "";
+        byte[] all = Base64.decode(value, Base64.NO_WRAP);
+        if (all.length < 29) throw new Exception("Saved local backup secret is damaged");
+        Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+        c.init(Cipher.DECRYPT_MODE, ksKey(), new GCMParameterSpec(128, Arrays.copyOfRange(all, 0, 12)));
+        return new String(c.doFinal(Arrays.copyOfRange(all, 12, all.length)), StandardCharsets.UTF_8);
     }
 
     static String loadDriveKey(Context ctx) throws Exception {
