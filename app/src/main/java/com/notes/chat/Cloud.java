@@ -13,6 +13,7 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 
+import androidx.work.BackoffPolicy;
 import androidx.work.Constraints;
 import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.NetworkType;
@@ -416,7 +417,9 @@ public class Cloud {
             if ("daily".equals(interval) || "weekly".equals(interval) || "monthly".equals(interval)) {
                 long days = "daily".equals(interval) ? 1L : "weekly".equals(interval) ? 7L : 30L;
                 PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
-                        LocalBackupWorker.class, days, TimeUnit.DAYS).build();
+                        LocalBackupWorker.class, days, TimeUnit.DAYS)
+                        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30L, TimeUnit.SECONDS)
+                        .build();
                 wm.enqueueUniquePeriodicWork("fz_notes_local_backup", ExistingPeriodicWorkPolicy.UPDATE, work);
             }
             if ("dailyopen".equals(interval))
@@ -428,7 +431,9 @@ public class Cloud {
             if ("daily".equals(previousInterval) || "weekly".equals(previousInterval) || "monthly".equals(previousInterval)) {
                 long days = "daily".equals(previousInterval) ? 1L : "weekly".equals(previousInterval) ? 7L : 30L;
                 PeriodicWorkRequest previousWork = new PeriodicWorkRequest.Builder(
-                        LocalBackupWorker.class, days, TimeUnit.DAYS).build();
+                        LocalBackupWorker.class, days, TimeUnit.DAYS)
+                        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30L, TimeUnit.SECONDS)
+                        .build();
                 wm.enqueueUniquePeriodicWork("fz_notes_local_backup", ExistingPeriodicWorkPolicy.UPDATE, previousWork);
             }
             throw e;
@@ -662,7 +667,9 @@ public class Cloud {
         Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
         PeriodicWorkRequest work = new PeriodicWorkRequest.Builder(
                 TelegramBackupWorker.class, days, TimeUnit.DAYS)
-                .setConstraints(constraints).build();
+                .setConstraints(constraints)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30L, TimeUnit.SECONDS)
+                .build();
         wm.enqueueUniquePeriodicWork("fz_notes_telegram_backup", ExistingPeriodicWorkPolicy.UPDATE, work);
     }
 

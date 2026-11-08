@@ -40,6 +40,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebResourceResponse;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import androidx.recyclerview.widget.DefaultItemAnimator;
@@ -55,9 +56,14 @@ import com.google.android.gms.common.api.Scope;
 import com.google.android.gms.common.api.ApiException;
 import java.util.Collections;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends Activity {
 
@@ -71,6 +77,15 @@ public class MainActivity extends Activity {
     private int saveFileReplyId = -1;
     private int backupFolderReplyId = -1;
     private String pendingSaveText;
+    private static final int MAX_BRIDGE_JSON_CHARS = 48 * 1024 * 1024;
+    private final ThreadPoolExecutor ioExecutor = new ThreadPoolExecutor(
+            2, 2, 30L, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(8),
+            runnable -> {
+                Thread thread = new Thread(runnable, "FZNotes-IO");
+                thread.setDaemon(true);
+                return thread;
+            }, new ThreadPoolExecutor.AbortPolicy());
+    private volatile boolean activityDestroyed;
     private WebView web;
     private FrameLayout rootLayout;
     private FrameLayout nativeChatLayer;
@@ -94,6 +109,32 @@ public class MainActivity extends Activity {
     private Runnable appToastHideRunnable;
     private float lastInteractionY = -1f;
     private long lastInteractionAt = 0L;
+
+    private void submitIo(int callbackId, Runnable task) {
+        if (activityDestroyed) return;
+        try {
+            ioExecutor.execute(task);
+        } catch (RejectedExecutionException e) {
+            reply(callbackId, false, "Background tasks are busy. Please try again.");
+        }
+    }
+
+    private static boolean bridgeStringWithinLimit(String value, int maxChars) {
+        return value == null || value.length() <= maxChars;
+    }
+
+    private boolean isTrustedAppAssetUrl(Uri uri) {
+        if (uri == null || !"file".equalsIgnoreCase(uri.getScheme())) return false;
+        if (uri.getAuthority() != null && !uri.getAuthority().isEmpty()) return false;
+        String path = uri.getPath();
+        return path != null && path.startsWith("/android_asset/")
+                && !path.contains("/../") && !path.endsWith("/..") && !path.contains("\\");
+    }
+
+    private static WebResourceResponse blockedWebResource() {
+        return new WebResourceResponse("text/plain", "UTF-8",
+                new ByteArrayInputStream(new byte[0]));
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -303,18 +344,45 @@ public class MainActivity extends Activity {
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);   // notes are saved with localStorage
+        // Keep bundled assets available, but prevent file-origin pages from reading
+        // other file URLs or making universal cross-origin requests.
         s.setAllowFileAccess(true);
+        s.setAllowFileAccessFromFileURLs(false);
+        s.setAllowUniversalAccessFromFileURLs(false);
+        // Content URIs are required for images returned by Android's document picker.
         s.setAllowContentAccess(true);
+        s.setJavaScriptCanOpenWindowsAutomatically(false);
+        s.setSupportMultipleWindows(false);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
 
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri u = request.getUrl();
-                if ("file".equals(u.getScheme())) return false;
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, u)); // links open in browser
-                } catch (Exception ignored) { }
+                if (isTrustedAppAssetUrl(u)) return false;
+                String scheme = u == null ? "" : u.getScheme();
+                boolean externalLink = "https".equalsIgnoreCase(scheme)
+                        || "http".equalsIgnoreCase(scheme)
+                        || "mailto".equalsIgnoreCase(scheme)
+                        || "tel".equalsIgnoreCase(scheme);
+                if (request.isForMainFrame() && externalLink) {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, u));
+                    } catch (Exception ignored) { }
+                }
+                // Do not navigate this WebView or its frames to untrusted pages.
                 return true;
+            }
+
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                Uri u = request.getUrl();
+                String scheme = u == null ? "" : u.getScheme();
+                if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)
+                        || ("file".equalsIgnoreCase(scheme) && !isTrustedAppAssetUrl(u))) {
+                    return blockedWebResource();
+                }
+                return super.shouldInterceptRequest(view, request);
             }
         });
 
@@ -393,7 +461,7 @@ public class MainActivity extends Activity {
             fileReplyId = -1;
             if (resultCode == RESULT_OK && data != null && data.getData() != null) {
                 final Uri u = data.getData();
-                new Thread(() -> {
+                submitIo(id, () -> {
                     try (InputStream in = getContentResolver().openInputStream(u)) {
                         if (in == null) throw new IllegalStateException("Backup file open nahi hui");
                         String imported = new String(Cloud.readAll(in), StandardCharsets.UTF_8);
@@ -402,7 +470,7 @@ public class MainActivity extends Activity {
                         String message = e.getMessage();
                         reply(id, false, message == null ? "Backup file padh nahi paye" : "Backup file padh nahi paye: " + message);
                     }
-                }).start();
+                });
             } else {
                 reply(id, false, "Koi file nahi chuni");
             }
@@ -413,7 +481,7 @@ public class MainActivity extends Activity {
             pendingSaveText = null;
             if (resultCode == RESULT_OK && data != null && data.getData() != null) {
                 final Uri uri = data.getData();
-                new Thread(() -> {
+                submitIo(id, () -> {
                     try (OutputStream out = getContentResolver().openOutputStream(uri, "wt")) {
                         if (out == null) throw new IllegalStateException("Backup file nahi likh paye");
                         out.write((text == null ? "" : text).getBytes(StandardCharsets.UTF_8));
@@ -422,7 +490,7 @@ public class MainActivity extends Activity {
                     } catch (Exception e) {
                         reply(id, false, e.getMessage() == null ? "Backup save failed" : e.getMessage());
                     }
-                }).start();
+                });
             } else {
                 reply(id, false, "Backup save cancel hua");
             }
@@ -771,6 +839,8 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void showAppToast(final String message, final String type,
                                  final boolean preferTop, final int durationMs) {
+            if (!bridgeStringWithinLimit(message, 1000)
+                    || !bridgeStringWithinLimit(type, 32)) return;
             runOnUiThread(() -> showAppToastInternal(message, type, preferTop, durationMs));
         }
 
@@ -793,6 +863,10 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void flashNativeCode(final String noteId, final String kind, final int index, final String copiedText) {
+            if (noteId == null || noteId.length() > 128
+                    || !bridgeStringWithinLimit(kind, 32)
+                    || !bridgeStringWithinLimit(copiedText, 65536)
+                    || index < -1 || index > 100000) return;
             runOnUiThread(() -> {
                 if (nativeChatAdapter != null) {
                     nativeChatAdapter.flashInlineCode(noteId, kind, index, copiedText == null ? "" : copiedText);
@@ -802,6 +876,8 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void showNativeMessageMenu(final String id, final String json) {
+            if (!bridgeStringWithinLimit(id, 128)
+                    || !bridgeStringWithinLimit(json, 512 * 1024)) return;
             runOnUiThread(() -> showNativeMessageMenuInternal(id, json));
         }
 
@@ -812,6 +888,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void setNativeChatData(final String json) {
+            if (!bridgeStringWithinLimit(json, MAX_BRIDGE_JSON_CHARS)) return;
             runOnUiThread(() -> {
                 if (nativeChatAdapter == null || nativeChatView == null) return;
                 nativeChatAdapter.submitJson(json == null ? "{}" : json);
@@ -824,6 +901,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void setNativeSelectionIds(final String json) {
+            if (!bridgeStringWithinLimit(json, 2 * 1024 * 1024)) return;
             runOnUiThread(() -> {
                 if (nativeChatAdapter != null) nativeChatAdapter.setSelectedIdsJson(json == null ? "[]" : json);
             });
@@ -834,10 +912,10 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 if (nativeChatLayer == null || rootLayout == null) return;
                 float density = getResources().getDisplayMetrics().density;
-                int l = Math.max(0, Math.round(left * density));
-                int t = Math.max(0, Math.round(top * density));
-                int w = Math.max(0, Math.round(width * density));
-                int h = Math.max(0, Math.round(height * density));
+                int l = Math.round(Math.min(10000, Math.max(0, left)) * density);
+                int t = Math.round(Math.min(10000, Math.max(0, top)) * density);
+                int w = Math.round(Math.min(10000, Math.max(0, width)) * density);
+                int h = Math.round(Math.min(10000, Math.max(0, height)) * density);
                 nativeChatBoundsReady = w > 0 && h > 0;
                 // ResizeObserver can report the same bounds many times during toolbar/dialog
                 // transitions. Avoid forcing RecyclerView layout when its rectangle is unchanged.
@@ -869,18 +947,55 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void scrollNativeChatToId(final String id) {
+            if (id == null || id.length() > 128) return;
             runOnUiThread(() -> {
                 if (nativeChatAdapter != null && id != null) nativeChatAdapter.scrollToId(id);
             });
         }
 
+        private boolean isAllowedCloudOperation(String operation) {
+            switch (operation) {
+                case "backup":
+                case "drivehistory":
+                case "drivekey":
+                case "localbackupconfigure":
+                case "localbackupmanual":
+                case "localbackupopen":
+                case "localbackupstatus":
+                case "localdecrypt":
+                case "mirrorload":
+                case "mirrorsave":
+                case "restore":
+                case "tgchat":
+                case "tgconfigure":
+                case "tgdailyclaim":
+                case "tgdailycomplete":
+                case "tgdailyrelease":
+                case "tgsnapshot":
+                case "tgstatus":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         @JavascriptInterface
         public void run(final int id, final String op, final String args) {
+            if (id <= 0 || op == null || op.length() > 64) return;
+            if (!bridgeStringWithinLimit(args, MAX_BRIDGE_JSON_CHARS)) {
+                reply(id, false, "Bridge request is too large");
+                return;
+            }
             if ("clipboardwrite".equals(op)) {
+                if (!bridgeStringWithinLimit(args, 64 * 1024)) {
+                    reply(id, false, "Clipboard text is too long");
+                    return;
+                }
                 runOnUiThread(() -> {
                     try {
                         JSONObject payload = new JSONObject(args == null ? "{}" : args);
                         String text = payload.optString("text", "");
+                        if (text.length() > 32768) throw new IllegalArgumentException("Clipboard text is too long");
                         ClipboardManager clipboard =
                                 (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
                         if (clipboard == null) throw new IllegalStateException("Clipboard service unavailable");
@@ -904,7 +1019,9 @@ public class MainActivity extends Activity {
                             return;
                         }
                         CharSequence value = clipboard.getPrimaryClip().getItemAt(0).coerceToText(MainActivity.this);
-                        reply(id, true, value == null ? "" : value.toString());
+                        String text = value == null ? "" : value.toString();
+                        if (text.length() > 32768) text = text.substring(0, 32768);
+                        reply(id, true, text);
                     } catch (Exception e) {
                         reply(id, false, e.getMessage() == null ? "Clipboard read failed" : e.getMessage());
                     }
@@ -924,6 +1041,10 @@ public class MainActivity extends Activity {
                 return;
             }
             if ("reminder".equals(op)) {
+                if (!bridgeStringWithinLimit(args, 16 * 1024)) {
+                    reply(id, false, "Reminder request is too large");
+                    return;
+                }
                 runOnUiThread(() -> handleReminder(id, args));
                 return;
             }
@@ -964,14 +1085,19 @@ public class MainActivity extends Activity {
                 final String text;
                 final String filename;
                 try {
-                    JSONObject payload = new JSONObject(args);
+                    JSONObject payload = new JSONObject(args == null ? "{}" : args);
                     text = payload.optString("text", "");
                     filename = payload.optString("filename", "FZ-Notes-backup.fzenc");
+                    if (filename.isEmpty() || filename.length() > 120
+                            || filename.contains("/") || filename.contains("\\")
+                            || ".".equals(filename) || "..".equals(filename)) {
+                        throw new IllegalArgumentException("Backup filename invalid hai");
+                    }
                 } catch (Exception e) {
                     reply(id, false, "Backup data invalid hai");
                     return;
                 }
-                new Thread(() -> {
+                submitIo(id, () -> {
                     try {
                         String path = Cloud.saveLocalBackupFile(getApplicationContext(), filename, text);
                         reply(id, true, "Backup saved: " + path);
@@ -979,12 +1105,23 @@ public class MainActivity extends Activity {
                         String message = e.getMessage() == null ? "Backup save failed" : e.getMessage();
                         reply(id, false, message);
                     }
-                }).start();
+                });
                 return;
             }
-            new Thread(() -> {
+            if (!isAllowedCloudOperation(op)) {
+                reply(id, false, "Unsupported bridge operation");
+                return;
+            }
+            final JSONObject payload;
+            try {
+                payload = new JSONObject(args == null ? "{}" : args);
+            } catch (Exception e) {
+                reply(id, false, "Bridge request data invalid hai");
+                return;
+            }
+            submitIo(id, () -> {
                 try {
-                    String result = Cloud.handle(getApplicationContext(), op, new JSONObject(args));
+                    String result = Cloud.handle(getApplicationContext(), op, payload);
                     if ("drivekey".equals(op)) {
                         setDriveAuthDebug("Google authorization passed; Drive appData access succeeded.");
                     } else if ("drivehistory".equals(op)) {
@@ -999,7 +1136,7 @@ public class MainActivity extends Activity {
                     }
                     reply(id, false, message);
                 }
-            }).start();
+            });
         }
     }
 
@@ -1513,16 +1650,20 @@ public class MainActivity extends Activity {
     }
 
     private void reply(int id, boolean ok, String data) {
+        if (activityDestroyed) return;
         final String js = "window.onNative(" + id + "," + ok + "," + JSONObject.quote(data) + ")";
         runOnUiThread(() -> {
             WebView currentWeb = web;
-            if (currentWeb == null || isFinishing() || isDestroyed()) return;
+            if (activityDestroyed || currentWeb == null || isFinishing() || isDestroyed()) return;
             currentWeb.evaluateJavascript(js, null);
         });
     }
 
     @Override
     protected void onDestroy() {
+        activityDestroyed = true;
+        // Allow accepted I/O operations to finish cleanly; the executor queue is bounded.
+        ioExecutor.shutdown();
         if (filePicker != null) {
             filePicker.onReceiveValue(null);
             filePicker = null;

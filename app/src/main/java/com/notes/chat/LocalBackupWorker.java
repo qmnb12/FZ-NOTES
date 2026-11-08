@@ -24,7 +24,8 @@ public final class LocalBackupWorker extends Worker {
             if (message.length() > 240) message = message.substring(0, 240);
             ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE)
                     .edit().putString("lastError", message).apply();
-            return Result.retry();
+            return BackupRetryPolicy.shouldRetry(getRunAttemptCount(), e)
+                    ? Result.retry() : Result.failure();
         }
     }
 }
