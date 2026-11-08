@@ -35,10 +35,19 @@ final class BackupRetryPolicy {
             }
 
             String lower = message.toLowerCase(java.util.Locale.ROOT);
+            // Do not classify ordinary connectivity wording as a permanent setup error.
+            if (lower.contains("network is not available")
+                    || lower.contains("network unavailable")
+                    || lower.contains("network is unreachable")
+                    || lower.contains("connection reset")
+                    || lower.contains("connection refused")
+                    || lower.contains("timed out")) {
+                return true;
+            }
             if (lower.contains("permission denied") || lower.contains("access denied")
                     || lower.contains("no space left") || lower.contains("enospc")
                     || lower.contains("disk full") || lower.contains("read-only file system")
-                    || lower.contains("not configured") || lower.contains("not available")
+                    || lower.contains("not configured")
                     || lower.contains("invalid") || lower.contains("unauthorized")
                     || lower.contains("forbidden") || lower.contains("password")
                     || lower.contains("backup key")) {
