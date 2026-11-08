@@ -1916,7 +1916,7 @@ async function copy(t,feedback='Copied',flashTarget=null,nativeTarget=null){
  }
 }
 const KINDS=['mono','code','spoiler','mention','quote','date'];
-const AUTO_LINK_RE=/(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s<>"']*)?)/gi;
+const AUTO_LINK_RE=/(?:https?:\/\/[^\s<>"']+|www\.[^\s<>"']+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s<>"']*)?)/gi;
 function linkifyText(value){
  let out='',last=0;
  String(value||'').replace(AUTO_LINK_RE,(match,offset,source)=>{
