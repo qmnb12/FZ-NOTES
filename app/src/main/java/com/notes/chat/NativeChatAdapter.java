@@ -59,7 +59,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
-import java.util.concurrent.ExecutorService;
+import java.util.WeakHashMap;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -89,11 +90,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private final Listener listener;
     private final List<Note> items = new ArrayList<>();
     private final Set<String> selectedIds = new HashSet<>();
-    // Bound both decoded bitmap memory (5 MB) and pending image payloads (8 tasks).
-    // Discard the oldest queued request when scrolling quickly; newest visible images win.
-    private final ExecutorService imageExecutor = new ThreadPoolExecutor(
+    // Bound decoded bitmap memory (5 MB) and pending image payloads (8 tasks).
+    // Rejected requests are retried only while their ImageView is still bound and attached.
+    private final ThreadPoolExecutor imageExecutor = new ThreadPoolExecutor(
             2, 2, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>(8),
-            new ThreadPoolExecutor.DiscardOldestPolicy());
+            new ThreadPoolExecutor.AbortPolicy());
+    // Accessed only on the UI thread; prevents repeated binds from queuing duplicate decodes.
+    private final Map<ImageView, String> loadingImageViews = new WeakHashMap<>();
     private final LruCache<String, Bitmap> imageCache = new LruCache<String, Bitmap>(5 * 1024) {
         @Override protected int sizeOf(String key, Bitmap value) {
             return (int) Math.max(1L, (value.getByteCount() + 1023L) / 1024L);
@@ -124,6 +127,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     void attachRecyclerView(RecyclerView view) {
         recyclerView = view;
+    }
+
+    void dispose() {
+        recyclerView = null;
+        imageExecutor.shutdownNow();
+        imageCache.evictAll();
+        loadingImageViews.clear();
     }
 
     void submitJson(String json) {
@@ -795,6 +805,20 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         onBindViewHolder(holder, position);
     }
 
+    @Override public void onViewAttachedToWindow(Holder holder) {
+        super.onViewAttachedToWindow(holder);
+        if (holder.itemView instanceof NoteRow) {
+            ((NoteRow) holder.itemView).ensureImageLoaded();
+        }
+    }
+
+    @Override public void onViewRecycled(Holder holder) {
+        if (holder.itemView instanceof NoteRow) {
+            ((NoteRow) holder.itemView).recycleImage();
+        }
+        super.onViewRecycled(holder);
+    }
+
     private Bitmap bitmapFor(Note note) {
         if (TextUtils.isEmpty(note.image)) return null;
         return imageCache.get(imageKey(note));
@@ -809,6 +833,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         target.setTag(key);
         Bitmap cached = imageCache.get(key);
         if (cached != null) {
+            loadingImageViews.remove(target);
             target.setImageBitmap(cached);
             target.setVisibility(View.VISIBLE);
             return;
@@ -816,20 +841,58 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         target.setImageDrawable(null);
         target.setVisibility(View.GONE);
         final String data = note.image;
-        if (TextUtils.isEmpty(data)) return;
-        imageExecutor.execute(() -> {
-            Bitmap bitmap = decodeImage(data);
-            if (bitmap == null) return;
-            imageCache.put(key, bitmap);
-            if (target.getTag() != null && key.equals(target.getTag())) {
+        if (TextUtils.isEmpty(data)) {
+            loadingImageViews.remove(target);
+            return;
+        }
+        if (key.equals(loadingImageViews.get(target))) return;
+        loadingImageViews.put(target, key);
+        enqueueImageDecode(key, data, target, 0);
+    }
+
+    private void enqueueImageDecode(final String key, final String data,
+                                    final ImageView target, final int retryCount) {
+        if (imageExecutor.isShutdown()) {
+            clearImageLoadState(target, key);
+            return;
+        }
+        try {
+            imageExecutor.execute(() -> {
+                Bitmap bitmap = decodeImage(data);
+                if (bitmap != null && !imageExecutor.isShutdown()) {
+                    imageCache.put(key, bitmap);
+                }
+                // View state is checked and changed only on the main thread.
                 target.post(() -> {
-                    if (target.getTag() != null && key.equals(target.getTag())) {
+                    clearImageLoadState(target, key);
+                    if (bitmap != null && !imageExecutor.isShutdown()
+                            && key.equals(target.getTag())) {
                         target.setImageBitmap(bitmap);
                         target.setVisibility(View.VISIBLE);
                     }
                 });
+            });
+        } catch (RejectedExecutionException rejected) {
+            // Keep the queue bounded without silently losing a still-visible image.
+            if (retryCount >= 40 || imageExecutor.isShutdown()) {
+                clearImageLoadState(target, key);
+                return;
             }
-        });
+            target.postDelayed(() -> {
+                if (imageExecutor.isShutdown() || !key.equals(target.getTag())
+                        || !target.isAttachedToWindow()) {
+                    clearImageLoadState(target, key);
+                    return;
+                }
+                enqueueImageDecode(key, data, target, retryCount + 1);
+            }, 250L);
+        }
+    }
+
+    private void clearImageLoadState(ImageView target, String key) {
+        if (key.equals(loadingImageViews.get(target))) {
+            loadingImageViews.remove(target);
+        }
     }
 
     private Bitmap decodeImage(String data) {
@@ -1108,6 +1171,22 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             return -1;
         }
 
+        void ensureImageLoaded() {
+            if (TextUtils.isEmpty(boundId) || imageView.getVisibility() == VISIBLE) return;
+            int position = indexOf(boundId);
+            if (position >= 0 && !TextUtils.isEmpty(items.get(position).image)) {
+                loadImage(items.get(position), imageView);
+            }
+        }
+
+        void recycleImage() {
+            Object tag = imageView.getTag();
+            if (tag instanceof String) clearImageLoadState(imageView, (String) tag);
+            imageView.setTag(null);
+            imageView.setImageDrawable(null);
+            imageView.setVisibility(GONE);
+        }
+
         void bind(Note note, boolean selected, boolean selectionMode, boolean light, boolean topics,
                   String previousDate, Listener listener, Bitmap cachedBitmap, boolean searchHighlighted) {
             if (selectionAnimator != null) {
@@ -1152,9 +1231,17 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
             if (!TextUtils.isEmpty(note.image)) {
                 imageView.setVisibility(VISIBLE);
-                if (cachedBitmap != null) imageView.setImageBitmap(cachedBitmap); else loadImage(note, imageView);
+                if (cachedBitmap != null) {
+                    // Invalidate any decode started for the previous row before showing this bitmap.
+                    imageView.setTag(imageKey(note));
+                    loadingImageViews.remove(imageView);
+                    imageView.setImageBitmap(cachedBitmap);
+                } else {
+                    loadImage(note, imageView);
+                }
             } else {
                 imageView.setTag(null);
+                loadingImageViews.remove(imageView);
                 imageView.setImageDrawable(null);
                 imageView.setVisibility(GONE);
             }

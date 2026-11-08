@@ -973,7 +973,7 @@ public class MainActivity extends Activity {
                 }
                 new Thread(() -> {
                     try {
-                        String path = Cloud.saveLocalBackupFile(MainActivity.this, filename, text);
+                        String path = Cloud.saveLocalBackupFile(getApplicationContext(), filename, text);
                         reply(id, true, "Backup saved: " + path);
                     } catch (Exception e) {
                         String message = e.getMessage() == null ? "Backup save failed" : e.getMessage();
@@ -984,7 +984,7 @@ public class MainActivity extends Activity {
             }
             new Thread(() -> {
                 try {
-                    String result = Cloud.handle(MainActivity.this, op, new JSONObject(args));
+                    String result = Cloud.handle(getApplicationContext(), op, new JSONObject(args));
                     if ("drivekey".equals(op)) {
                         setDriveAuthDebug("Google authorization passed; Drive appData access succeeded.");
                     } else if ("drivehistory".equals(op)) {
@@ -1514,6 +1514,40 @@ public class MainActivity extends Activity {
 
     private void reply(int id, boolean ok, String data) {
         final String js = "window.onNative(" + id + "," + ok + "," + JSONObject.quote(data) + ")";
-        runOnUiThread(() -> web.evaluateJavascript(js, null));
+        runOnUiThread(() -> {
+            WebView currentWeb = web;
+            if (currentWeb == null || isFinishing() || isDestroyed()) return;
+            currentWeb.evaluateJavascript(js, null);
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (filePicker != null) {
+            filePicker.onReceiveValue(null);
+            filePicker = null;
+        }
+        if (appToastCard != null) {
+            if (appToastHideRunnable != null) {
+                appToastCard.removeCallbacks(appToastHideRunnable);
+                appToastHideRunnable = null;
+            }
+            appToastCard.animate().cancel();
+        }
+        dismissNativeMessagePopupImmediately();
+        if (nativeChatView != null) nativeChatView.setAdapter(null);
+        if (nativeChatAdapter != null) {
+            nativeChatAdapter.dispose();
+            nativeChatAdapter = null;
+        }
+        if (web != null) {
+            web.removeJavascriptInterface("Android");
+            web.stopLoading();
+            if (rootLayout != null) rootLayout.removeView(web);
+            web.removeAllViews();
+            web.destroy();
+            web = null;
+        }
+        super.onDestroy();
     }
 }
