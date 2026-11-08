@@ -76,6 +76,7 @@ header b{display:block;font-size:16px}header small{color:var(--mut)}
 .theme-custom-reset{margin-right:auto!important}
 
 #chat .msgtext{font-size:var(--msg-size,16px)!important}
+ #chat .msgtext a{color:var(--accent,#68a9ff)!important;text-decoration:underline!important;text-decoration-thickness:1px;text-underline-offset:2px;overflow-wrap:anywhere;cursor:pointer}
 .theme-customizer{padding:10px 16px 15px;display:flex;flex-direction:column;gap:14px}
 .theme-control{display:flex;flex-direction:column;gap:7px}
 .theme-control-label{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--text);font-size:14px;font-weight:650}
@@ -1915,19 +1916,37 @@ async function copy(t,feedback='Copied',flashTarget=null,nativeTarget=null){
  }
 }
 const KINDS=['mono','code','spoiler','mention','quote','date'];
-function clean(n){let o='';n.childNodes.forEach(c=>{
- if(c.nodeType===3){o+=esc(c.nodeValue);return}
+const AUTO_LINK_RE=/(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s<>"']*)?)/gi;
+function linkifyText(value){
+ let out='',last=0;
+ String(value||'').replace(AUTO_LINK_RE,(match,offset,source)=>{
+  out+=esc(source.slice(last,offset));
+  let url=match,trailing='';
+  while(/[.,!?;:)\]}]$/.test(url)){trailing=url.slice(-1)+trailing;url=url.slice(0,-1)}
+  if(url){
+   const href=/^https?:\/\//i.test(url)?url:'https://'+url;
+   out+='<a href="'+esc(href)+'">'+esc(url)+'</a>'+esc(trailing);
+  }else out+=esc(match);
+  last=offset+match.length;
+  return match;
+ });
+ return out+esc(String(value||'').slice(last));
+}
+function clean(n,autoLinks=true){let o='';n.childNodes.forEach(c=>{
+ if(c.nodeType===3){o+=(autoLinks?linkifyText(c.nodeValue):esc(c.nodeValue));return}
  if(c.nodeType!==1)return;
  const t=c.tagName;
- if(t==='DIV'||t==='P'){o+=(o?'<br>':'')+clean(c);return}
+ if(t==='DIV'||t==='P'){o+=(o?'<br>':'')+clean(c,autoLinks);return}
  if(t==='BR'){o+='<br>';return}
- const x=clean(c);
+ const kind=KINDS.find(k=>c.classList.contains(k));
+ const literal=t==='CODE'||(t==='SPAN'&&(kind==='mono'||kind==='code'));
+ const x=clean(c,autoLinks&&!literal&&t!=='A');
  if(t==='B'||t==='STRONG')o+='<b>'+x+'</b>';
  else if(t==='I'||t==='EM')o+='<i>'+x+'</i>';
  else if(t==='U')o+='<u>'+x+'</u>';
  else if(t==='S'||t==='STRIKE'||t==='DEL')o+='<s>'+x+'</s>';
- else if(t==='A'){const h=c.getAttribute('href')||'';o+=/^(https?:|mailto:|tel:)/i.test(h)?'<a href="'+esc(h)+'" target="_blank" rel="noopener">'+x+'</a>':x}
- else if(t==='SPAN'||t==='CODE'){const k=KINDS.find(k=>c.classList.contains(k));o+=k?'<span class="'+k+'">'+x+'</span>':x}
+ else if(t==='A'){const h=c.getAttribute('href')||'';o+=/^(https?:|mailto:|tel:)/i.test(h)?'<a href="'+esc(h)+'">'+x+'</a>':x}
+ else if(t==='SPAN'||t==='CODE'){o+=kind?'<span class="'+kind+'">'+x+'</span>':x}
  else o+=x});return o}
 function sanitizeStoredMessages(items){
  if(!Array.isArray(items))return;
