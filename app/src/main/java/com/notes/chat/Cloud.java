@@ -324,6 +324,8 @@ public class Cloud {
     private static final String LOCAL_BACKUP_FILE = "FZ-Notes-AutoBackup.fzenc"; // legacy private copy
     private static final String LOCAL_BACKUP_PATH = "Documents/FZ NOTES/Backups/";
     private static final String LOCAL_AUTO_PREFIX = "FZ-Notes-AutoBackup-";
+    // Keep three recoverable automatic snapshots: newest, previous and one older copy.
+    private static final int MAX_AUTOMATIC_LOCAL_BACKUPS = 3;
 
     static String saveLocalBackupFile(Context ctx, String filename, String contents) throws Exception {
         if (filename == null || filename.trim().isEmpty()) filename = "FZ-Notes-backup.fzenc";
@@ -372,6 +374,68 @@ public class Cloud {
             if (cursor.moveToFirst()) return ContentUris.withAppendedId(base, cursor.getLong(0));
         } finally { cursor.close(); }
         return null;
+    } 
+    /**
+     * Remove only app-created automatic local snapshots beyond the newest three.
+     * Manual .fzenc files and all cloud/Telegram data are deliberately excluded.
+     * A failed delete is reported instead of silently claiming that retention succeeded.
+     */
+    private static void pruneAutomaticLocalBackups(Context ctx) throws Exception {
+        ContentResolver resolver = ctx.getContentResolver();
+        Uri base = MediaStore.Files.getContentUri("external");
+        String selection = MediaStore.MediaColumns.RELATIVE_PATH + "=? AND "
+                + MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ? AND "
+                + MediaStore.MediaColumns.IS_PENDING + "=0";
+        String[] selectionArgs = new String[]{
+                LOCAL_BACKUP_PATH, LOCAL_AUTO_PREFIX + "%.fzenc"
+        };
+
+        java.util.List<Uri> obsolete = new java.util.ArrayList<>();
+        Cursor cursor = resolver.query(base,
+                new String[]{MediaStore.MediaColumns._ID},
+                selection, selectionArgs,
+                MediaStore.MediaColumns.DATE_ADDED + " DESC, "
+                        + MediaStore.MediaColumns._ID + " DESC");
+        if (cursor == null) {
+            throw new Exception("Automatic backup list could not be read for cleanup");
+        }
+        try {
+            int idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID);
+            int position = 0;
+            while (cursor.moveToNext()) {
+                long id = cursor.getLong(idColumn);
+                if (position++ >= MAX_AUTOMATIC_LOCAL_BACKUPS) {
+                    obsolete.add(ContentUris.withAppendedId(base, id));
+                }
+            }
+        } finally {
+            cursor.close();
+        }
+
+        for (Uri oldBackup : obsolete) {
+            int deleted = resolver.delete(oldBackup, null, null);
+            if (deleted == 0) {
+                // A concurrently removed item is fine; a still-existing item is not.
+                try (Cursor remaining = resolver.query(oldBackup,
+                        new String[]{MediaStore.MediaColumns._ID}, null, null, null)) {
+                    if (remaining != null && remaining.moveToFirst()) {
+                        throw new Exception("An older automatic backup could not be deleted");
+                    }
+                }
+            }
+        }
+
+        // Verify the cap after deleting; do not silently ignore a MediaStore refusal.
+        try (Cursor remaining = resolver.query(base,
+                new String[]{MediaStore.MediaColumns._ID},
+                selection, selectionArgs, null)) {
+            if (remaining == null) {
+                throw new Exception("Automatic backup cleanup could not be verified");
+            }
+            if (remaining.getCount() > MAX_AUTOMATIC_LOCAL_BACKUPS) {
+                throw new Exception("More than three automatic backups remain; cleanup was incomplete");
+            }
+        }
     }
 
     private static int localBackupCount(Context ctx) {
@@ -440,7 +504,7 @@ public class Cloud {
         }
     }
 
-    static void createScheduledLocalBackup(Context ctx) throws Exception {
+    static synchronized void createScheduledLocalBackup(Context ctx) throws Exception {
         SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
         String interval = prefs.getString("interval", "manual");
         if ("manual".equals(interval) || "never".equals(interval) || "off".equals(interval)) return;
@@ -451,10 +515,26 @@ public class Cloud {
         if (pw.length() < 8) throw new Exception("Scheduled local backup password is unavailable");
         String contents = LOCAL_BACKUP_HEADER
                 + Base64.encodeToString(encrypt(data, pw), Base64.NO_WRAP);
-        String filename = LOCAL_AUTO_PREFIX + localBackupStamp() + ".fzenc";
+        String filename = LOCAL_AUTO_PREFIX + localCalendarTimestamp() + ".fzenc";
+        // Save and finalize the new encrypted file before deleting any older copy.
         saveLocalBackupFile(ctx, filename, contents);
         prefs.edit().putLong("lastSuccess", System.currentTimeMillis())
-                .putString("lastFileName", filename).remove("lastError").commit();
+                .putString("lastFileName", filename).remove("lastError").apply();
+        try {
+            pruneAutomaticLocalBackups(ctx);
+            prefs.edit().remove("lastError").apply();
+        } catch (Exception cleanupError) {
+            String message = cleanupError.getMessage() == null
+                    ? "Automatic backup saved, but old backup cleanup failed"
+                    : "Automatic backup saved, but cleanup failed: " + cleanupError.getMessage();
+            prefs.edit().putString("lastError", message).apply();
+            throw new Exception(message, cleanupError);
+        }
+    }
+
+    private static String localCalendarTimestamp() {
+        return new java.text.SimpleDateFormat("yyyyMMdd-HHmmss-SSS", java.util.Locale.US)
+                .format(new java.util.Date());
     }
 
     static void createLocalBackupOnAppOpen(Context ctx) throws Exception {
