@@ -1938,6 +1938,10 @@ function sanitizeStoredMessages(items){
    holder.innerHTML=m.h;
    m.h=clean(holder);
   }else m.h='';
+  if(m.r!==undefined&&m.r!==null){
+   const replyRef=String(m.r);
+   m.r=/^[0-9]{1,20}$/.test(replyRef)?m.r:null;
+  }
   if(m.i!==undefined&&m.i!==null){
    const image=String(m.i);
    const validImage=/^data:image[/](?:png|jpe?g|gif|webp|bmp|heic|heif);base64,[a-z0-9+/=]+$/i.test(image);
