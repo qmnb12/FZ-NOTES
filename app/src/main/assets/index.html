@@ -1929,6 +1929,24 @@ function clean(n){let o='';n.childNodes.forEach(c=>{
  else if(t==='A'){const h=c.getAttribute('href')||'';o+=/^(https?:|mailto:|tel:)/i.test(h)?'<a href="'+esc(h)+'" target="_blank" rel="noopener">'+x+'</a>':x}
  else if(t==='SPAN'||t==='CODE'){const k=KINDS.find(k=>c.classList.contains(k));o+=k?'<span class="'+k+'">'+x+'</span>':x}
  else o+=x});return o}
+function sanitizeStoredMessages(items){
+ if(!Array.isArray(items))return;
+ items.forEach(m=>{
+  if(!m||typeof m!=='object')return;
+  if(typeof m.h==='string'){
+   const holder=document.createElement('div');
+   holder.innerHTML=m.h;
+   m.h=clean(holder);
+  }else m.h='';
+  if(m.i!==undefined&&m.i!==null){
+   const image=String(m.i);
+   const validImage=/^data:image\\/(?:png|jpe?g|gif|webp|bmp|heic|heif);base64,[a-z0-9+/=]+$/i.test(image);
+   m.i=validImage&&image.length<=48*1024*1024?image:'';
+  }
+ });
+}
+// Local storage and imported backup content are data, never trusted HTML.
+sanitizeStoredMessages(msgs);
 const nativeImagePayloadCache=new Map();
 function hasNativeChat(){return !!(window.Android&&typeof window.Android.setNativeChatData==='function')}
 function syncNativeSelection(){try{if(hasNativeChat()&&typeof window.Android.setNativeSelectionIds==='function')window.Android.setNativeSelectionIds(JSON.stringify([...sel].map(String)))}catch(_){}}
@@ -3656,6 +3674,7 @@ function applyFile(t,password){
  if(d.format&&d.format!=='FZ-NOTES-BACKUP')return false;
  if(!d.msgs.every(m=>m&&typeof m==='object'&&m.id!==undefined&&typeof m.h==='string'))return false;
  if(!d.topics.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))return false;
+ sanitizeStoredMessages(d.msgs);
  msgs=d.msgs;topics=d.topics;cur='all';hiddenUnlocked=false;save();saveT();render();
  if(d.telegramSettings&&typeof restoreTelegramSettingsFromBackup==='function')restoreTelegramSettingsFromBackup(d.telegramSettings);
  if(d.localBackupSettings&&typeof d.localBackupSettings.schedule==='string'){
