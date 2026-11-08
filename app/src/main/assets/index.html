@@ -1940,7 +1940,7 @@ function sanitizeStoredMessages(items){
   }else m.h='';
   if(m.i!==undefined&&m.i!==null){
    const image=String(m.i);
-   const validImage=/^data:image\\/(?:png|jpe?g|gif|webp|bmp|heic|heif);base64,[a-z0-9+/=]+$/i.test(image);
+   const validImage=/^data:image[/](?:png|jpe?g|gif|webp|bmp|heic|heif);base64,[a-z0-9+/=]+$/i.test(image);
    m.i=validImage&&image.length<=48*1024*1024?image:'';
   }
  });
