@@ -1920,6 +1920,12 @@ const AUTO_LINK_RE=/(?:https?:\/\/[^\s<>"']+|www\.[^\s<>"']+|(?:[a-z0-9](?:[a-z0
 function linkifyText(value){
  let out='',last=0;
  String(value||'').replace(AUTO_LINK_RE,(match,offset,source)=>{
+  const previous=source.charAt(offset-1);
+  if(previous&&/[a-z0-9@._-]/i.test(previous)){
+   out+=esc(source.slice(last,offset+match.length));
+   last=offset+match.length;
+   return match;
+  }
   out+=esc(source.slice(last,offset));
   let url=match,trailing='';
   while(/[.,!?;:)\]}]$/.test(url)){trailing=url.slice(-1)+trailing;url=url.slice(0,-1)}
