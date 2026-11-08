@@ -60,7 +60,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Native, recycled rendering for the FZ NOTES message timeline.
@@ -87,9 +89,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private final Listener listener;
     private final List<Note> items = new ArrayList<>();
     private final Set<String> selectedIds = new HashSet<>();
-    // Keep only 5 MB of decoded images; sizeOf() and LruCache both use KB units.
-    // Two decode workers avoid large simultaneous bitmap allocations on mid-range devices.
-    private final ExecutorService imageExecutor = Executors.newFixedThreadPool(2);
+    // Bound both decoded bitmap memory (5 MB) and pending image payloads (8 tasks).
+    // Discard the oldest queued request when scrolling quickly; newest visible images win.
+    private final ExecutorService imageExecutor = new ThreadPoolExecutor(
+            2, 2, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>(8),
+            new ThreadPoolExecutor.DiscardOldestPolicy());
     private final LruCache<String, Bitmap> imageCache = new LruCache<String, Bitmap>(5 * 1024) {
         @Override protected int sizeOf(String key, Bitmap value) {
             return (int) Math.max(1L, (value.getByteCount() + 1023L) / 1024L);
@@ -836,6 +840,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             BitmapFactory.Options bounds = new BitmapFactory.Options();
             bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
             int sample = 1;
             int max = Math.max(bounds.outWidth, bounds.outHeight);
             while (max / sample > 1600) sample *= 2;
@@ -843,6 +848,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             options.inSampleSize = sample;
             options.inPreferredConfig = Bitmap.Config.RGB_565;
             return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+        } catch (OutOfMemoryError ignored) {
+            return null;
         } catch (Exception ignored) {
             return null;
         }
