@@ -817,15 +817,8 @@ public class MainActivity extends Activity {
                 nativeChatAdapter.submitJson(json == null ? "{}" : json);
                 boolean empty = nativeChatAdapter.getItemCount() == 0;
                 nativeEmptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
-                boolean light = false;
-                int emptyTextColor = Color.rgb(147, 164, 184);
-                try {
-                    JSONObject root = new JSONObject(json);
-                    light = "light".equals(root.optString("theme", "dark"));
-                    emptyTextColor = paletteColor(root.optJSONObject("palette"), "mut",
-                            light ? Color.rgb(99, 113, 137) : Color.rgb(147, 164, 184));
-                } catch (Exception ignored) { }
-                nativeEmptyView.setTextColor(emptyTextColor);
+                // submitJson() has already parsed this large payload; reuse its resolved theme color.
+                nativeEmptyView.setTextColor(nativeChatAdapter.getThemeMutedColor());
             });
         }
 

@@ -87,10 +87,12 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private final Listener listener;
     private final List<Note> items = new ArrayList<>();
     private final Set<String> selectedIds = new HashSet<>();
+    // Keep only 5 MB of decoded images; sizeOf() and LruCache both use KB units.
+    // Two decode workers avoid large simultaneous bitmap allocations on mid-range devices.
     private final ExecutorService imageExecutor = Executors.newFixedThreadPool(2);
-    private final LruCache<String, Bitmap> imageCache = new LruCache<String, Bitmap>(16 * 1024) {
+    private final LruCache<String, Bitmap> imageCache = new LruCache<String, Bitmap>(5 * 1024) {
         @Override protected int sizeOf(String key, Bitmap value) {
-            return Math.max(1, value.getByteCount() / 1024);
+            return (int) Math.max(1L, (value.getByteCount() + 1023L) / 1024L);
         }
     };
     private RecyclerView recyclerView;
@@ -756,6 +758,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         for (int i = 0; i < id.length(); i++) hash = 31 * hash + id.charAt(i);
         return hash;
     }
+
+    int getThemeMutedColor() { return themeMuted; }
 
     @Override public int getItemCount() { return items.size(); }
 

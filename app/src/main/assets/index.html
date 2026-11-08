@@ -1986,7 +1986,7 @@ function render(forceScrollToLatest=false){syncHiddenCredentialLifecycle();if(cu
  searchResultResetPending=false;
  updateSearchNavigation();
  if(hasNativeChat()){
-  chat.innerHTML='';
+  while(chat.firstChild)chat.removeChild(chat.firstChild);
   const visibleIds=new Set(list.map(m=>String(m.id)));
   [...nativeImagePayloadCache.keys()].forEach(id=>{if(!visibleIds.has(id))nativeImagePayloadCache.delete(id)});
   const items=list.map(m=>{
