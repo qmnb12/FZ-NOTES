@@ -1758,9 +1758,9 @@ try{const last=localStorage.getItem('notes-last-topic');if(last&&(last==='all'||
 let undoStack=[],redoStack=[],lastSnapshot='';
 const snapshot=()=>JSON.stringify({msgs,topics});
 function rememberChange(){const now=snapshot();if(lastSnapshot&&now!==lastSnapshot){undoStack.push(lastSnapshot);if(undoStack.length>60)undoStack.shift();redoStack=[]}lastSnapshot=now}
-function persistSnapshot(){try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){toast('Storage full')}mirror();scheduleAutoBackup()}
-const saveT=()=>{rememberChange();try{localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){}mirror();scheduleAutoBackup()};
-const save=()=>{rememberChange();try{localStorage.setItem('notes-chat',JSON.stringify(msgs))}catch(e){toast('Storage full')}mirror();scheduleAutoBackup()};
+function persistSnapshot(){try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){toast('Storage full')}persistBackupSnapshot();scheduleAutoBackup()}
+const saveT=()=>{rememberChange();try{localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){}persistBackupSnapshot();scheduleAutoBackup()};
+const save=()=>{rememberChange();try{localStorage.setItem('notes-chat',JSON.stringify(msgs))}catch(e){toast('Storage full')}persistBackupSnapshot();scheduleAutoBackup()};
 function restoreHistoryState(raw){try{const d=JSON.parse(raw);if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics))return false;msgs=d.msgs;topics=d.topics;lastSnapshot=snapshot();persistSnapshot();cur='all';hiddenUnlocked=false;render();return true}catch(e){return false}}
 function undoChange(){if(!undoStack.length){toast('Undo ke liye kuch nahi hai');return}redoStack.push(snapshot());const prev=undoStack.pop();if(!restoreHistoryState(prev))toast('Undo nahi ho saka');else toast('Undo ho gaya')}
 function redoChange(){if(!redoStack.length){toast('Redo ke liye kuch nahi hai');return}undoStack.push(snapshot());const next=redoStack.pop();if(!restoreHistoryState(next))toast('Redo nahi ho saka');else toast('Redo ho gaya')}
@@ -3260,7 +3260,7 @@ function applyCloudRestore(raw){
   suppressAutoBackup=true;msgs=d.msgs;topics=d.topics;cur='all';hiddenUnlocked=false;lastSnapshot=snapshot();undoStack=[];redoStack=[];
   try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics));localStorage.setItem('notes-last-backup',noteStamp())}catch(_){}
   if(d.telegramSettings)restoreTelegramSettingsFromBackup(d.telegramSettings);
-  hadLocalNotesState=true;mirror();render();suppressAutoBackup=false;return true;
+  hadLocalNotesState=true;persistBackupSnapshot();render();suppressAutoBackup=false;return true;
  }
  suppressAutoBackup=false;toast('Backup data format valid nahi hai');return false;
 }
@@ -3810,17 +3810,11 @@ const ckHtml=m=>m.c?'<div class="cnt">'+cntText(m)+'</div><div class="ck">'+m.c.
 $('#fab').onclick=()=>{$('#qk').classList.add('on');$('#qkt').value='';focusWithKeyboard($('#qkt'))};
 $('#qkx').onclick=()=>$('#qk').classList.remove('on');
 $('#qks').onclick=()=>{const t=$('#qkt').value.trim();if(!t)return;msgs.push({id:Date.now(),t:Date.now(),h:esc(t).replace(/\n/g,'<br>'),k:'quick'});save();$('#qk').classList.remove('on');toast('⚡ Quick me save hua');render()};
-let mt;
-function mirror(){
+function persistBackupSnapshot(){
  if(!window.Android)return;
- // Persist the latest encrypted-backup snapshot immediately so a scheduled worker
- // never depends on the delayed legacy mirror write.
- native('tgsnapshot',{data:backupPayload()}).catch(e=>{try{localStorage.setItem('notes-local-backup-snapshot-error',e.message||'Snapshot update failed')}catch(_){}});
- clearTimeout(mt);
- mt=setTimeout(()=>{
-  const text=JSON.stringify({msgs,topics});
-  native('mirrorsave',{text}).catch(()=>{});
- },900);
+ native('tgsnapshot',{data:backupPayload()}).catch(e=>{
+  try{localStorage.setItem('notes-local-backup-snapshot-error',e.message||'Snapshot update failed')}catch(_){}
+ });
 }
 const LOCAL_BACKUP_HEADER='FZ-NOTES-ENCRYPTED-BACKUP-V1\n';
 let pendingLocalBackupPassword='',pendingLocalEncryptedBackup='',pendingLocalBackupInterval='off';
@@ -3955,9 +3949,6 @@ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLower
 if(window.Android)native('tgstatus',{}).then(v=>{const n=Number(v);if(n>0){try{localStorage.setItem('notes-last-telegram-backup',new Date(n).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}))}catch(_){}}}).catch(()=>{});
 (async()=>{
  if(!window.Android)return;
- if(!msgs.length&&topics.length<=1&&topics[0].name==='General'){
-  try{const t=await native('mirrorload',{});if(t&&applyFile(t))toast('Phone storage se data wapas aaya',3000)}catch(e){}
- }
  await native('tgsnapshot',{data:backupPayload()}).catch(()=>{});
  await native('localbackupopen',{}).catch(e=>toast('Local backup: '+e.message,3500));
  if(cfgGet().driveOn)await startupCloudSync();

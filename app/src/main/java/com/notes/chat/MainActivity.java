@@ -963,8 +963,6 @@ public class MainActivity extends Activity {
                 case "localbackupopen":
                 case "localbackupstatus":
                 case "localdecrypt":
-                case "mirrorload":
-                case "mirrorsave":
                 case "restore":
                 case "tgchat":
                 case "tgconfigure":

@@ -71,11 +71,6 @@ public class Cloud {
                 return "ok";
             case "pwget":
                 return loadPassword(ctx);
-            case "mirrorsave":
-                mirrorSave(ctx, a.getString("text"));
-                return "ok";
-            case "mirrorload":
-                return mirrorLoad(ctx);
             case "localencrypt": {
                 String pw = a.getString("pw");
                 if (pw.length() < 8) throw new Exception("Backup password must be at least 8 characters");
@@ -280,45 +275,6 @@ public class Cloud {
         return new String(c.doFinal(Arrays.copyOfRange(all, 12, all.length)), StandardCharsets.UTF_8);
     }
 
-    // ---------- auto copy in phone storage: Documents/NotesChat/notes-mirror.json ----------
-    static Uri mirrorUri(Context ctx) {
-        Uri base = MediaStore.Files.getContentUri("external");
-        Cursor c = ctx.getContentResolver().query(base, new String[]{MediaStore.MediaColumns._ID},
-                MediaStore.MediaColumns.DISPLAY_NAME + "=? AND " + MediaStore.MediaColumns.RELATIVE_PATH + " LIKE ?",
-                new String[]{"notes-mirror.json", "Documents/NotesChat%"}, null);
-        if (c == null) return null;
-        try {
-            if (c.moveToFirst()) return ContentUris.withAppendedId(base, c.getLong(0));
-        } finally {
-            c.close();
-        }
-        return null;
-    }
-
-    static void mirrorSave(Context ctx, String text) throws Exception {
-        ContentResolver r = ctx.getContentResolver();
-        Uri uri = mirrorUri(ctx);
-        if (uri == null) {
-            ContentValues v = new ContentValues();
-            v.put(MediaStore.MediaColumns.DISPLAY_NAME, "notes-mirror.json");
-            v.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
-            v.put(MediaStore.MediaColumns.RELATIVE_PATH, "Documents/NotesChat");
-            uri = r.insert(MediaStore.Files.getContentUri("external"), v);
-        }
-        if (uri == null) throw new Exception("Storage me file nahi ban payi");
-        try (OutputStream o = r.openOutputStream(uri, "wt")) {
-            o.write(text.getBytes(StandardCharsets.UTF_8));
-        }
-    }
-
-    static String mirrorLoad(Context ctx) throws Exception {
-        Uri uri = mirrorUri(ctx);
-        if (uri == null) return "";
-        try (InputStream in = ctx.getContentResolver().openInputStream(uri)) {
-            return new String(readAll(in), StandardCharsets.UTF_8);
-        }
-    }
-
     // ---------- encrypted local backups in Documents/FZ NOTES/Backups ----------
     private static final String LOCAL_BACKUP_HEADER = "FZ-NOTES-ENCRYPTED-BACKUP-V1\n";
     private static final String LOCAL_BACKUP_FILE = "FZ-Notes-AutoBackup.fzenc"; // legacy private copy
@@ -326,6 +282,23 @@ public class Cloud {
     private static final String LOCAL_AUTO_PREFIX = "FZ-Notes-AutoBackup-";
     // Keep three recoverable automatic snapshots: newest, previous and one older copy.
     private static final int MAX_AUTOMATIC_LOCAL_BACKUPS = 3;
+
+    /**
+     * Remove only the old plaintext mirror created by earlier app versions.
+     * Keep this migration cleanup scoped to the legacy folder and mirror filename
+     * so unrelated user documents are never touched.
+     */
+    private static void deleteLegacyPlaintextMirror(Context ctx) {
+        try {
+            Uri files = MediaStore.Files.getContentUri("external");
+            ctx.getContentResolver().delete(files,
+                    MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ? AND "
+                            + MediaStore.MediaColumns.RELATIVE_PATH + " LIKE ?",
+                    new String[]{"notes-mirror%.json", "Documents/NotesChat%"});
+        } catch (Exception ignored) {
+            // Cleanup must never block app startup or encrypted backup creation.
+        }
+    }
 
     static String saveLocalBackupFile(Context ctx, String filename, String contents) throws Exception {
         if (filename == null || filename.trim().isEmpty()) filename = "FZ-Notes-backup.fzenc";
@@ -538,6 +511,7 @@ public class Cloud {
     }
 
     static void createLocalBackupOnAppOpen(Context ctx) throws Exception {
+        deleteLegacyPlaintextMirror(ctx);
         SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
         String interval = prefs.getString("interval", "manual");
         if ("onopen".equals(interval)) {
