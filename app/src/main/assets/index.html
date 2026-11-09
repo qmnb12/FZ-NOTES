@@ -3552,7 +3552,6 @@ function handleSelectionToolbarAction(e){
  if(a==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render();return}
  if(a==='reply'){if(ids.length!==1){toast('Reply ke liye ek note select karo');return}replyId=ids[0];editId=null;setCtx();selMode=false;sel.clear();render();ed.focus();return}
  if(a==='more'){openMultiSelectSheet(ids);return}
- }
 }
 let selectionToolbarPointerAt=0;
 $('#selbar').addEventListener('pointerup',e=>{
