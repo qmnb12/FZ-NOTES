@@ -445,30 +445,31 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             int spanStart = styled.getSpanStart(span);
             int spanEnd = styled.getSpanEnd(span);
             if (spanStart < 0 || spanEnd <= spanStart) continue;
-            String spanText = normalizeInlineText(styled.subSequence(spanStart, spanEnd));
             if (index == span.index) indexCandidate = span;
-            if (index == span.index && (wanted.isEmpty() || wanted.equals(spanText))) {
-                target = span;
-                break;
-            }
-            // HTML/TextView parsing can alter span indexes; text identity is a safer fallback.
-            if (!wanted.isEmpty() && wanted.equals(spanText)) {
-                target = span;
-                break;
-            }
         }
-        if (target == null && indexCandidate != null && wanted.isEmpty()) target = indexCandidate;
-
-        int start = target == null ? -1 : styled.getSpanStart(target);
-        int end = target == null ? -1 : styled.getSpanEnd(target);
-        if ((start < 0 || end <= start) && !wanted.isEmpty()) {
-            int[] fallbackRange = findNormalizedTextRange(styled, wanted);
-            if (fallbackRange != null) {
-                start = fallbackRange[0];
-                end = fallbackRange[1];
+        if (indexCandidate != null) {
+            int candidateStart = styled.getSpanStart(indexCandidate);
+            int candidateEnd = styled.getSpanEnd(indexCandidate);
+            String candidateText = candidateStart >= 0 && candidateEnd > candidateStart
+                    ? normalizeInlineText(styled.subSequence(candidateStart, candidateEnd)) : "";
+            if (wanted.isEmpty() || wanted.equals(candidateText)) target = indexCandidate;
+        } else if (!wanted.isEmpty()) {
+            InlineCopySpan uniqueMatch = null;
+            for (InlineCopySpan span : spans) {
+                if (!noteId.equals(span.noteId) || !kind.equals(span.action)) continue;
+                int spanStart = styled.getSpanStart(span);
+                int spanEnd = styled.getSpanEnd(span);
+                if (spanStart < 0 || spanEnd <= spanStart) continue;
+                if (wanted.equals(normalizeInlineText(styled.subSequence(spanStart, spanEnd)))) {
+                    if (uniqueMatch != null) { uniqueMatch = null; break; }
+                    uniqueMatch = span;
+                }
             }
+            target = uniqueMatch;
         }
-        // Do not silently exit just because the parser gave the Mono span a different index.
+        if (target == null) return;
+        int start = styled.getSpanStart(target);
+        int end = styled.getSpanEnd(target);
         if (start < 0 || end <= start) return;
 
         if (row.copyFlashAnimator != null) {
@@ -1628,10 +1629,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (!adapter.selectedIds.isEmpty()) {
                 adapter.toggleSelectionById(noteId);
             } else if (adapter.listener != null) {
-                // Animate the exact clicked span instance; no ID/index re-search is needed.
-                if (("mono".equals(action) || "code".equals(action)) && widget instanceof TextView) {
-                    adapter.flashInlineCode((TextView) widget, this);
-                }
+                // JS confirms clipboard success before the exact span pulse is requested.
                 adapter.listener.onAction(noteId, action, index);
             }
         }

@@ -1908,6 +1908,9 @@ async function copy(t,feedback='Copied',flashTarget=null,nativeTarget=null){
    legacyCopyText(value);
   }
   if(flashTarget)flashCopiedElement(flashTarget);
+  if(nativeTarget&&window.Android&&typeof window.Android.flashNativeCode==='function'){
+   try{window.Android.flashNativeCode(String(nativeTarget.id||''),String(nativeTarget.action||''),Number.isFinite(Number(nativeTarget.index))?Number(nativeTarget.index):0,value)}catch(_){}
+  }
   toast(feedback);
   return true;
  }catch(error){
@@ -1952,7 +1955,7 @@ function clean(n,autoLinks=true){let o='';n.childNodes.forEach(c=>{
  else if(t==='U')o+='<u>'+x+'</u>';
  else if(t==='S'||t==='STRIKE'||t==='DEL')o+='<s>'+x+'</s>';
  else if(t==='A'){const h=c.getAttribute('href')||'';o+=/^(https?:|mailto:|tel:)/i.test(h)?'<a href="'+esc(h)+'">'+x+'</a>':x}
- else if(t==='SPAN'||t==='CODE'){o+=kind?'<span class="'+kind+'">'+x+'</span>':x}
+ else if(t==='SPAN'||t==='CODE'){const blockKind=kind==='mono'||kind==='quote'||kind==='code';const nested=blockKind&&c.parentElement&&c.parentElement.closest('span.mono,span.quote,span.code');o+=kind&&!nested?'<span class="'+kind+'">'+x+'</span>':x}
  else o+=x});return o}
 function sanitizeStoredMessages(items){
  if(!Array.isArray(items))return;
@@ -2150,16 +2153,92 @@ function focusWithKeyboard(el,caretAtEnd=false){
 }
 function focusComposerForTyping(){focusWithKeyboard(ed,true)}
 
-function wrap(cls){const s=getSelection();if(!s.rangeCount||s.isCollapsed)return false;
- const r=s.getRangeAt(0),sp=document.createElement('span');sp.className=cls;sp.appendChild(r.extractContents());r.insertNode(sp);
- // Telegram-like one-shot feedback on the actual newly formatted Mono selection.
- if(cls==='mono'){
-  const clearPulse=()=>sp.classList.remove('mono-apply-pulse');
-  sp.addEventListener('animationend',clearPulse,{once:true});
-  sp.classList.add('mono-apply-pulse');
-  setTimeout(clearPulse,520);
+function outerEditorBlockFormat(range){
+ let node=range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement,found=null;
+ while(node&&node!==ed){
+  if(node.nodeType===1&&node.matches('span.mono,span.quote,span.code')&&node.contains(range.endContainer))found=node;
+  node=node.parentElement;
  }
- s.removeAllRanges();const n=document.createRange();n.selectNodeContents(sp);s.addRange(n);return true}
+ return found;
+}
+function stripNestedEditorBlockFormats(fragment){
+ if(!fragment||!fragment.querySelectorAll)return;
+ Array.from(fragment.querySelectorAll('span.mono,span.quote,span.code')).forEach(node=>{
+  const parent=node.parentNode;if(!parent)return;
+  while(node.firstChild)parent.insertBefore(node.firstChild,node);
+  parent.removeChild(node);
+ });
+}
+function appendEditorFormatRemainder(target,source,contents){
+ if(!source||!contents||!contents.childNodes.length)return;
+ const shell=source.cloneNode(false);shell.appendChild(contents);target.appendChild(shell);
+}
+function selectInsertedEditorNodes(nodes){
+ if(!nodes||!nodes.length)return false;
+ const first=nodes[0],last=nodes[nodes.length-1],range=document.createRange();
+ if(first.nodeType===3)range.setStart(first,0);else range.setStartBefore(first);
+ if(last.nodeType===3)range.setEnd(last,last.nodeValue.length);else range.setEndAfter(last);
+ const selection=getSelection();selection.removeAllRanges();selection.addRange(range);return true;
+}
+function applyEditorBlockFormat(cls){
+ const selection=getSelection();if(!selection||!selection.rangeCount||selection.isCollapsed)return false;
+ const range=selection.getRangeAt(0).cloneRange();
+ if(!ed.contains(range.startContainer)||!ed.contains(range.endContainer))return false;
+ const owner=outerEditorBlockFormat(range);
+ let selected,before=null,after=null;
+ if(owner&&owner.parentNode){
+  const beforeRange=document.createRange();beforeRange.selectNodeContents(owner);beforeRange.setEnd(range.startContainer,range.startOffset);before=beforeRange.cloneContents();
+  selected=range.cloneContents();
+  const afterRange=document.createRange();afterRange.selectNodeContents(owner);afterRange.setStart(range.endContainer,range.endOffset);after=afterRange.cloneContents();
+ }else selected=range.extractContents();
+ stripNestedEditorBlockFormats(selected);
+ const replacement=document.createDocumentFragment();
+ appendEditorFormatRemainder(replacement,owner,before);
+ let wrapper=null,insertedNodes=[];
+ if(cls){
+  wrapper=document.createElement('span');wrapper.className=cls;wrapper.appendChild(selected);
+  insertedNodes=[wrapper];replacement.appendChild(wrapper);
+ }else{
+  insertedNodes=Array.from(selected.childNodes);replacement.appendChild(selected);
+ }
+ appendEditorFormatRemainder(replacement,owner,after);
+ if(owner&&owner.parentNode)owner.parentNode.replaceChild(replacement,owner);
+ else range.insertNode(replacement);
+ if(wrapper){
+  const next=document.createRange();next.selectNodeContents(wrapper);selection.removeAllRanges();selection.addRange(next);
+ }else selectInsertedEditorNodes(insertedNodes);
+ if(cls==='mono'&&wrapper){
+  const clearPulse=()=>wrapper.classList.remove('mono-apply-pulse');
+  wrapper.addEventListener('animationend',clearPulse,{once:true});wrapper.classList.add('mono-apply-pulse');setTimeout(clearPulse,520);
+ }
+ return true;
+}
+function wrap(cls){
+ if(['mono','quote','code'].includes(cls))return applyEditorBlockFormat(cls);
+ const selection=getSelection();if(!selection||!selection.rangeCount||selection.isCollapsed)return false;
+ const range=selection.getRangeAt(0),span=document.createElement('span');span.className=cls;
+ span.appendChild(range.extractContents());range.insertNode(span);
+ selection.removeAllRanges();const next=document.createRange();next.selectNodeContents(span);selection.addRange(next);return true;
+}
+function exitQuoteOnParagraph(e){
+ const paragraph=e.type==='keydown'?(e.key==='Enter'&&!e.shiftKey&&!e.isComposing):(e.inputType==='insertParagraph');
+ if(!paragraph)return;
+ const selection=getSelection();if(!selection||!selection.rangeCount||!selection.isCollapsed)return;
+ const caret=selection.getRangeAt(0);if(!ed.contains(caret.startContainer))return;
+ let node=caret.startContainer.nodeType===1?caret.startContainer:caret.startContainer.parentElement,quote=null;
+ while(node&&node!==ed){if(node.nodeType===1&&node.classList.contains('quote'))quote=node;node=node.parentElement}
+ if(!quote||!quote.parentNode)return;
+ const end=document.createRange();end.selectNodeContents(quote);end.collapse(false);
+ if(caret.compareBoundaryPoints(Range.START_TO_START,end)!==0)return;
+ e.preventDefault();
+ const nextLine=document.createElement('div');nextLine.appendChild(document.createElement('br'));
+ quote.parentNode.insertBefore(nextLine,quote.nextSibling);
+ const next=document.createRange();next.setStart(nextLine,0);next.collapse(true);
+ selection.removeAllRanges();selection.addRange(next);saved=next.cloneRange();
+ ed.dispatchEvent(new Event('input',{bubbles:true}));
+}
+ed.addEventListener('keydown',exitQuoteOnParagraph);
+ed.addEventListener('beforeinput',exitQuoteOnParagraph);
 function hasSel(){const s=getSelection();return s.rangeCount&&!s.isCollapsed}
 window.applyMonoFromNative=function(){
  const s=getSelection();
@@ -2220,7 +2299,7 @@ function act(a){restore();
  const ex={b:'bold',i:'italic',u:'underline',s:'strikeThrough'};
  if(ex[a])document.execCommand(ex[a]);
  else if(['mono','code','quote','spoiler'].includes(a)){if(!wrap(a))toast('Pehle text select karo')}
- else if(a==='reg'){if(hasSel())document.execCommand('insertText',false,getSelection().toString());else toast('Pehle text select karo')}
+ else if(a==='reg'){if(!applyEditorBlockFormat(''))toast('Pehle text select karo')}
  
  else if(a==='date')document.execCommand('insertHTML',false,'<span class="date">'+esc(new Date().toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}))+'</span>&nbsp;');
  else if(a==='link')ask('link','Paste link');
@@ -2315,7 +2394,7 @@ function chatwSelectTimestampGuard(){
  },true)
 }
 function contextMenuRow(key,title,path,extra=''){
- return '<button type="button" class="context-menu-row'+(extra?' '+extra:'')+'" data-k="'+key+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+path+'</svg></span><span class="mt">'+esc(title)+'</span></button>';
+ return '<button type="button" class="context-menu-row'+(extra?' '+extra:'')+'" data-k="'+esc(key)+'"><span class="mi"><svg viewBox="0 0 24 24" aria-hidden="true">'+path+'</svg></span><span class="mt">'+esc(title)+'</span></button>';
 }
 const contextIcons={
  reply:'<path d="M9 14 4 9l5-5"/><path d="M4 9h9a7 7 0 0 1 0 14h-2"/>',
@@ -2324,6 +2403,7 @@ const contextIcons={
  pin:'<path d="m16 3 5 5-4 1-4 4-1 4-5-5 4-4 1-5Z"/><path d="m9 15-5 5"/>',
  lock:'<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/>',
  folder:'<path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+ forward:'<path d="M14 5 21 12l-7 7"/><path d="M21 12H9a6 6 0 0 0-6 6"/>',
  select:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="m7 12 3 3 7-7"/>',
  delete:'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 10v6m4-6v6"/>',
  close:'<path d="m6 6 12 12M18 6 6 18"/>'
@@ -2346,6 +2426,7 @@ function showNativeMessagePopup(id,mode){
    config={mode:'message',theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),title:'Message',preview,items:[
     {key:'edit',title:'Edit',icon:'✎'},
     {key:'copy',title:'Copy text',icon:'▢'},
+    {key:'forward',title:'Forward message',icon:'➦'},
     {key:'hide',title:m.hidden?'Unhide note':'Hide note',icon:'▣'},
     {key:'mv',title:'Move to topic',icon:'▰'},
     {key:'divider'},
@@ -2354,6 +2435,41 @@ function showNativeMessagePopup(id,mode){
    ]};
   }
   try{window.Android.showNativeMessageMenu(String(id),JSON.stringify(config));return true}catch(_){return false}
+ }
+ function openForwardTopicPicker(ids){
+  const valid=[...new Set((ids||[]).map(Number))].filter(id=>msgs.some(m=>Number(m.id)===id));
+  if(!valid.length){toast('Forward karne ke liye message select karo');return}
+  const targets=[{id:'quick',name:'Quick'}].concat(topics).filter(t=>t&&t.id&&t.id!=='hidden');
+  const uniqueTargets=[],seenTargets=new Set();
+  targets.forEach(t=>{if(!seenTargets.has(t.id)){seenTargets.add(t.id);uniqueTargets.push(t)}});
+  const rows=uniqueTargets.map(t=>contextMenuRow('forwardto:'+t.id,t.name,contextIcons.forward)).join('');
+  shStack=[];sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · FORWARD</div><div class="context-title">Forward '+(valid.length===1?'message':'messages')+'</div><div class="context-preview">Choose a destination topic</div></div><div class="context-actions">'+rows+contextMenuRow('x','Cancel',contextIcons.close,'cancel')+'</div>';
+  sh.dataset.type='forward-select';sh.dataset.ids=JSON.stringify(valid);sh.classList.add('on');chat.classList.add('sheet-open');syncNativeChatOverlay();
+ }
+ function forwardSelectedNotes(ids,topicId){
+  const allowed=topicId==='quick'||topics.some(t=>t.id===topicId&&t.id!=='hidden');
+  if(!allowed){toast('Destination topic available nahi hai');return}
+  const sources=[...new Set((ids||[]).map(Number))].map(id=>msgs.find(m=>Number(m.id)===id)).filter(Boolean);
+  if(!sources.length){toast('Forward karne ke liye message nahi mila');return}
+  const used=new Set(msgs.map(m=>Number(m.id)));
+  let nextId=Math.max(Date.now(),...Array.from(used).filter(Number.isFinite).map(id=>id+1));
+  const copies=sources.map(source=>{
+   while(used.has(nextId))nextId++;
+   const copyNote={id:nextId,t:nextId,h:String(source.h||''),k:topicId};
+   used.add(nextId);nextId++;
+   if(source.i)copyNote.i=source.i;
+   if(Array.isArray(source.c))copyNote.c=source.c.filter(item=>item&&typeof item==='object').map(item=>({x:String(item.x||''),s:[0,1,2].includes(Number(item.s))?Number(item.s):0}));
+   return copyNote;
+  });
+  msgs.push(...copies);sh.classList.remove('on');sh.dataset.type='';selMode=false;sel.clear();clearCtx();save();render(true);
+  toast(copies.length===1?'Message forwarded':'Messages forwarded',2200);
+ }
+ function openMultiSelectSheet(ids){
+  const selected=[...new Set((ids||[]).map(Number))].filter(id=>msgs.some(m=>Number(m.id)===id));
+  if(selected.length===1){openSheet(selected[0]);return}
+  if(selected.length<2){toast('Pehle kam se kam 2 messages select karo',1800);return}
+  shStack=[];sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-head-line"><span class="context-eyebrow">FZ NOTES · SELECTION</span><button type="button" class="context-close" data-k="x" aria-label="Close menu">×</button></div><div class="context-title">'+selected.length+' selected messages</div><div class="context-preview">Choose an action for the selected messages</div></div><div class="context-actions">'+contextMenuRow('forward','Forward messages',contextIcons.forward)+contextMenuRow('copy','Copy selected messages',contextIcons.copy)+contextMenuRow('del','Delete selected messages',contextIcons.delete,'del')+contextMenuRow('x','Cancel',contextIcons.close,'cancel')+'</div>';
+  sh.dataset.type='multi-select';sh.dataset.ids=JSON.stringify(selected);sh.dataset.id='';sh.classList.add('on');chat.classList.add('sheet-open');syncNativeChatOverlay();
  }
  function openSheet(id){
    try{const activeSelection=window.getSelection();if(activeSelection)activeSelection.removeAllRanges()}catch(_){}
@@ -2365,6 +2481,7 @@ function showNativeMessagePopup(id,mode){
    contextMenuRow('reply','Reply',contextIcons.reply)+
    contextMenuRow('edit','Edit',contextIcons.edit)+
    contextMenuRow('copy','Copy text',contextIcons.copy)+
+   contextMenuRow('forward','Forward message',contextIcons.forward)+
    contextMenuRow('pin',m.p?'Unpin message':'Pin message',contextIcons.pin)+
    contextMenuRow('hide',m.hidden?'Unhide note':'Hide note',contextIcons.lock)+
    contextMenuRow('mv','Move to topic',contextIcons.folder)+
@@ -2603,7 +2720,19 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='changeAuth'){sh.classList.remove('on');const pin=hiddenAuthType()==='pin';ask(pin?'hidepinsettingsverify':'hidepwsettingsverify',pin?'Enter current Hidden Notes PIN':'Enter current Hidden Notes password');return}
   return
  }
- if(sh.dataset.type==='multi-select'){if(k==='x'){sh.classList.remove('on');return}const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);sh.classList.remove('on');if(k==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));return}if(k==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render()}return}
+ if(sh.dataset.type==='forward-select'){
+  if(k==='x'){sh.classList.remove('on');sh.dataset.type='';syncNativeChatOverlay();return}
+  if(k.startsWith('forwardto:')){const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);forwardSelectedNotes(ids,k.slice(10));return}
+  return
+ }
+ if(sh.dataset.type==='multi-select'){
+  const ids=JSON.parse(sh.dataset.ids||'[]').map(Number);
+  if(k==='x'){sh.classList.remove('on');syncNativeChatOverlay();return}
+  if(k==='forward'){openForwardTopicPicker(ids);return}
+  if(k==='copy'){sh.classList.remove('on');syncNativeChatOverlay();copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\\n\\n'));return}
+  if(k==='del'){sh.classList.remove('on');msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render();syncNativeChatOverlay();return}
+  return
+ }
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
  if(sh.dataset.type==='backup-hub'){
   if(k==='x'){restoreSheetState();return}
@@ -2690,6 +2819,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(k==='pin'){const m=msgs.find(m=>m.id===id);if(m){m.p=m.p?0:1;save();render();toast(m.p?'Pinned':'Unpinned')}}
  if(k==='hide'){const m=msgs.find(m=>m.id===id);if(m){sh.classList.remove('on');if(m.hidden){if(!hiddenUnlocked){requestHiddenNotesAccess();return}m.hidden=false;save();render();toast('Note unhidden')}else{requestHideNoteAuth(id)}}}
  if(k==='sel'){sh.classList.remove('on');selMode=true;sel.clear();selectNote(id)}
+ if(k==='forward'){openForwardTopicPicker([id]);return}
  if(k==='mv'){
    const topicRows=[{id:'quick',name:'Quick'}].concat(topics).map(t=>contextMenuRow('to:'+t.id,t.name,contextIcons.folder)).join('');
    sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-eyebrow">FZ NOTES · ORGANIZE</div><div class="context-title">Move to topic</div><div class="context-preview">Choose where this message belongs</div></div><div class="context-actions">'+topicRows+contextMenuRow('x','Cancel',contextIcons.close,'cancel')+'</div>';
@@ -2717,6 +2847,7 @@ window.nativeMessageMenuAction=function(rawId,action){
   if(action==='sel'){selMode=true;sel.clear();selectNote(id);return}
   if(action==='reply'){replyId=id;editId=null;setCtx();ed.focus();return}
   if(action==='copy'){copy(noteCopyText(m));return}
+  if(action==='forward'){openForwardTopicPicker([id]);return}
   if(action==='del'){if(replyId===id||editId===id)clearCtx();msgs=msgs.filter(x=>Number(x.id)!==id);save();render();return}
   if(action==='edit'){
    if(m.c){
@@ -3420,10 +3551,7 @@ function handleSelectionToolbarAction(e){
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
  if(a==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render();return}
  if(a==='reply'){if(ids.length!==1){toast('Reply ke liye ek note select karo');return}replyId=ids[0];editId=null;setCtx();selMode=false;sel.clear();render();ed.focus();return}
- if(a==='more'){
-  if(ids.length===1){openSheet(ids[0]);return}
-  if(ids.length>1){sh.innerHTML='<div class="context-sheet-head"><span class="context-grabber"></span><div class="context-head-line"><span class="context-eyebrow">FZ NOTES · SELECTION</span><button type="button" class="context-close" data-k="x" aria-label="Close menu">×</button></div><div class="context-title">'+ids.length+' selected notes</div><div class="context-preview">Actions for selected notes</div></div><div class="context-actions">'+contextMenuRow('copy','Copy selected notes',contextIcons.copy)+contextMenuRow('del','Delete selected notes',contextIcons.delete,'del')+contextMenuRow('x','Cancel',contextIcons.close,'cancel')+'</div>';sh.dataset.type='multi-select';sh.dataset.ids=JSON.stringify(ids);sh.classList.add('on');syncNativeChatOverlay();return}
-  toast('Pehle ek note select karo',1800);
+ if(a==='more'){openMultiSelectSheet(ids);return}
  }
 }
 let selectionToolbarPointerAt=0;
