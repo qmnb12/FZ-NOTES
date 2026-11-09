@@ -1256,7 +1256,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setText(parsed);
             // CSS px and Telegram-style chat sizes are density-independent; SP would
             // enlarge notes again when the Android system font scale is above 1.0.
-            body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, messageTextSizeDp * 0.78f);
+            body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, messageTextSizeDp);
             body.setTextColor(fg);
             body.setLinkTextColor(accent);
             body.setVisibility(TextUtils.isEmpty(note.html) ? GONE : VISIBLE);
@@ -1581,7 +1581,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 int monoBg = lightTheme ? Color.rgb(226, 238, 255) : Color.rgb(12, 24, 40);
                 int monoFg = lightTheme ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255);
                 output.setSpan(new TypefaceSpan("monospace"), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                output.setSpan(new RelativeSizeSpan(0.90f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                output.setSpan(new RelativeSizeSpan(1.0f), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new BackgroundColorSpan(monoBg), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new ForegroundColorSpan(monoFg), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 output.setSpan(new InlineCopySpan(adapter, noteId, "mono", mark.index, monoFg), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
