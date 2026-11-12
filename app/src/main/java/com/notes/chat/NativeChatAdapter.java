@@ -1251,8 +1251,33 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             rich = rich.replaceAll("(?is)<span\\s+class=[\"']mono[\"']\\s*>(.*?)</span>", "<monospan>$1</monospan>");
             rich = rich.replaceAll("(?is)<span\\s+class=[\"']code[\"']\\s*>(.*?)</span>", "<codeblock>$1</codeblock>");
             rich = rich.replaceAll("(?is)<span\\s+class=[\"']quote[\"']\\s*>(.*?)</span>", "<quoteblock>$1</quoteblock>");
-            Spanned parsed = Html.fromHtml(rich, Html.FROM_HTML_MODE_COMPACT, null,
-                    new NativeRichTagHandler(context, accent, themeBg, lightTheme, dp(3), dp(8), NativeChatAdapter.this, note.id));
+
+            Spanned parsed;
+            try {
+                parsed = Html.fromHtml(rich, Html.FROM_HTML_MODE_COMPACT, null,
+                        new NativeRichTagHandler(context, accent, themeBg, lightTheme,
+                                dp(3), dp(8), NativeChatAdapter.this, note.id));
+            } catch (RuntimeException malformedParagraphHtml) {
+                // Android's Html converter can create an invalid SPAN_PARAGRAPH range
+                // for malformed/imported block markup (for example, an aligned
+                // paragraph or list ending in the middle of a word). Retry after
+                // normalizing block elements; preserve inline tags and custom formats.
+                String safeRich = makeParagraphSafeFallbackHtml(rich);
+                try {
+                    parsed = Html.fromHtml(safeRich, Html.FROM_HTML_MODE_COMPACT, null,
+                            new NativeRichTagHandler(context, accent, themeBg, lightTheme,
+                                    dp(3), dp(8), NativeChatAdapter.this, note.id));
+                } catch (RuntimeException malformedFallbackHtml) {
+                    // Last-resort rendering prevents one damaged note from taking down
+                    // RecyclerView binding. The text remains readable without styling.
+                    String plain = safeRich
+                            .replaceAll("(?is)<br\\s*/?>", "\n")
+                            .replaceAll("(?is)<[^>]*>", "")
+                            .replace("&nbsp;", " ");
+                    parsed = new SpannableStringBuilder(
+                            Html.fromHtml(plain, Html.FROM_HTML_MODE_COMPACT));
+                }
+            }
             body.setText(parsed);
             // CSS px and Telegram-style chat sizes are density-independent; SP would
             // enlarge notes again when the Android system font scale is above 1.0.
@@ -1528,6 +1553,26 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 paint.setAlpha(255);
             }
         }
+    }
+
+    /**
+     * Defensive retry for HTML whose block tags make Android create invalid
+     * SPAN_PARAGRAPH ranges. Inline formatting and custom Mono/Code/Quote tags
+     * are retained; block-level formatting is represented by line breaks.
+     */
+    private static String makeParagraphSafeFallbackHtml(String html) {
+        String safe = html == null ? "" : html;
+        safe = safe.replaceAll("(?is)<\\s*li\\b[^>]*>", "&#8226;&nbsp;");
+        safe = safe.replaceAll("(?is)</\\s*li\\s*>", "<br>");
+        safe = safe.replaceAll("(?is)<\\s*/?\\s*(?:ul|ol)\\b[^>]*>", "<br>");
+        safe = safe.replaceAll("(?is)<\\s*blockquote\\b[^>]*>", "<br>");
+        safe = safe.replaceAll("(?is)</\\s*blockquote\\s*>", "<br>");
+        safe = safe.replaceAll("(?is)<\\s*(?:p|div|h[1-6]|section|article)\\b[^>]*>", "<br>");
+        safe = safe.replaceAll("(?is)</\\s*(?:p|div|h[1-6]|section|article)\\s*>", "<br>");
+        // Alignment and CSS style attributes can request paragraph-style spans too.
+        safe = safe.replaceAll("(?is)\\s+(?:align|style)\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s>]+)", "");
+        safe = safe.replaceAll("(?is)(?:\\s*<br\\s*/?>\\s*){3,}", "<br><br>");
+        return safe;
     }
 
     private static final class NativeRichTagHandler implements Html.TagHandler {
