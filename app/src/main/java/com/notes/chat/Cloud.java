@@ -223,7 +223,9 @@ public class Cloud {
                     if (m == null) continue;
                     String messageText = m.optString("text", "");
                     if (!messageText.equals("/start") && !messageText.startsWith("/start ")) continue;
-                    String chatId = String.valueOf(m.getJSONObject("chat").getLong("id"));
+                    JSONObject chat = m.optJSONObject("chat");
+                    if (chat == null || !chat.has("id")) continue;
+                    String chatId = String.valueOf(chat.optLong("id"));
                     acknowledgeTelegramUpdate(ctx, token, update.optLong("update_id", -1L));
                     return chatId;
                 }
@@ -295,12 +297,16 @@ public class Cloud {
      * so unrelated user documents are never touched.
      */
     private static void deleteLegacyPlaintextMirror(Context ctx) {
+        // Do not remove the only recoverable copy. Delete only the exact legacy
+        // mirror, and only when an encrypted local backup is already available.
+        if (latestLocalBackupUri(ctx, false) == null
+                && !new File(ctx.getFilesDir(), LOCAL_BACKUP_FILE).isFile()) return;
         try {
             Uri files = MediaStore.Files.getContentUri("external");
             ctx.getContentResolver().delete(files,
-                    MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ? AND "
-                            + MediaStore.MediaColumns.RELATIVE_PATH + " LIKE ?",
-                    new String[]{"notes-mirror%.json", "Documents/NotesChat%"});
+                    MediaStore.MediaColumns.DISPLAY_NAME + "=? AND "
+                            + MediaStore.MediaColumns.RELATIVE_PATH + "=?",
+                    new String[]{"notes-mirror.json", "Documents/NotesChat/"});
         } catch (Exception ignored) {
             // Cleanup must never block app startup or encrypted backup creation.
         }
@@ -517,7 +523,6 @@ public class Cloud {
     }
 
     static void createLocalBackupOnAppOpen(Context ctx) throws Exception {
-        deleteLegacyPlaintextMirror(ctx);
         SharedPreferences prefs = ctx.getSharedPreferences("notes_local_backup", Context.MODE_PRIVATE);
         String interval = prefs.getString("interval", "manual");
         if ("onopen".equals(interval)) {
@@ -529,6 +534,8 @@ public class Cloud {
                 prefs.edit().putString("dailyOpenDate", today).apply();
             }
         }
+        // Never delete the legacy mirror before the encrypted backup exists.
+        deleteLegacyPlaintextMirror(ctx);
     }
 
     static String createManualLocalBackup(Context ctx, JSONObject a) throws Exception {
@@ -933,9 +940,26 @@ public class Cloud {
             String key = telegramTokenKey(token);
             String offsetKey = TG_OFFSET_PREF + key;
             String pendingKey = TG_PENDING_PREF + key;
+            final int maxPendingUpdates = 20;
             JSONArray pending;
             try { pending = new JSONArray(sp.getString(pendingKey, "[]")); }
             catch (Exception corrupt) { pending = new JSONArray(); }
+
+            // Only /start and backup-document messages are consumed by this app.
+            // Drop unrelated Telegram traffic instead of retaining it forever.
+            JSONArray relevant = new JSONArray();
+            java.util.HashSet<Long> known = new java.util.HashSet<>();
+            for (int i = 0; i < pending.length(); i++) {
+                JSONObject item = pending.optJSONObject(i);
+                JSONObject message = item == null ? null : item.optJSONObject("message");
+                if (message == null) continue;
+                String text = message.optString("text", "");
+                boolean start = text.equals("/start") || text.startsWith("/start ");
+                boolean document = message.optJSONObject("document") != null;
+                long id = item.optLong("update_id", -1L);
+                if ((start || document) && id >= 0 && known.add(id)) relevant.put(item);
+            }
+
             long offset = sp.getLong(offsetKey, -1L);
             String url = "https://api.telegram.org/bot" + token + "/getUpdates?timeout=0"
                     + (offset >= 0 ? "&offset=" + offset : "");
@@ -945,22 +969,29 @@ public class Cloud {
             if (fresh == null) throw new Exception("Telegram getUpdates failed: "
                     + response.substring(0, Math.min(120, response.length())));
             long maxUpdateId = offset;
-            java.util.HashSet<Long> known = new java.util.HashSet<>();
-            for (int i = 0; i < pending.length(); i++) {
-                JSONObject item = pending.optJSONObject(i);
-                if (item != null) known.add(item.optLong("update_id", -1L));
-            }
             for (int i = 0; i < fresh.length(); i++) {
                 JSONObject item = fresh.optJSONObject(i);
                 if (item == null) continue;
                 long id = item.optLong("update_id", -1L);
-                if (id >= 0 && known.add(id)) pending.put(item);
+                JSONObject message = item.optJSONObject("message");
+                if (message != null && id >= 0) {
+                    String text = message.optString("text", "");
+                    boolean start = text.equals("/start") || text.startsWith("/start ");
+                    boolean document = message.optJSONObject("document") != null;
+                    if ((start || document) && known.add(id)) relevant.put(item);
+                }
                 if (id > maxUpdateId) maxUpdateId = id;
             }
-            SharedPreferences.Editor edit = sp.edit().putString(pendingKey, pending.toString());
+
+            // Bound SharedPreferences storage while preserving the newest actionable
+            // commands/documents for the app's chat-detection and restore flows.
+            JSONArray bounded = new JSONArray();
+            int first = Math.max(0, relevant.length() - maxPendingUpdates);
+            for (int i = first; i < relevant.length(); i++) bounded.put(relevant.get(i));
+            SharedPreferences.Editor edit = sp.edit().putString(pendingKey, bounded.toString());
             if (maxUpdateId >= 0) edit.putLong(offsetKey, maxUpdateId + 1);
             if (!edit.commit()) throw new Exception("Telegram updates could not be saved locally");
-            return pending;
+            return bounded;
         }
     }
 
