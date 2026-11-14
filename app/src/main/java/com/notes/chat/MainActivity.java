@@ -822,7 +822,7 @@ public class MainActivity extends Activity {
                 // A due task that is not done is still actionable — surface it once
                 // instead of silently dropping it (the app may have been closed).
                 if (!done && due > 0 && due <= System.currentTimeMillis()) {
-                    ReminderReceiver.showNow(this, taskId, title + " (overdue)");
+                    ReminderReceiver.showNow(this, taskId, title + " (overdue)", due);
                 }
                 reply(callbackId, true, "Reminder cancelled or due time passed");
                 return;
@@ -831,8 +831,16 @@ public class MainActivity extends Activity {
             alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pending);
             if (Build.VERSION.SDK_INT >= 33
                     && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 501);
-                reply(callbackId, true, "Reminder scheduled. Turn on notification permission to get alerted.");
+                android.content.SharedPreferences permissionPrefs =
+                        getSharedPreferences("notes_permissions", MODE_PRIVATE);
+                boolean alreadyRequested = permissionPrefs.getBoolean("post_notifications_requested", false);
+                if (!alreadyRequested) {
+                    permissionPrefs.edit().putBoolean("post_notifications_requested", true).apply();
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 501);
+                    reply(callbackId, true, "Reminder scheduled. Allow notification permission to receive alerts.");
+                } else {
+                    reply(callbackId, true, "Reminder scheduled. Enable Notifications for FZ Notes in Android Settings to receive alerts.");
+                }
                 return;
             }
             reply(callbackId, true, "Reminder scheduled");
