@@ -16,6 +16,7 @@ public class ReminderReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String taskId = intent.getStringExtra("taskId");
         String title = intent.getStringExtra("title");
+        long dueAt = intent.getLongExtra("dueAt", 0L);
         if (title == null || title.trim().isEmpty()) title = "Your task is due";
 
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -49,6 +50,10 @@ public class ReminderReceiver extends BroadcastReceiver {
                 .setAutoCancel(true)
                 .build();
         manager.notify(taskId == null ? (int) System.currentTimeMillis() : taskId.hashCode(), notification);
+        if (dueAt > 0L) {
+            context.getSharedPreferences("notes_reminders", Context.MODE_PRIVATE)
+                    .edit().putLong("notified_" + (taskId == null ? "task" : taskId), dueAt).apply();
+        }
     }
 
     /** Fire an overdue reminder once for each task due-time value. */
