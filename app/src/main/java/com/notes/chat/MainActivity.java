@@ -819,6 +819,11 @@ public class MainActivity extends Activity {
             AlarmManager alarms = (AlarmManager) getSystemService(ALARM_SERVICE);
             if (done || due <= System.currentTimeMillis()) {
                 if (alarms != null) alarms.cancel(pending);
+                // A due task that is not done is still actionable — surface it once
+                // instead of silently dropping it (the app may have been closed).
+                if (!done && due > 0 && due <= System.currentTimeMillis()) {
+                    ReminderReceiver.showNow(this, taskId, title + " (overdue)");
+                }
                 reply(callbackId, true, "Reminder cancelled or due time passed");
                 return;
             }
@@ -827,6 +832,8 @@ public class MainActivity extends Activity {
             if (Build.VERSION.SDK_INT >= 33
                     && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 501);
+                reply(callbackId, true, "Reminder scheduled. Turn on notification permission to get alerted.");
+                return;
             }
             reply(callbackId, true, "Reminder scheduled");
         } catch (Exception e) {

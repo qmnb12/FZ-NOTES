@@ -216,7 +216,7 @@ public class Cloud {
             }
             case "tgchat": {
                 String token = a.getString("token");
-                JSONArray r = tgUpdates(token);
+                JSONArray r = tgUpdates(ctx, token);
                 for (int i = r.length() - 1; i >= 0; i--) {
                     JSONObject m = r.getJSONObject(i).optJSONObject("message");
                     if (m != null) return String.valueOf(m.getJSONObject("chat").getLong("id"));
@@ -869,7 +869,7 @@ public class Cloud {
                 String token = t.getString("token");
                 String fid = t.optString("fid", "");
                 if (fid.isEmpty()) {
-                    JSONArray r = tgUpdates(token);
+                    JSONArray r = tgUpdates(ctx, token);
                     for (int i = r.length() - 1; i >= 0 && fid.isEmpty(); i--) {
                         JSONObject m = r.getJSONObject(i).optJSONObject("message");
                         if (m != null && m.has("document"))
@@ -903,10 +903,32 @@ public class Cloud {
     }
 
     // ---------- helpers ----------
-    static JSONArray tgUpdates(String token) throws Exception {
-        String s = new String(http("GET", "https://api.telegram.org/bot" + token + "/getUpdates",
-                null, null, null), StandardCharsets.UTF_8);
-        return new JSONObject(s).getJSONArray("result");
+    private static final String TG_OFFSET_PREF = "tg_updates_offset";
+
+    /**
+     * getUpdates without an offset re-delivers every old update forever. Remembering
+     * the last seen update_id per token keeps tgchat/tgdownload reads from walking
+     * the same stale history on every call.
+     */
+    static JSONArray tgUpdates(Context ctx, String token) throws Exception {
+        SharedPreferences sp = ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE);
+        long offset = sp.getLong(TG_OFFSET_PREF, -1L);
+        String url = "https://api.telegram.org/bot" + token + "/getUpdates?timeout=0"
+                + (offset >= 0 ? "&offset=" + offset : "");
+        String s = new String(http("GET", url, null, null, null), StandardCharsets.UTF_8);
+        JSONObject j = new JSONObject(s);
+        JSONArray r = j.optJSONArray("result");
+        if (r == null) throw new Exception("Telegram getUpdates failed: " + s.substring(0, Math.min(120, s.length())));
+        // Advance the offset past the newest update seen, so the next call starts clean.
+        long maxUpdateId = offset;
+        for (int i = 0; i < r.length(); i++) {
+            long uid = r.optJSONObject(i).optLong("update_id", -1L);
+            if (uid > maxUpdateId) maxUpdateId = uid;
+        }
+        if (maxUpdateId >= 0) {
+            sp.edit().putLong(TG_OFFSET_PREF, maxUpdateId + 1).apply();
+        }
+        return r;
     }
 
     static String webdavUrl(JSONObject t) throws Exception {

@@ -47,4 +47,35 @@ public class ReminderReceiver extends BroadcastReceiver {
                 .build();
         manager.notify(taskId == null ? (int) System.currentTimeMillis() : taskId.hashCode(), notification);
     }
+
+    /** Fire a reminder immediately (used for overdue tasks discovered at schedule time). */
+    static void showNow(Context context, String taskId, String title) {
+        if (title == null || title.trim().isEmpty()) title = "Your task is due";
+        NotificationManager manager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID, "Task reminders", NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription("Reminders for NotesChat task lists");
+            manager.createNotificationChannel(channel);
+        }
+        Intent open = new Intent(context, MainActivity.class);
+        open.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent content = PendingIntent.getActivity(
+                context, taskId == null ? 0 : taskId.hashCode(), open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? new Notification.Builder(context, CHANNEL_ID)
+                : new Notification.Builder(context);
+        Notification notification = builder
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("NotesChat reminder")
+                .setContentText(title)
+                .setStyle(new Notification.BigTextStyle().bigText(title))
+                .setContentIntent(content)
+                .setAutoCancel(true)
+                .build();
+        manager.notify(taskId == null ? (int) System.currentTimeMillis() : taskId.hashCode(), notification);
+    }
 }

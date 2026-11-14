@@ -3810,11 +3810,19 @@ const ckHtml=m=>m.c?'<div class="cnt">'+cntText(m)+'</div><div class="ck">'+m.c.
 $('#fab').onclick=()=>{$('#qk').classList.add('on');$('#qkt').value='';focusWithKeyboard($('#qkt'))};
 $('#qkx').onclick=()=>$('#qk').classList.remove('on');
 $('#qks').onclick=()=>{const t=$('#qkt').value.trim();if(!t)return;msgs.push({id:Date.now(),t:Date.now(),h:esc(t).replace(/\n/g,'<br>'),k:'quick'});save();$('#qk').classList.remove('on');toast('⚡ Quick me save hua');render()};
+let snapshotTimer=0,snapshotBusy=false,snapshotPending=false;
 function persistBackupSnapshot(){
  if(!window.Android)return;
- native('tgsnapshot',{data:backupPayload()}).catch(e=>{
-  try{localStorage.setItem('notes-local-backup-snapshot-error',e.message||'Snapshot update failed')}catch(_){}
- });
+ // Debounce: save()/saveT() fire on every edit; without this each keystroke
+ // triggers two synchronous SharedPreferences commits on the Java side.
+ if(snapshotBusy){snapshotPending=true;return}
+ clearTimeout(snapshotTimer);
+ snapshotTimer=setTimeout(async()=>{
+  snapshotBusy=true;
+  try{await native('tgsnapshot',{data:backupPayload()})}
+  catch(e){try{localStorage.setItem('notes-local-backup-snapshot-error',e.message||'Snapshot update failed')}catch(_){}}
+  finally{snapshotBusy=false;if(snapshotPending){snapshotPending=false;persistBackupSnapshot()}}
+ },1200);
 }
 const LOCAL_BACKUP_HEADER='FZ-NOTES-ENCRYPTED-BACKUP-V1\n';
 let pendingLocalBackupPassword='',pendingLocalEncryptedBackup='',pendingLocalBackupInterval='off';

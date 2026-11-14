@@ -769,9 +769,16 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     }
 
     private static long stableId(String id) {
-        long hash = 1125899906842597L;
-        for (int i = 0; i < id.length(); i++) hash = 31 * hash + id.charAt(i);
-        return hash;
+        // FNV-1a over the full string, folded to 63 bits. Date.now()-based note ids
+        // are numeric and close together; a plain 31*hash loop overflowed into
+        // collisions for ids that shared trailing characters, which made
+        // RecyclerView animate/delete the wrong row.
+        long hash = 0xcbf29ce484222325L;
+        for (int i = 0; i < id.length(); i++) {
+            hash ^= id.charAt(i);
+            hash *= 0x100000001b3L;
+        }
+        return hash & 0x7fffffffffffffffL;
     }
 
     int getThemeMutedColor() { return themeMuted; }
