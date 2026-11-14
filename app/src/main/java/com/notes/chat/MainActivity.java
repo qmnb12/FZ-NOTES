@@ -812,6 +812,7 @@ public class MainActivity extends Activity {
             Intent intent = new Intent(this, ReminderReceiver.class);
             intent.putExtra("taskId", taskId);
             intent.putExtra("title", title);
+            intent.putExtra("dueAt", due);
             int requestCode = taskId.hashCode();
             PendingIntent pending = PendingIntent.getBroadcast(
                     this, requestCode, intent,
@@ -822,6 +823,16 @@ public class MainActivity extends Activity {
                 // A due task that is not done is still actionable — surface it once
                 // instead of silently dropping it (the app may have been closed).
                 if (!done && due > 0 && due <= System.currentTimeMillis()) {
+                    if (Build.VERSION.SDK_INT >= 33
+                            && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        android.content.SharedPreferences permissionPrefs =
+                                getSharedPreferences("notes_permissions", MODE_PRIVATE);
+                        boolean alreadyRequested = permissionPrefs.getBoolean("post_notifications_requested", false);
+                        if (!alreadyRequested) {
+                            permissionPrefs.edit().putBoolean("post_notifications_requested", true).apply();
+                            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 501);
+                        }
+                    }
                     ReminderReceiver.showNow(this, taskId, title + " (overdue)", due);
                 }
                 reply(callbackId, true, "Reminder cancelled or due time passed");
