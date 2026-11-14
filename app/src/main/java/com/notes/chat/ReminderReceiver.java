@@ -51,9 +51,13 @@ public class ReminderReceiver extends BroadcastReceiver {
         manager.notify(taskId == null ? (int) System.currentTimeMillis() : taskId.hashCode(), notification);
     }
 
-    /** Fire a reminder immediately (used for overdue tasks discovered at schedule time). */
-    static void showNow(Context context, String taskId, String title) {
+    /** Fire an overdue reminder once for each task due-time value. */
+    static void showNow(Context context, String taskId, String title, long dueAt) {
         if (title == null || title.trim().isEmpty()) title = "Your task is due";
+        String reminderKey = "notified_" + (taskId == null ? "task" : taskId);
+        android.content.SharedPreferences reminderPrefs =
+                context.getSharedPreferences("notes_reminders", Context.MODE_PRIVATE);
+        if (reminderPrefs.getLong(reminderKey, 0L) == dueAt) return;
         NotificationManager manager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null || !manager.areNotificationsEnabled()) return;
@@ -83,5 +87,6 @@ public class ReminderReceiver extends BroadcastReceiver {
                 .setAutoCancel(true)
                 .build();
         manager.notify(taskId == null ? (int) System.currentTimeMillis() : taskId.hashCode(), notification);
+        reminderPrefs.edit().putLong(reminderKey, dueAt).apply();
     }
 }
