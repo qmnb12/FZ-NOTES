@@ -18,6 +18,8 @@ Menu (top-right) > Cloud backup > Settings me details bharein.
 - GitHub: private repo + personal access token (Contents: read/write).
 Backup file `notes-backup.ncb` password se encrypt hoti hai. Password phone ke Android Keystore me (optional) save ho sakta hai: Cloud backup > Save password on phone.
 
-## Phone storage copy
-Har change ke baad notes ki ek copy `Documents/NotesChat/notes-mirror.json` me apne aap save hoti hai (plain JSON, file manager me dikhti hai).
-App data clear hone par app ye copy khud wapas le aata hai. App uninstall ke baad: menu > "Open backup file from phone" se wahi file chunein.
+## Local encrypted backups
+Local automatic backups are encrypted and saved in `Documents/FZ NOTES/Backups/`.
+Automatic retention keeps the newest three automatic snapshots; manual backups are not pruned.
+Older versions created a plaintext `Documents/NotesChat/notes-mirror.json` file. The app now removes only that exact legacy file, and only when an encrypted backup already exists. If no encrypted backup exists, the legacy mirror is retained so it remains available for recovery.
+For recovery, use Menu > Local backup > Restore and select an encrypted `.fzenc` backup.
