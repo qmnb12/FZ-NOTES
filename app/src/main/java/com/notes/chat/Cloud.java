@@ -209,7 +209,7 @@ public class Cloud {
                 return o.toString();
             }
             case "restore": {
-                byte[] b = download(a.getJSONObject("source"));
+                byte[] b = download(ctx, a.getJSONObject("source"));
                 String key = a.optString("key", "");
                 if (!key.isEmpty()) return decryptWithKey(b, key);
                 return decrypt(b, a.getString("pw"));
@@ -848,7 +848,7 @@ public class Cloud {
         }
     }
 
-    static byte[] download(JSONObject t) throws Exception {
+    static byte[] download(Context ctx, JSONObject t) throws Exception {
         switch (t.getString("type")) {
             case "drive": {
                 String token = t.getString("token");
