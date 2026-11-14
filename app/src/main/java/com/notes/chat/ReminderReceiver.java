@@ -19,7 +19,10 @@ public class ReminderReceiver extends BroadcastReceiver {
         if (title == null || title.trim().isEmpty()) title = "Your task is due";
 
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (manager == null) return;
+        if (manager == null || !manager.areNotificationsEnabled()) return;
+        if (Build.VERSION.SDK_INT >= 33
+                && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
@@ -53,7 +56,10 @@ public class ReminderReceiver extends BroadcastReceiver {
         if (title == null || title.trim().isEmpty()) title = "Your task is due";
         NotificationManager manager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (manager == null) return;
+        if (manager == null || !manager.areNotificationsEnabled()) return;
+        if (Build.VERSION.SDK_INT >= 33
+                && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID, "Task reminders", NotificationManager.IMPORTANCE_DEFAULT);

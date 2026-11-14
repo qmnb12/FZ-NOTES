@@ -218,8 +218,14 @@ public class Cloud {
                 String token = a.getString("token");
                 JSONArray r = tgUpdates(ctx, token);
                 for (int i = r.length() - 1; i >= 0; i--) {
-                    JSONObject m = r.getJSONObject(i).optJSONObject("message");
-                    if (m != null) return String.valueOf(m.getJSONObject("chat").getLong("id"));
+                    JSONObject update = r.optJSONObject(i);
+                    JSONObject m = update == null ? null : update.optJSONObject("message");
+                    if (m == null) continue;
+                    String messageText = m.optString("text", "");
+                    if (!messageText.equals("/start") && !messageText.startsWith("/start ")) continue;
+                    String chatId = String.valueOf(m.getJSONObject("chat").getLong("id"));
+                    acknowledgeTelegramUpdate(ctx, token, update.optLong("update_id", -1L));
+                    return chatId;
                 }
                 throw new Exception("Pehle bot ko /start bhejein");
             }
@@ -868,12 +874,16 @@ public class Cloud {
             default: { // tg
                 String token = t.getString("token");
                 String fid = t.optString("fid", "");
+                long selectedUpdateId = -1L;
                 if (fid.isEmpty()) {
                     JSONArray r = tgUpdates(ctx, token);
                     for (int i = r.length() - 1; i >= 0 && fid.isEmpty(); i--) {
-                        JSONObject m = r.getJSONObject(i).optJSONObject("message");
-                        if (m != null && m.has("document"))
+                        JSONObject update = r.optJSONObject(i);
+                        JSONObject m = update == null ? null : update.optJSONObject("message");
+                        if (m != null && m.has("document")) {
                             fid = m.getJSONObject("document").getString("file_id");
+                            selectedUpdateId = update.optLong("update_id", -1L);
+                        }
                     }
                     if (fid.isEmpty())
                         throw new Exception("Bot ko backup file bhejein (ya forward karein), phir Restore dabayein");
@@ -881,7 +891,9 @@ public class Cloud {
                 String info = new String(http("GET", "https://api.telegram.org/bot" + token
                         + "/getFile?file_id=" + URLEncoder.encode(fid, "UTF-8"), null, null, null), StandardCharsets.UTF_8);
                 String path = new JSONObject(info).getJSONObject("result").getString("file_path");
-                return http("GET", "https://api.telegram.org/file/bot" + token + "/" + path, null, null, null);
+                byte[] downloaded = http("GET", "https://api.telegram.org/file/bot" + token + "/" + path, null, null, null);
+                if (selectedUpdateId >= 0) acknowledgeTelegramUpdate(ctx, token, selectedUpdateId);
+                return downloaded;
             }
         }
     }
@@ -903,32 +915,71 @@ public class Cloud {
     }
 
     // ---------- helpers ----------
-    private static final String TG_OFFSET_PREF = "tg_updates_offset";
+    private static final String TG_OFFSET_PREF = "tg_updates_offset_";
+    private static final String TG_PENDING_PREF = "tg_pending_updates_";
+    private static final Object TG_UPDATES_LOCK = new Object();
 
-    /**
-     * getUpdates without an offset re-delivers every old update forever. Remembering
-     * the last seen update_id per token keeps tgchat/tgdownload reads from walking
-     * the same stale history on every call.
-     */
+    private static String telegramTokenKey(String token) throws Exception {
+        byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(token.getBytes(StandardCharsets.UTF_8));
+        return Base64.encodeToString(digest, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+    }
+
+    /** Cache updates durably before advancing Telegram's offset. Callers acknowledge only
+     * the matching update, so /start polling cannot discard a backup document. */
     static JSONArray tgUpdates(Context ctx, String token) throws Exception {
-        SharedPreferences sp = ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE);
-        long offset = sp.getLong(TG_OFFSET_PREF, -1L);
-        String url = "https://api.telegram.org/bot" + token + "/getUpdates?timeout=0"
-                + (offset >= 0 ? "&offset=" + offset : "");
-        String s = new String(http("GET", url, null, null, null), StandardCharsets.UTF_8);
-        JSONObject j = new JSONObject(s);
-        JSONArray r = j.optJSONArray("result");
-        if (r == null) throw new Exception("Telegram getUpdates failed: " + s.substring(0, Math.min(120, s.length())));
-        // Advance the offset past the newest update seen, so the next call starts clean.
-        long maxUpdateId = offset;
-        for (int i = 0; i < r.length(); i++) {
-            long uid = r.optJSONObject(i).optLong("update_id", -1L);
-            if (uid > maxUpdateId) maxUpdateId = uid;
+        synchronized (TG_UPDATES_LOCK) {
+            SharedPreferences sp = ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE);
+            String key = telegramTokenKey(token);
+            String offsetKey = TG_OFFSET_PREF + key;
+            String pendingKey = TG_PENDING_PREF + key;
+            JSONArray pending;
+            try { pending = new JSONArray(sp.getString(pendingKey, "[]")); }
+            catch (Exception corrupt) { pending = new JSONArray(); }
+            long offset = sp.getLong(offsetKey, -1L);
+            String url = "https://api.telegram.org/bot" + token + "/getUpdates?timeout=0"
+                    + (offset >= 0 ? "&offset=" + offset : "");
+            String response = new String(http("GET", url, null, null, null), StandardCharsets.UTF_8);
+            JSONObject json = new JSONObject(response);
+            JSONArray fresh = json.optJSONArray("result");
+            if (fresh == null) throw new Exception("Telegram getUpdates failed: "
+                    + response.substring(0, Math.min(120, response.length())));
+            long maxUpdateId = offset;
+            java.util.HashSet<Long> known = new java.util.HashSet<>();
+            for (int i = 0; i < pending.length(); i++) {
+                JSONObject item = pending.optJSONObject(i);
+                if (item != null) known.add(item.optLong("update_id", -1L));
+            }
+            for (int i = 0; i < fresh.length(); i++) {
+                JSONObject item = fresh.optJSONObject(i);
+                if (item == null) continue;
+                long id = item.optLong("update_id", -1L);
+                if (id >= 0 && known.add(id)) pending.put(item);
+                if (id > maxUpdateId) maxUpdateId = id;
+            }
+            SharedPreferences.Editor edit = sp.edit().putString(pendingKey, pending.toString());
+            if (maxUpdateId >= 0) edit.putLong(offsetKey, maxUpdateId + 1);
+            if (!edit.commit()) throw new Exception("Telegram updates could not be saved locally");
+            return pending;
         }
-        if (maxUpdateId >= 0) {
-            sp.edit().putLong(TG_OFFSET_PREF, maxUpdateId + 1).apply();
+    }
+
+    private static void acknowledgeTelegramUpdate(Context ctx, String token, long updateId) throws Exception {
+        if (updateId < 0) return;
+        synchronized (TG_UPDATES_LOCK) {
+            SharedPreferences sp = ctx.getSharedPreferences("notes_tg_backup", Context.MODE_PRIVATE);
+            String pendingKey = TG_PENDING_PREF + telegramTokenKey(token);
+            JSONArray old;
+            try { old = new JSONArray(sp.getString(pendingKey, "[]")); }
+            catch (Exception corrupt) { old = new JSONArray(); }
+            JSONArray keep = new JSONArray();
+            for (int i = 0; i < old.length(); i++) {
+                JSONObject item = old.optJSONObject(i);
+                if (item != null && item.optLong("update_id", -1L) != updateId) keep.put(item);
+            }
+            if (!sp.edit().putString(pendingKey, keep.toString()).commit())
+                throw new Exception("Telegram update acknowledgement could not be saved");
         }
-        return r;
     }
 
     static String webdavUrl(JSONObject t) throws Exception {
