@@ -3904,7 +3904,8 @@ async function exportBackupFile(password){
   return false;
  }
 }
-msgs.filter(m=>m.due>Date.now()&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
+// Restore future alarms and surface overdue incomplete tasks after an app restart.
+msgs.filter(m=>Number(m.due)>0&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
 installNativeChatOverlayObservers();render();restoreDraft();updateComposerControls();lastSnapshot=snapshot();if(window.Android)native('tgsnapshot',{data:backupPayload()}).catch(()=>{});syncNativeChatOverlay();
 if(window.Android){
  let driveRecoveryBusy=false,driveRecoveryAttempts=0;

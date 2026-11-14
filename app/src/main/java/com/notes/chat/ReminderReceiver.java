@@ -16,6 +16,7 @@ public class ReminderReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String taskId = intent.getStringExtra("taskId");
         String title = intent.getStringExtra("title");
+        long dueAt = intent.getLongExtra("dueAt", 0L);
         if (title == null || title.trim().isEmpty()) title = "Your task is due";
 
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -49,11 +50,19 @@ public class ReminderReceiver extends BroadcastReceiver {
                 .setAutoCancel(true)
                 .build();
         manager.notify(taskId == null ? (int) System.currentTimeMillis() : taskId.hashCode(), notification);
+        if (dueAt > 0L) {
+            context.getSharedPreferences("notes_reminders", Context.MODE_PRIVATE)
+                    .edit().putLong("notified_" + (taskId == null ? "task" : taskId), dueAt).apply();
+        }
     }
 
-    /** Fire a reminder immediately (used for overdue tasks discovered at schedule time). */
-    static void showNow(Context context, String taskId, String title) {
+    /** Fire an overdue reminder once for each task due-time value. */
+    static void showNow(Context context, String taskId, String title, long dueAt) {
         if (title == null || title.trim().isEmpty()) title = "Your task is due";
+        String reminderKey = "notified_" + (taskId == null ? "task" : taskId);
+        android.content.SharedPreferences reminderPrefs =
+                context.getSharedPreferences("notes_reminders", Context.MODE_PRIVATE);
+        if (reminderPrefs.getLong(reminderKey, 0L) == dueAt) return;
         NotificationManager manager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null || !manager.areNotificationsEnabled()) return;
@@ -83,5 +92,6 @@ public class ReminderReceiver extends BroadcastReceiver {
                 .setAutoCancel(true)
                 .build();
         manager.notify(taskId == null ? (int) System.currentTimeMillis() : taskId.hashCode(), notification);
+        reminderPrefs.edit().putLong(reminderKey, dueAt).apply();
     }
 }
