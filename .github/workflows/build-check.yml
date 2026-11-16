@@ -1,0 +1,32 @@
+name: Compile check
+
+# Manual-only sanity build. Unlike "Android debug build" this does not require the
+# Google OAuth keystore, so it can verify that a change compiles even when the
+# signing secret is not available. It must never be used to distribute an APK.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  assemble-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - name: Install Gradle 9.6.1
+        run: |
+          curl -fsSL https://services.gradle.org/distributions/gradle-9.6.1-bin.zip -o "$RUNNER_TEMP/gradle.zip"
+          unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
+      - name: Compile debug sources
+        run: $RUNNER_TEMP/gradle-9.6.1/bin/gradle --no-daemon --stacktrace :app:assembleDebug

@@ -2,8 +2,6 @@ package com.notes.chat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.graphics.Rect;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -809,17 +807,8 @@ public class MainActivity extends Activity {
             String title = data.optString("title", "NotesChat task");
             long due = data.optLong("due", 0L);
             boolean done = data.optBoolean("done", false);
-            Intent intent = new Intent(this, ReminderReceiver.class);
-            intent.putExtra("taskId", taskId);
-            intent.putExtra("title", title);
-            intent.putExtra("dueAt", due);
-            int requestCode = taskId.hashCode();
-            PendingIntent pending = PendingIntent.getBroadcast(
-                    this, requestCode, intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            AlarmManager alarms = (AlarmManager) getSystemService(ALARM_SERVICE);
             if (done || due <= System.currentTimeMillis()) {
-                if (alarms != null) alarms.cancel(pending);
+                ReminderReceiver.cancel(this, taskId);
                 // A due task that is not done is still actionable — surface it once
                 // instead of silently dropping it (the app may have been closed).
                 if (!done && due > 0 && due <= System.currentTimeMillis()) {
@@ -838,8 +827,7 @@ public class MainActivity extends Activity {
                 reply(callbackId, true, "Reminder cancelled or due time passed");
                 return;
             }
-            if (alarms == null) throw new IllegalStateException("Alarm service unavailable");
-            alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pending);
+            ReminderReceiver.schedule(this, taskId, title, due);
             if (Build.VERSION.SDK_INT >= 33
                     && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 android.content.SharedPreferences permissionPrefs =
@@ -857,6 +845,25 @@ public class MainActivity extends Activity {
             reply(callbackId, true, "Reminder scheduled");
         } catch (Exception e) {
             reply(callbackId, false, e.getMessage() == null ? "Reminder failed" : e.getMessage());
+        }
+    }
+
+    private void handleReminderSync(int callbackId, String rawArgs) {
+        try {
+            JSONArray items = new JSONObject(rawArgs).optJSONArray("items");
+            ReminderReceiver.sync(this, items);
+            if (items != null && items.length() > 0 && Build.VERSION.SDK_INT >= 33
+                    && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                android.content.SharedPreferences permissionPrefs =
+                        getSharedPreferences("notes_permissions", MODE_PRIVATE);
+                if (!permissionPrefs.getBoolean("post_notifications_requested", false)) {
+                    permissionPrefs.edit().putBoolean("post_notifications_requested", true).apply();
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 501);
+                }
+            }
+            reply(callbackId, true, "Reminders synced");
+        } catch (Exception e) {
+            reply(callbackId, false, e.getMessage() == null ? "Reminder sync failed" : e.getMessage());
         }
     }
 
@@ -1072,6 +1079,14 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> handleReminder(id, args));
                 return;
             }
+            if ("remindersync".equals(op)) {
+                if (!bridgeStringWithinLimit(args, 2 * 1024 * 1024)) {
+                    reply(id, false, "Reminder sync request is too large");
+                    return;
+                }
+                runOnUiThread(() -> handleReminderSync(id, args));
+                return;
+            }
             if ("pickbackupfolder".equals(op)) {
                 runOnUiThread(() -> {
                     backupFolderReplyId = id;
@@ -1187,9 +1202,9 @@ public class MainActivity extends Activity {
                 .alpha(0f)
                 .translationX(nativeMessagePopupStartDx)
                 .translationY(nativeMessagePopupStartDy)
-                .scaleX(0.055f).scaleY(0.055f)
-                .setDuration(225)
-                .setInterpolator(new AccelerateInterpolator(1.2f))
+                .scaleX(0.72f).scaleY(0.72f)
+                .setDuration(180)
+                .setInterpolator(new AccelerateInterpolator(1.4f))
                 .withLayer()
                 .withEndAction(() -> {
                     if (nativeMessagePopup == popup) {
@@ -1510,21 +1525,23 @@ public class MainActivity extends Activity {
                     dx = anchor[0] - (cardLocation[0] + card.getWidth() / 2f);
                     dy = anchor[1] - (cardLocation[1] + card.getHeight() / 2f);
                 }
-                nativeMessagePopupStartDx = dx;
-                nativeMessagePopupStartDy = dy;
+                // Travel only part of the way from the bubble: a full-screen-scale animation
+                // re-rasterises the whole card every frame and reads as stutter on 60 Hz panels.
+                nativeMessagePopupStartDx = dx * 0.45f;
+                nativeMessagePopupStartDy = dy * 0.45f;
                 card.setPivotX(card.getWidth() / 2f);
                 card.setPivotY(card.getHeight() / 2f);
-                card.setTranslationX(dx);
-                card.setTranslationY(dy);
-                card.setScaleX(0.045f);
-                card.setScaleY(0.045f);
+                card.setTranslationX(nativeMessagePopupStartDx);
+                card.setTranslationY(nativeMessagePopupStartDy);
+                card.setScaleX(0.72f);
+                card.setScaleY(0.72f);
                 card.setAlpha(0f);
                 card.animate().cancel();
                 card.animate()
                         .alpha(1f).translationX(0f).translationY(0f)
                         .scaleX(1f).scaleY(1f)
-                        .setDuration(390)
-                        .setInterpolator(new DecelerateInterpolator(1.35f))
+                        .setDuration(250)
+                        .setInterpolator(new DecelerateInterpolator(1.6f))
                         .withLayer()
                         .start();
             });

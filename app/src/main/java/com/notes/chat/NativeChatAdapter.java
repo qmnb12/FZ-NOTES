@@ -32,6 +32,7 @@ import android.util.Base64;
 import android.util.LruCache;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
@@ -317,6 +318,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         lastSelectionChangedId = id;
         boolean wasSelecting = !selectedIds.isEmpty();
         if (selectedIds.contains(id)) selectedIds.remove(id); else selectedIds.add(id);
+        // Telegram-like tactile tick for every selection change.
+        try {
+            if (recyclerView != null) recyclerView.performHapticFeedback(
+                    HapticFeedbackConstants.KEYBOARD_TAP);
+        } catch (Exception ignored) { }
         boolean isSelecting = !selectedIds.isEmpty();
         if (wasSelecting != isSelecting) {
             if (!items.isEmpty()) notifyItemRangeChanged(0, items.size(), "selection");
@@ -1439,21 +1445,27 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                     ? blendColors(themeBubble, themeAccent, light ? 0.14f : 0.26f)
                     : themeBubble;
             final int startColor = bubbleFillColor;
-            GradientDrawable background = new GradientDrawable();
+            // Reuse the row's drawable instead of installing a fresh one: setBackground()
+            // requests a layout pass, and doing that for every visible row on every toggle
+            // was the main source of selection jank.
+            GradientDrawable background = bubble.getBackground() instanceof GradientDrawable
+                    ? (GradientDrawable) bubble.getBackground() : new GradientDrawable();
+            boolean installed = bubble.getBackground() == background;
             background.setColor(startColor);
             background.setCornerRadii(new float[]{dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(5),dp(5),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp)});
-            if (selected) {
-                background.setStroke(dp(1), themeAccent);
-            }
-            bubble.setBackground(background);
+            background.setStroke(dp(1), selected ? themeAccent : themeBorder);
+            if (installed) background.invalidateSelf(); else bubble.setBackground(background);
             bubble.setElevation(dp(selected ? 2f : 1.5f));
-            // Keep the selected message response on the hardware compositor; avoid layout changes.
-            // Never scale/translate the bubble itself: selection must not alter its visible size.
-            bubble.animate().translationX(0f).scaleX(1f).scaleY(1f)
-                    .setDuration(220)
-                    .setInterpolator(new DecelerateInterpolator(1.5f))
-                    .withLayer()
-                    .start();
+            // Never scale/translate the bubble itself: selection must not alter its visible
+            // size. Only settle a row that was actually mid-swipe; otherwise creating a
+            // hardware layer for every visible row on every toggle causes selection jank.
+            if (bubble.getTranslationX() != 0f || bubble.getScaleX() != 1f || bubble.getScaleY() != 1f) {
+                bubble.animate().translationX(0f).scaleX(1f).scaleY(1f)
+                        .setDuration(220)
+                        .setInterpolator(new DecelerateInterpolator(1.5f))
+                        .withLayer()
+                        .start();
+            }
             selectionAnimator = ValueAnimator.ofFloat(0f, 1f);
             selectionAnimator.setDuration(240);
             selectionAnimator.setInterpolator(new DecelerateInterpolator(1.5f));
@@ -1503,7 +1515,12 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             super(context);
             // Keep drawing hardware-accelerated. Software layers caused selection stutter.
         }
-        void setColors(int accent, int outline) { this.accent = accent; this.outline = outline; invalidate(); }
+        void setColors(int accent, int outline) {
+            if (this.accent == accent && this.outline == outline) return;
+            this.accent = accent;
+            this.outline = outline;
+            invalidate();
+        }
         void setChecked(boolean checked, boolean animated) { setChecked(checked, animated, false); }
         void setChecked(boolean checked, boolean animated, boolean hideWhenDone) {
             float target = checked ? 1f : 0f;

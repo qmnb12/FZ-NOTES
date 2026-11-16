@@ -1292,24 +1292,25 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 
 /* Brief, low-friction copy feedback: the exact Mono/code value flashes only after clipboard success. */
 #chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{
- background:color-mix(in srgb,var(--acc) 28%,transparent)!important;
- color:var(--text)!important;
- box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 42%,transparent)!important;
+ background:var(--acc)!important;
+ color:var(--bg)!important;
+ box-shadow:0 0 0 2px var(--acc)!important;
  border-radius:4px!important;
- transition:background 120ms ease-out,box-shadow 160ms ease-out!important;
+ transition:background 120ms ease-out,color 120ms ease-out,box-shadow 160ms ease-out!important;
 }
 @media(prefers-reduced-motion:reduce){#chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{transition:none!important}}
 
-/* Animate applying Mono from the Android text-selection toolbar, not just copying existing Mono. */
+/* Animate applying Mono from the Android text-selection toolbar, not just copying existing Mono.
+   Uses plain theme variables (no color-mix) so the pulse renders on every theme/WebView build. */
 #ed .mono.mono-apply-pulse{
- outline:2px solid transparent!important;
+ outline:2px solid var(--acc)!important;
  outline-offset:2px;
  border-radius:4px!important;
- animation:monoApplyPulse 420ms cubic-bezier(.22,1,.36,1) both!important;
+ animation:monoApplyPulse 480ms cubic-bezier(.22,1,.36,1) both!important;
 }
 @keyframes monoApplyPulse{
- 0%{outline-color:color-mix(in srgb,var(--acc) 62%,transparent);text-shadow:0 0 7px color-mix(in srgb,var(--acc) 58%,transparent);filter:brightness(1.32)}
- 45%{outline-color:color-mix(in srgb,var(--acc) 34%,transparent);text-shadow:0 0 4px color-mix(in srgb,var(--acc) 30%,transparent);filter:brightness(1.14)}
+ 0%{outline-color:var(--acc);text-shadow:0 0 8px var(--acc);filter:brightness(1.4)}
+ 55%{outline-color:var(--acc);text-shadow:0 0 3px var(--acc);filter:brightness(1.12)}
  100%{outline-color:transparent;text-shadow:none;filter:none}
 }
 @media(prefers-reduced-motion:reduce){#ed .mono.mono-apply-pulse{animation:none!important;outline-color:transparent!important;text-shadow:none!important;filter:none!important}}
@@ -1758,10 +1759,10 @@ try{const last=localStorage.getItem('notes-last-topic');if(last&&(last==='all'||
 let undoStack=[],redoStack=[],lastSnapshot='';
 const snapshot=()=>JSON.stringify({msgs,topics});
 function rememberChange(){const now=snapshot();if(lastSnapshot&&now!==lastSnapshot){undoStack.push(lastSnapshot);if(undoStack.length>60)undoStack.shift();redoStack=[]}lastSnapshot=now}
-function persistSnapshot(){try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){toast('Storage full')}persistBackupSnapshot();scheduleAutoBackup()}
+function persistSnapshot(){try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){toast('Storage full')}persistBackupSnapshot();scheduleAutoBackup();syncReminders()}
 const saveT=()=>{rememberChange();try{localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){}persistBackupSnapshot();scheduleAutoBackup()};
 const save=()=>{rememberChange();try{localStorage.setItem('notes-chat',JSON.stringify(msgs))}catch(e){toast('Storage full')}persistBackupSnapshot();scheduleAutoBackup()};
-function restoreHistoryState(raw){try{const d=JSON.parse(raw);if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics))return false;msgs=d.msgs;topics=d.topics;lastSnapshot=snapshot();persistSnapshot();cur='all';hiddenUnlocked=false;render();return true}catch(e){return false}}
+function restoreHistoryState(raw){try{const d=JSON.parse(raw);if(!isRestorablePayload(d,false))return false;if(!sanitizeImportedPayload(d))return false;msgs=d.msgs;topics=d.topics;lastSnapshot=snapshot();persistSnapshot();cur='all';hiddenUnlocked=false;render();return true}catch(e){return false}}
 function undoChange(){if(!undoStack.length){toast('Undo ke liye kuch nahi hai');return}redoStack.push(snapshot());const prev=undoStack.pop();if(!restoreHistoryState(prev))toast('Undo nahi ho saka');else toast('Undo ho gaya')}
 function redoChange(){if(!redoStack.length){toast('Redo ke liye kuch nahi hai');return}undoStack.push(snapshot());const next=redoStack.pop();if(!restoreHistoryState(next))toast('Redo nahi ho saka');else toast('Redo ho gaya')}
 
@@ -1957,25 +1958,63 @@ function clean(n,autoLinks=true){let o='';n.childNodes.forEach(c=>{
  else if(t==='A'){const h=c.getAttribute('href')||'';o+=/^(https?:|mailto:|tel:)/i.test(h)?'<a href="'+esc(h)+'">'+x+'</a>':x}
  else if(t==='SPAN'||t==='CODE'){const blockKind=kind==='mono'||kind==='quote'||kind==='code';const nested=blockKind&&c.parentElement&&c.parentElement.closest('span.mono,span.quote,span.code');o+=kind&&!nested?'<span class="'+kind+'">'+x+'</span>':x}
  else o+=x});return o}
+function normalizeMessageId(value){
+ const id=String(value==null?'':value);
+ if(!/^[0-9]{1,20}$/.test(id))return null;
+ const numeric=Number(id);
+ return Number.isSafeInteger(numeric)?numeric:id
+}
 function sanitizeStoredMessages(items){
  if(!Array.isArray(items))return;
- items.forEach(m=>{
-  if(!m||typeof m!=='object')return;
+ for(let index=items.length-1;index>=0;index--){
+  const m=items[index];
+  if(!m||typeof m!=='object'||Array.isArray(m)){items.splice(index,1);continue}
+  const id=normalizeMessageId(m.id);
+  if(id===null){items.splice(index,1);continue}
+  m.id=id;
   if(typeof m.h==='string'){
    const holder=document.createElement('div');
    holder.innerHTML=m.h;
    m.h=clean(holder);
   }else m.h='';
+  const time=Number(m.t);
+  m.t=Number.isFinite(time)&&time>0?time:Date.now();
+  if(m.due!==undefined&&m.due!==null&&m.due!==''){
+   const due=Number(m.due);
+   if(Number.isFinite(due)&&due>0)m.due=due;
+   else delete m.due;
+  }else delete m.due;
   if(m.r!==undefined&&m.r!==null){
-   const replyRef=String(m.r);
-   m.r=/^[0-9]{1,20}$/.test(replyRef)?m.r:null;
+   const replyRef=normalizeMessageId(m.r);
+   if(replyRef===null)delete m.r;else m.r=replyRef;
   }
   if(m.i!==undefined&&m.i!==null){
    const image=String(m.i);
    const validImage=/^data:image[/](?:png|jpe?g|gif|webp|bmp|heic|heif);base64,[a-z0-9+/=]+$/i.test(image);
-   m.i=validImage&&image.length<=48*1024*1024?image:'';
+   if(validImage&&image.length<=48*1024*1024)m.i=image;else delete m.i;
   }
- });
+  if(m.k!==undefined&&typeof m.k!=='string')delete m.k;
+  if(m.p!==undefined)m.p=m.p?1:0;
+  if(m.hidden!==undefined)m.hidden=!!m.hidden;
+  if(m.e!==undefined)m.e=m.e?1:0;
+  if(m.c!==undefined){
+   if(!Array.isArray(m.c))delete m.c;
+   else{
+    m.c=m.c.filter(item=>item&&typeof item==='object').map(item=>{
+     const state=Number(item.s);
+     return{x:String(item.x==null?'':item.x),s:state===1||state===2?state:0}
+    });
+    if(!m.c.length)delete m.c;
+   }
+  }
+ }
+ const seenIds=new Set();
+ for(let index=items.length-1;index>=0;index--){
+  const key=String(items[index].id);
+  if(seenIds.has(key)){items.splice(index,1);continue}
+  seenIds.add(key);
+ }
+ items.forEach(m=>{if(m.r!==undefined&&!seenIds.has(String(m.r)))delete m.r});
 }
 // Local storage and imported backup content are data, never trusted HTML.
 sanitizeStoredMessages(msgs);
@@ -2114,7 +2153,7 @@ function send(){const h=clean(ed);if(!ed.textContent.trim())return;
  const em=editId&&msgs.find(m=>m.id===editId);
  if(listMode||(em&&em.c)){const title=(listTitle||(em&&plain(em.h))||'').trim();const L=ed.innerText.split('\n').map(x=>x.trim()).filter(Boolean);if(!title||!L.length){toast('List ka naam aur kam se kam ek item likhein',2500);return}
   const items=L.map(x=>{const o=em&&em.c&&em.c.find(i=>i.x===x);return{x,s:o?o.s:0}});
-  const dueText=$('#taskdue').value;const due=dueText?new Date(dueText).getTime():(em&&em.due||0);
+  const dueText=$('#taskdue').value;const due=dueText?new Date(dueText).getTime():0;
   if(em){em.h='<b>'+esc(title)+'</b>';em.c=items;em.due=due||undefined;em.e=1;editId=null;if(due)scheduleReminder(em)}
   else{const rm=replyId&&msgs.find(m=>m.id===replyId);const task={id:Date.now(),t:Date.now(),h:'<b>'+esc(title)+'</b>',c:items,due:due||undefined,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined};msgs.push(task);if(due)scheduleReminder(task);replyId=null}
   listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');$('#taskdue').value='';ed.innerHTML='';updateComposerControls();ed.dataset.ph='Message in Notes';clearDraft();setCtx();save();render(!wasEditing);keepComposerFocused();return}
@@ -2123,7 +2162,7 @@ function send(){const h=clean(ed);if(!ed.textContent.trim())return;
  ed.innerHTML='';updateComposerControls();clearDraft();setCtx();save();render(!wasEditing);keepComposerFocused()}$('#send').onclick=send;
 $('#listfab').onclick=()=>{if(listMode){listMode=false;listTitle='';$('#listfab').classList.remove('on');$('#taskmeta').classList.remove('on');ed.dataset.ph='Message in Notes';toast('Checklist mode off');return}ask('listtitle','List ka naam likhein');};
 ed.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'))});
-document.addEventListener('selectionchange',()=>{const s=getSelection();const selectedAny=s.rangeCount&&!s.isCollapsed;if(selectedAny)lastAnySelectionRange=s.getRangeAt(0).cloneRange();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;if(!selected&&!nativeSelectionMenuOpen){nativeSelectionSession=false;$('#tb').classList.remove('native-selection-hidden')}$('#tb').classList.remove('on');if(selected){$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',b.dataset.a==='mono'&&!!(s.anchorNode.parentElement&&s.anchorNode.parentElement.closest('.mono'))))}}else{nativeSelectionSession=false;$('#tb').classList.remove('on','native-selection-hidden')}});
+document.addEventListener('selectionchange',()=>{const s=getSelection();const selectedAny=s.rangeCount&&!s.isCollapsed;if(selectedAny)lastAnySelectionRange=s.getRangeAt(0).cloneRange();const inEditor=s.rangeCount&&ed.contains(s.anchorNode)&&ed.contains(s.focusNode);if(inEditor){saved=s.getRangeAt(0).cloneRange();const selected=!s.isCollapsed&&s.toString().trim().length>0;if(!selected&&!nativeSelectionMenuOpen){nativeSelectionSession=false;$('#tb').classList.remove('native-selection-hidden')}$('#tb').classList.remove('on');if(selected){const formatState=editorSelectionFormatState();$('#tb').querySelectorAll('button[data-a]').forEach(b=>b.classList.toggle('on',!!formatState[b.dataset.a]))}}else{nativeSelectionSession=false;$('#tb').classList.remove('on','native-selection-hidden')}});
 function restore(){ed.focus();if(saved){const s=getSelection();s.removeAllRanges();s.addRange(saved)}}function placeCaretAtEnd(el){try{el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();s.removeAllRanges();s.addRange(r)}catch(_){}if(el===ed)updateComposerControls()}
 let nativeImeFocusTarget=null,nativeImeFocusAt=0;
 function requestNativeKeyboard(el){
@@ -2173,18 +2212,103 @@ function appendEditorFormatRemainder(target,source,contents){
  if(!source||!contents||!contents.childNodes.length)return;
  const shell=source.cloneNode(false);shell.appendChild(contents);target.appendChild(shell);
 }
-function selectInsertedEditorNodes(nodes){
- if(!nodes||!nodes.length)return false;
- const first=nodes[0],last=nodes[nodes.length-1],range=document.createRange();
- if(first.nodeType===3)range.setStart(first,0);else range.setStartBefore(first);
- if(last.nodeType===3)range.setEnd(last,last.nodeValue.length);else range.setEndAfter(last);
- const selection=getSelection();selection.removeAllRanges();selection.addRange(range);return true;
+// Formatting must stay on the selected text only. Keeping the wrapper's contents
+// selected makes the next keystroke (or Enter) replace/continue the format, so every
+// format action parks the caret right after the new wrapper instead.
+function collapseEditorCaretAfter(node){
+ if(!node)return false;
+ try{const range=document.createRange();range.setStartAfter(node);range.collapse(true);
+  const selection=getSelection();selection.removeAllRanges();selection.addRange(range);saved=range.cloneRange();return true}catch(_){return false}
+}
+function collapseEditorCaretAtEndOf(node){
+ if(!node)return false;
+ try{const range=document.createRange();range.selectNodeContents(node);range.collapse(false);
+  const selection=getSelection();selection.removeAllRanges();selection.addRange(range);saved=range.cloneRange();return true}catch(_){return false}
+}
+function editorSelectionFormatState(){
+ const out={},selection=getSelection();
+ if(!selection||!selection.rangeCount||selection.isCollapsed)return out;
+ const tags={b:'B',i:'I',u:'U',s:'S'};
+ let node=selection.getRangeAt(0).startContainer;node=node.nodeType===1?node:node.parentElement;
+ while(node&&node!==ed){
+  if(node.nodeType===1){
+   const name=node.tagName;
+   Object.keys(tags).forEach(k=>{if(name===tags[k]||(k==='s'&&(name==='STRIKE'||name==='DEL')))out[k]=1});
+   KINDS.forEach(k=>{if(node.classList&&node.classList.contains(k))out[k]=1});
+  }
+  node=node.parentElement;
+ }
+ return out
+}
+function applyEditorInlineFormat(tag){
+ const selection=getSelection();
+ if(!selection||!selection.rangeCount||selection.isCollapsed)return false;
+ const range=selection.getRangeAt(0).cloneRange();
+ if(!ed.contains(range.startContainer)||!ed.contains(range.endContainer))return false;
+ let host=null,node=range.commonAncestorContainer;
+ node=node.nodeType===1?node:node.parentElement;
+ while(node&&node!==ed){if(node.nodeType===1&&node.tagName===tag){host=node;break}node=node.parentElement}
+ if(host){
+  const whole=document.createRange();whole.selectNodeContents(host);
+  const covers=range.compareBoundaryPoints(Range.START_TO_START,whole)<=0
+   &&range.compareBoundaryPoints(Range.END_TO_END,whole)>=0;
+  const parent=host.parentNode;if(!parent)return false;
+  if(covers){
+   const last=host.lastChild;
+   while(host.firstChild)parent.insertBefore(host.firstChild,host);
+   parent.removeChild(host);
+   if(last&&last.parentNode)collapseEditorCaretAfter(last);else collapseEditorCaretAtEndOf(parent===ed?ed:parent);
+   return true
+  }
+  const beforeRange=document.createRange();beforeRange.selectNodeContents(host);beforeRange.setEnd(range.startContainer,range.startOffset);
+  const afterRange=document.createRange();afterRange.selectNodeContents(host);afterRange.setStart(range.endContainer,range.endOffset);
+  const before=beforeRange.cloneContents(),selected=range.cloneContents(),after=afterRange.cloneContents();
+  const replacement=document.createDocumentFragment();
+  if(before.childNodes.length){const shell=host.cloneNode(false);shell.appendChild(before);replacement.appendChild(shell)}
+  replacement.appendChild(selected);
+  if(after.childNodes.length){const shell=host.cloneNode(false);shell.appendChild(after);replacement.appendChild(shell)}
+  const lastNode=replacement.lastChild;
+  parent.replaceChild(replacement,host);
+  if(lastNode&&lastNode.parentNode)collapseEditorCaretAfter(lastNode);
+  return true
+ }
+ const fragment=range.extractContents();
+ const element=document.createElement(tag);element.appendChild(fragment);range.insertNode(element);
+ collapseEditorCaretAfter(element);
+ return true
+}
+function clearEditorFormatting(){
+ const selection=getSelection();
+ if(!selection||!selection.rangeCount||selection.isCollapsed){toast('Pehle text select karo');return false}
+ const range=selection.getRangeAt(0).cloneRange();
+ if(!ed.contains(range.startContainer)||!ed.contains(range.endContainer))return false;
+ const fragment=range.extractContents(),plain=document.createDocumentFragment();
+ const walk=(node,out)=>{
+  Array.from(node.childNodes).forEach(child=>{
+   if(child.nodeType===3){out.appendChild(document.createTextNode(child.nodeValue));return}
+   if(child.nodeType!==1)return;
+   if(child.tagName==='BR'){out.appendChild(document.createElement('br'));return}
+   if(child.tagName==='DIV'||child.tagName==='P'){
+    if(out.lastChild&&out.lastChild.nodeName!=='BR')out.appendChild(document.createElement('br'));
+    walk(child,out);return
+   }
+   walk(child,out);
+  });
+ };
+ walk(fragment,plain);
+ range.insertNode(plain);
+ if(plain.lastChild)collapseEditorCaretAfter(plain.lastChild);else collapseEditorCaretAtEndOf(ed);
+ return true
 }
 function applyEditorBlockFormat(cls){
  const selection=getSelection();if(!selection||!selection.rangeCount||selection.isCollapsed)return false;
- const range=selection.getRangeAt(0).cloneRange();
+ let range=selection.getRangeAt(0).cloneRange();
  if(!ed.contains(range.startContainer)||!ed.contains(range.endContainer))return false;
- const owner=outerEditorBlockFormat(range);
+ let owner=outerEditorBlockFormat(range);
+ if(cls&&owner&&owner.classList.contains(cls)){
+  // Tapping the active format again removes that whole block format.
+  range=document.createRange();range.selectNodeContents(owner);cls='';
+ }
  let selected,before=null,after=null;
  if(owner&&owner.parentNode){
   const beforeRange=document.createRange();beforeRange.selectNodeContents(owner);beforeRange.setEnd(range.startContainer,range.startOffset);before=beforeRange.cloneContents();
@@ -2204,9 +2328,9 @@ function applyEditorBlockFormat(cls){
  appendEditorFormatRemainder(replacement,owner,after);
  if(owner&&owner.parentNode)owner.parentNode.replaceChild(replacement,owner);
  else range.insertNode(replacement);
- if(wrapper){
-  const next=document.createRange();next.selectNodeContents(wrapper);selection.removeAllRanges();selection.addRange(next);
- }else selectInsertedEditorNodes(insertedNodes);
+ const tail=wrapper||insertedNodes[insertedNodes.length-1];
+ if(tail&&tail.parentNode)collapseEditorCaretAfter(tail);
+ else collapseEditorCaretAtEndOf(ed);
  if(cls==='mono'&&wrapper){
   const clearPulse=()=>wrapper.classList.remove('mono-apply-pulse');
   wrapper.addEventListener('animationend',clearPulse,{once:true});wrapper.classList.add('mono-apply-pulse');setTimeout(clearPulse,520);
@@ -2216,9 +2340,11 @@ function applyEditorBlockFormat(cls){
 function wrap(cls){
  if(['mono','quote','code'].includes(cls))return applyEditorBlockFormat(cls);
  const selection=getSelection();if(!selection||!selection.rangeCount||selection.isCollapsed)return false;
- const range=selection.getRangeAt(0),span=document.createElement('span');span.className=cls;
+ const range=selection.getRangeAt(0);
+ if(!ed.contains(range.startContainer)||!ed.contains(range.endContainer))return false;
+ const span=document.createElement('span');span.className=cls;
  span.appendChild(range.extractContents());range.insertNode(span);
- selection.removeAllRanges();const next=document.createRange();next.selectNodeContents(span);selection.addRange(next);return true;
+ collapseEditorCaretAfter(span);return true;
 }
 function exitQuoteOnParagraph(e){
  const paragraph=e.type==='keydown'?(e.key==='Enter'&&!e.shiftKey&&!e.isComposing):(e.inputType==='insertParagraph');
@@ -2296,10 +2422,10 @@ function ask(m,ph,v){
  lk.classList.add('on');syncNativeChatOverlay();focusWithKeyboard(lki)
 }
 function act(a){restore();
- const ex={b:'bold',i:'italic',u:'underline',s:'strikeThrough'};
- if(ex[a])document.execCommand(ex[a]);
+ const inline={b:'B',i:'I',u:'U',s:'S'};
+ if(inline[a]){if(!applyEditorInlineFormat(inline[a]))toast('Pehle text select karo')}
  else if(['mono','code','quote','spoiler'].includes(a)){if(!wrap(a))toast('Pehle text select karo')}
- else if(a==='reg'){if(!applyEditorBlockFormat(''))toast('Pehle text select karo')}
+ else if(a==='reg'){if(!clearEditorFormatting())toast('Pehle text select karo')}
  
  else if(a==='date')document.execCommand('insertHTML',false,'<span class="date">'+esc(new Date().toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}))+'</span>&nbsp;');
  else if(a==='link')ask('link','Paste link');
@@ -2926,7 +3052,7 @@ function openTopicSheet(t){sh.innerHTML='<button data-k="ren">Rename topic</butt
  sh.dataset.id=t.id;sh.dataset.type='topic';sh.classList.add('on')}
 $('#side').addEventListener('contextmenu',e=>e.preventDefault());
 const plain=h=>{const d=document.createElement('div');d.innerHTML=h.replace(/<br>/g,' ');return d.textContent};
-const rq=m=>{if(!m.r)return '';const o=msgs.find(x=>x.id===m.r);return '<span class="rp" data-r="'+m.r+'"><b>Note</b><span>'+(o?(esc(plain(o.h).slice(0,80))||'Photo'):'Deleted note')+'</span></span>'};
+const rq=m=>{if(!m.r)return '';const o=msgs.find(x=>x.id===m.r);return '<span class="rp" data-r="'+esc(String(m.r))+'"><b>Note</b><span>'+(o?(esc(plain(o.h).slice(0,80))||'Photo'):'Deleted note')+'</span></span>'};
 function jump(id){if(hasNativeChat()){const found=msgs.some(m=>Number(m.id)===Number(id));if(!found){toast('Note nahi mila');return}try{window.Android.scrollNativeChatToId(String(id))}catch(_){}return}const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b){toast('Note nahi mila');return}b.scrollIntoView({block:'center',behavior:'smooth'});b.classList.add('hl');setTimeout(()=>b.classList.remove('hl'),1200)}
 function setCtx(){const c=$('#ctx'),id=editId||replyId,m=id&&msgs.find(m=>m.id===id);
  if(m){$('#cxt').textContent=editId?'Edit message':'Reply to note';$('#cxs').textContent=plain(m.h);c.classList.add('on')}else c.classList.remove('on')}
@@ -3113,11 +3239,15 @@ const lastBackup=()=>{try{return localStorage.getItem('notes-last-backup')||''}c
 const lastTelegramBackup=()=>{try{return localStorage.getItem('notes-last-telegram-backup')||''}catch(e){return ''}};
 function backupPayload(){
  const c=cfgGet();
+ // Hidden Notes must never be written to a backup/snapshot payload: the native
+ // Telegram snapshot path stores that JSON as plaintext in SharedPreferences, which
+ // side-stepped the Hidden Notes PIN. Local hidden notes are kept on restore.
+ const backupMsgs=msgs.filter(m=>!m.hidden);
  return JSON.stringify({
   format:'FZ-NOTES-BACKUP',
   version:5,
   exportedAt:new Date().toISOString(),
-  msgs,topics,
+  msgs:backupMsgs,topics,
   telegramSettings:{
    token:c.tgToken||'',
    chat:c.tgChat||'',
@@ -3254,13 +3384,43 @@ function restoreTelegramSettingsFromBackup(settings){
   .then(()=>toast('Telegram settings restored from Google',3500))
   .catch(e=>toast('Telegram settings restore failed: '+e.message,4500));
 }
+function isRestorablePayload(d,requireSingle){
+ if(!d||typeof d!=='object')return false;
+ if(d.format&&d.format!=='FZ-NOTES-BACKUP')return false;
+ if(!Array.isArray(d.msgs)||!Array.isArray(d.topics)||!d.topics.length)return false;
+ if(!d.topics.every(t=>t&&typeof t==='object'&&typeof t.id==='string'&&t.id&&typeof t.name==='string'))return false;
+ return !requireSingle||d.msgs.every(m=>m&&typeof m==='object'&&typeof m.h==='string')
+}
+function sanitizeImportedPayload(d){
+ const sourceCount=Array.isArray(d.msgs)?d.msgs.length:0;
+ sanitizeStoredMessages(d.msgs);
+ d.topics=d.topics.filter(t=>t&&typeof t.id==='string'&&t.id.length<=120&&typeof t.name==='string');
+ const topicIds=new Set(d.topics.map(t=>t.id));
+ if(!topicIds.has('gen'))d.topics.unshift({id:'gen',name:'General'});
+ if(sourceCount>0&&!d.msgs.length)return false;
+ return true
+}
+// Backups intentionally exclude Hidden Notes, so a restore must not wipe the hidden
+// notes that already live on this device. Keep them and let ordinary notes come from
+// the restored payload.
+function mergeHiddenNotes(restored){
+ const hidden=msgs.filter(m=>m.hidden);
+ if(!hidden.length)return restored;
+ const ids=new Set(restored.map(m=>String(m.id)));
+ hidden.forEach(m=>{if(!ids.has(String(m.id)))restored.push(m)});
+ return restored;
+}
 function applyCloudRestore(raw){
- const d=JSON.parse(raw);
- if(Array.isArray(d.msgs)&&Array.isArray(d.topics)&&d.topics.length){
-  suppressAutoBackup=true;msgs=d.msgs;topics=d.topics;cur='all';hiddenUnlocked=false;lastSnapshot=snapshot();undoStack=[];redoStack=[];
+ let d;try{d=JSON.parse(raw)}catch(_){d=null}
+ if(isRestorablePayload(d,false)&&sanitizeImportedPayload(d)){
+  suppressAutoBackup=true;
+  msgs=mergeHiddenNotes(d.msgs);topics=d.topics;cur='all';hiddenUnlocked=false;replyId=null;editId=null;sel.clear();selMode=false;
+  lastSnapshot=snapshot();undoStack=[];redoStack=[];
   try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics));localStorage.setItem('notes-last-backup',noteStamp())}catch(_){}
   if(d.telegramSettings)restoreTelegramSettingsFromBackup(d.telegramSettings);
-  hadLocalNotesState=true;persistBackupSnapshot();render();suppressAutoBackup=false;return true;
+  hadLocalNotesState=true;persistBackupSnapshot();render();suppressAutoBackup=false;
+  syncReminders();
+  return true;
  }
  suppressAutoBackup=false;toast('Backup data format valid nahi hai');return false;
 }
@@ -3805,7 +3965,23 @@ function moveSearchResult(delta){
 function matchesFilter(m){const task=Array.isArray(m.c),done=task&&m.c.length>0&&m.c.every(i=>i.s===1),d=new Date(m.t),n=new Date();if(searchFilter==='focus')return task&&!done;if(searchFilter==='pinned')return !!m.p;if(searchFilter==='tasks')return task;if(searchFilter==='open')return task&&!done;if(searchFilter==='done')return task&&done;if(searchFilter==='overdue')return task&&m.due&&m.due<Date.now()&&!done;if(searchFilter==='today')return d.toDateString()===n.toDateString();return true}
 $('#filters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;searchFilter=b.dataset.filter;$('#filters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));render()});
 const cntText=m=>{const n=m.c.length,d=m.c.filter(i=>i.s===1).length,r=m.c.filter(i=>i.s===2).length;return d+'/'+n+' ho gaya'+(r?' · '+r+' nahi mila':'')};
-function scheduleReminder(m){if(!m||!m.due||!window.Android)return;native('reminder',{id:String(m.id),title:plain(m.h)||'NotesChat task',due:Number(m.due),done:!!(m.c&&m.c.every(i=>i.s===1))}).catch(e=>toast('Reminder error: '+e.message,3000))}
+var reminderSyncTimer=0,reminderSyncBusy=false,reminderSyncAgain=false;
+function reminderItems(){return (Array.isArray(msgs)?msgs:[]).filter(m=>m&&m.due>0).map(m=>({id:String(m.id),title:(plain(m.h)||'NotesChat task').slice(0,300),due:Number(m.due)||0,done:!!(Array.isArray(m.c)&&m.c.length&&m.c.every(i=>i&&i.s===1))}))}
+// Reminders are reconciled in one place: the native side cancels alarms and
+// persisted tasks that are no longer present, so deletes, edits, restores and
+// undo/redo can never leave stale notifications behind.
+function syncReminders(){
+ if(!window.Android||typeof window.Android.run!=='function')return;
+ clearTimeout(reminderSyncTimer);
+ reminderSyncTimer=setTimeout(()=>{
+  if(reminderSyncBusy){reminderSyncAgain=true;return}
+  reminderSyncBusy=true;
+  native('remindersync',{items:reminderItems()})
+   .catch(()=>{})
+   .finally(()=>{reminderSyncBusy=false;if(reminderSyncAgain){reminderSyncAgain=false;syncReminders()}});
+ },200);
+}
+function scheduleReminder(){syncReminders()}
 const ckHtml=m=>m.c?'<div class="cnt">'+cntText(m)+'</div><div class="ck">'+m.c.map((it,i)=>'<div class="ci s'+it.s+'" data-i="'+i+'"><i></i><span>'+esc(it.x)+'</span></div>').join('')+'</div>':'';
 $('#fab').onclick=()=>{$('#qk').classList.add('on');$('#qkt').value='';focusWithKeyboard($('#qkt'))};
 $('#qkx').onclick=()=>$('#qk').classList.remove('on');
@@ -3828,12 +4004,10 @@ const LOCAL_BACKUP_HEADER='FZ-NOTES-ENCRYPTED-BACKUP-V1\n';
 let pendingLocalBackupPassword='',pendingLocalEncryptedBackup='',pendingLocalBackupInterval='off';
 function applyFile(t,password){
  let d;try{d=JSON.parse(t)}catch(_){throw new Error('FZ Notes ki backup file chuno')}
- if(!d||!Array.isArray(d.msgs)||!Array.isArray(d.topics)||!d.topics.length)return false;
- if(d.format&&d.format!=='FZ-NOTES-BACKUP')return false;
- if(!d.msgs.every(m=>m&&typeof m==='object'&&m.id!==undefined&&typeof m.h==='string'))return false;
- if(!d.topics.every(x=>x&&typeof x.id==='string'&&typeof x.name==='string'))return false;
- sanitizeStoredMessages(d.msgs);
- msgs=d.msgs;topics=d.topics;cur='all';hiddenUnlocked=false;save();saveT();render();
+ if(!isRestorablePayload(d,true))throw new Error('Valid FZ NOTES backup nahi hai');
+ if(!sanitizeImportedPayload(d))throw new Error('Backup me koi valid note nahi mila');
+ msgs=mergeHiddenNotes(d.msgs);topics=d.topics;cur='all';hiddenUnlocked=false;replyId=null;editId=null;sel.clear();selMode=false;
+ save();saveT();render();syncReminders();
  if(d.telegramSettings&&typeof restoreTelegramSettingsFromBackup==='function')restoreTelegramSettingsFromBackup(d.telegramSettings);
  if(d.localBackupSettings&&typeof d.localBackupSettings.schedule==='string'){
   const schedule=d.localBackupSettings.schedule;
@@ -3904,9 +4078,7 @@ async function exportBackupFile(password){
   return false;
  }
 }
-// Restore future alarms and surface overdue incomplete tasks after an app restart.
-msgs.filter(m=>Number(m.due)>0&&m.c&&!m.c.every(i=>i.s===1)).forEach(scheduleReminder);
-installNativeChatOverlayObservers();render();restoreDraft();updateComposerControls();lastSnapshot=snapshot();if(window.Android)native('tgsnapshot',{data:backupPayload()}).catch(()=>{});syncNativeChatOverlay();
+installNativeChatOverlayObservers();render();restoreDraft();updateComposerControls();syncReminders();lastSnapshot=snapshot();if(window.Android)native('tgsnapshot',{data:backupPayload()}).catch(()=>{});syncNativeChatOverlay();
 if(window.Android){
  let driveRecoveryBusy=false,driveRecoveryAttempts=0;
  async function recoverDriveAuthResult(){
