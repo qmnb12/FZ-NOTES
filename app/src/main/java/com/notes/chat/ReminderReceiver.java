@@ -119,8 +119,8 @@ public class ReminderReceiver extends BroadcastReceiver {
         if (taskId == null || taskId.isEmpty() || dueAt <= 0L) return;
         AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarms == null) return;
-        alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dueAt,
-                alarmIntent(context, taskId, title, dueAt));
+        PendingIntent pending = alarmIntent(context, taskId, title, dueAt);
+        scheduleAlarm(alarms, dueAt, pending);
         try {
             JSONObject saved = new JSONObject()
                     .put("title", title == null ? "" : title)
@@ -128,6 +128,23 @@ public class ReminderReceiver extends BroadcastReceiver {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                     .putString("task_" + taskId, saved.toString()).apply();
         } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Prefer exact alarms when the user has allowed them, so reminders do not
+     * drift by minutes inside Doze. Fall back to the inexact API otherwise
+     * (e.g. fresh Android 13+ installs where exact alarms are denied).
+     */
+    private static void scheduleAlarm(AlarmManager alarms, long dueAt, PendingIntent pending) {
+        try {
+            if (Build.VERSION.SDK_INT >= 31 && !alarms.canScheduleExactAlarms()) {
+                alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dueAt, pending);
+                return;
+            }
+            alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dueAt, pending);
+        } catch (SecurityException e) {
+            alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dueAt, pending);
         }
     }
 

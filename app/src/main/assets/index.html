@@ -1552,6 +1552,34 @@ header .av.drive-avatar:focus-visible{
  visibility:visible!important;
  transform:translate(-50%,0) scale(1)!important;
 }
+#undobar{
+ position:fixed!important;
+ left:50%!important;
+ bottom:calc(var(--toast-position,100px) + 68px)!important;
+ z-index:10001!important;
+ display:flex!important;
+ align-items:center!important;
+ gap:12px!important;
+ max-width:calc(100vw - 28px)!important;
+ box-sizing:border-box!important;
+ padding:10px 12px 10px 15px!important;
+ border:1px solid rgba(255,255,255,.14)!important;
+ border-radius:15px!important;
+ background:linear-gradient(145deg,#1d2b3d,#101a29)!important;
+ color:#f5f9ff!important;
+ font:600 13.5px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif!important;
+ box-shadow:0 10px 30px rgba(0,0,0,.42)!important;
+ opacity:0!important;
+ visibility:hidden!important;
+ pointer-events:none!important;
+ transform:translate(-50%,10px) scale(.98)!important;
+ transition:opacity .18s ease,transform .18s ease,visibility .18s ease!important;
+}
+#undobar.on{opacity:1!important;visibility:visible!important;pointer-events:auto!important;transform:translate(-50%,0) scale(1)!important}
+#undobar span{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+#undobar button{flex:0 0 auto!important;border:0!important;border-radius:10px!important;padding:8px 13px!important;background:rgba(255,255,255,.14)!important;color:#7ee2b8!important;font:inherit!important;font-weight:800!important;letter-spacing:.6px!important;cursor:pointer!important}
+#undobar button:active{background:rgba(255,255,255,.26)!important}
+:root[data-theme="light"] #undobar{background:linear-gradient(145deg,#22314a,#172235)!important}
 #toast .toast-icon{
  flex:0 0 34px!important;
  width:34px!important;
@@ -1759,6 +1787,10 @@ try{const last=localStorage.getItem('notes-last-topic');if(last&&(last==='all'||
 let undoStack=[],redoStack=[],lastSnapshot='';
 const snapshot=()=>JSON.stringify({msgs,topics});
 function rememberChange(){const now=snapshot();if(lastSnapshot&&now!==lastSnapshot){undoStack.push(lastSnapshot);if(undoStack.length>60)undoStack.shift();redoStack=[]}lastSnapshot=now}
+function storageHasRoom(extraBytes){
+ try{return JSON.stringify(msgs).length+Number(extraBytes||0)<4*1024*1024}
+ catch(_){return false}
+}
 function persistSnapshot(){try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){toast('Storage full')}persistBackupSnapshot();scheduleAutoBackup();syncReminders()}
 const saveT=()=>{rememberChange();try{localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){}persistBackupSnapshot();scheduleAutoBackup()};
 const save=()=>{rememberChange();try{localStorage.setItem('notes-chat',JSON.stringify(msgs))}catch(e){toast('Storage full')}persistBackupSnapshot();scheduleAutoBackup()};
@@ -1766,7 +1798,7 @@ function restoreHistoryState(raw){try{const d=JSON.parse(raw);if(!isRestorablePa
 function undoChange(){if(!undoStack.length){toast('Undo ke liye kuch nahi hai');return}redoStack.push(snapshot());const prev=undoStack.pop();if(!restoreHistoryState(prev))toast('Undo nahi ho saka');else toast('Undo ho gaya')}
 function redoChange(){if(!redoStack.length){toast('Redo ke liye kuch nahi hai');return}undoStack.push(snapshot());const next=redoStack.pop();if(!restoreHistoryState(next))toast('Redo nahi ho saka');else toast('Redo ho gaya')}
 
-const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 let appToastTimer=0;
 let lastToastInteractionY=-1,lastToastInteractionAt=0;
 function rememberToastInteraction(y){
@@ -1785,6 +1817,49 @@ function updateToastAnchor(showAtTop){
  const rect=footer.getBoundingClientRect();
  const bottom=Math.max(88,Math.round(window.innerHeight-rect.top+12));
  e.style.setProperty('--toast-position',bottom+'px');
+}
+let undoTimer=0,undoEl=null,undoAction=null;
+function clearUndoBar(){
+ if(undoTimer){clearTimeout(undoTimer);undoTimer=0}
+ undoAction=null;
+ if(undoEl){const el=undoEl;undoEl=null;el.id='';el.classList.remove('on');setTimeout(()=>{try{el.remove()}catch(_){}} ,240)}
+}
+function showUndoBar(message,action){
+ if(!document.body)return;
+ clearUndoBar();
+ const el=document.createElement('div');el.id='undobar';
+ const label=document.createElement('span');label.textContent=String(message==null?'Done':message);
+ const button=document.createElement('button');button.type='button';button.textContent='UNDO';
+ button.addEventListener('click',()=>{const fn=undoAction;clearUndoBar();if(fn){try{fn()}catch(e){toast('Undo fail hua',3000)}}});
+ el.appendChild(label);el.appendChild(button);document.body.appendChild(el);
+ undoEl=el;undoAction=typeof action==='function'?action:null;
+ requestAnimationFrame(()=>{try{el.classList.add('on')}catch(_){}});
+ undoTimer=setTimeout(()=>clearUndoBar(),6000);
+}
+function deleteNotesWithUndo(ids,after){
+ const wanted=new Set((ids||[]).map(Number).filter(Number.isFinite));
+ if(!wanted.size)return false;
+ const removed=[];
+ msgs.forEach((m,index)=>{if(wanted.has(Number(m.id)))removed.push({m,index})});
+ if(!removed.length)return false;
+ msgs=msgs.filter(m=>!wanted.has(Number(m.id)));
+ if(typeof after==='function')after();
+ showUndoBar(removed.length===1?'Message deleted':removed.length+' messages deleted',()=>{
+  removed.slice().sort((a,b)=>a.index-b.index).forEach(entry=>{
+   if(msgs.some(m=>Number(m.id)===Number(entry.m.id)))return;
+   const at=Math.max(0,Math.min(entry.index,msgs.length));
+   msgs.splice(at,0,entry.m);
+  });
+  save();render();
+  try{if(typeof syncNativeChatOverlay==='function')syncNativeChatOverlay()}catch(_){}
+  toast('Deleted note wapas aa gaya',2200)
+ });
+ return true;
+}
+function sanitizeEditorHtml(value){
+ const holder=document.createElement('div');
+ holder.innerHTML=String(value==null?'':value);
+ return clean(holder);
 }
 function toast(t,ms){
  const e=$('#toast');if(!e)return;
@@ -2103,7 +2178,7 @@ function render(forceScrollToLatest=false){syncHiddenCredentialLifecycle();if(cu
 function saveDraft(){try{const value={text:ed.innerHTML,plain:ed.innerText,listMode,listTitle,due:$('#taskdue').value,topic:cur,replyId,editId,updatedAt:Date.now()};if(value.plain.trim()||listMode||value.due)localStorage.setItem('notes-chat-draft',JSON.stringify(value));else localStorage.removeItem('notes-chat-draft')}catch(e){}}
 function clearDraft(){try{localStorage.removeItem('notes-chat-draft')}catch(e){}}
 ed.addEventListener('input',()=>{updateComposerControls();clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,180);});$('#taskdue').addEventListener('change',saveDraft);
-function restoreDraft(){try{const d=JSON.parse(localStorage.getItem('notes-chat-draft')||'null');if(!d){updateComposerControls();return;}if(d.text)ed.innerHTML=d.text;if(d.listMode){listMode=true;listTitle=d.listTitle||'';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.dataset.ph='Add list items, one per line'}if(d.due)$('#taskdue').value=d.due;if(d.topic==='hidden'){cur='all';hiddenUnlocked=false}else if(d.topic&&((d.topic==='all')||d.topic==='quick'||topics.some(t=>t.id===d.topic)))cur=d.topic;replyId=d.replyId||null;editId=d.editId||null;if(replyId||editId)setCtx();if(d.plain&&d.plain.trim())toast('Draft restored',1800)}catch(e){}finally{updateComposerControls()}}
+function restoreDraft(){try{const d=JSON.parse(localStorage.getItem('notes-chat-draft')||'null');if(!d){updateComposerControls();return;}if(d.text)ed.innerHTML=sanitizeEditorHtml(d.text);if(d.listMode){listMode=true;listTitle=d.listTitle||'';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.dataset.ph='Add list items, one per line'}if(d.due)$('#taskdue').value=d.due;if(d.topic==='hidden'){cur='all';hiddenUnlocked=false}else if(d.topic&&((d.topic==='all')||d.topic==='quick'||topics.some(t=>t.id===d.topic)))cur=d.topic;replyId=d.replyId||null;editId=d.editId||null;if(replyId||editId)setCtx();if(d.plain&&d.plain.trim())toast('Draft restored',1800)}catch(e){}finally{updateComposerControls()}}
 function clearSelection(){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop()}
 function handleAppBack(){
  // The photo viewer sits above the chat and must close before the Activity handles Back.
@@ -2856,7 +2931,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
   if(k==='x'){sh.classList.remove('on');syncNativeChatOverlay();return}
   if(k==='forward'){openForwardTopicPicker(ids);return}
   if(k==='copy'){sh.classList.remove('on');syncNativeChatOverlay();copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\\n\\n'));return}
-  if(k==='del'){sh.classList.remove('on');msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render();syncNativeChatOverlay();return}
+  if(k==='del'){sh.classList.remove('on');deleteNotesWithUndo(ids,()=>{selMode=false;sel.clear();save();render();syncNativeChatOverlay()});return}
   return
  }
  if(sh.dataset.type==='copyonly'){if(k==='copy')copy(sh.dataset.txt||'');sh.classList.remove('on');return}
@@ -2954,7 +3029,7 @@ sh.addEventListener('click',e=>{const button=e.target.closest('button[data-k]');
  if(k.startsWith('to:')){const m=msgs.find(m=>m.id===id);if(m){m.k=k.slice(3);m.p=0;save();render()}}
  if(k==='reply'){replyId=id;editId=null;setCtx();ed.focus()}
  if(k==='copy')copy(sh.dataset.txt);
- if(k==='del'){if(replyId===id||editId===id)clearCtx();msgs=msgs.filter(m=>m.id!==id);save();render()}
+ if(k==='del'){if(replyId===id||editId===id)clearCtx();deleteNotesWithUndo([id],()=>{save();render()})}
  if(k==='edit'){const m=msgs.find(m=>m.id===id);if(m){if(m.c){ed.innerText=m.c.map(i=>i.x).join('\n');listTitle=plain(m.h);listMode=true;ed.dataset.ph='Add list items, one per line';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');$('#taskdue').value=m.due?new Date(m.due-new Date(m.due).getTimezoneOffset()*60000).toISOString().slice(0,16):''}else ed.innerHTML=m.h;editId=id;replyId=null;setCtx();placeCaretAtEnd(ed)}}});
 window.nativeMessageMenuAction=function(rawId,action){
   const id=Number(rawId),m=msgs.find(x=>Number(x.id)===id);
@@ -2974,7 +3049,7 @@ window.nativeMessageMenuAction=function(rawId,action){
   if(action==='reply'){replyId=id;editId=null;setCtx();ed.focus();return}
   if(action==='copy'){copy(noteCopyText(m));return}
   if(action==='forward'){openForwardTopicPicker([id]);return}
-  if(action==='del'){if(replyId===id||editId===id)clearCtx();msgs=msgs.filter(x=>Number(x.id)!==id);save();render();return}
+  if(action==='del'){if(replyId===id||editId===id)clearCtx();deleteNotesWithUndo([id],()=>{save();render()});return}
   if(action==='edit'){
    if(m.c){
     ed.innerText=m.c.map(i=>i.x).join('\n');listTitle=plain(m.h);listMode=true;
@@ -3410,9 +3485,10 @@ function mergeHiddenNotes(restored){
  hidden.forEach(m=>{if(!ids.has(String(m.id)))restored.push(m)});
  return restored;
 }
-function applyCloudRestore(raw){
+function applyCloudRestore(raw,allowUndo){
  let d;try{d=JSON.parse(raw)}catch(_){d=null}
  if(isRestorablePayload(d,false)&&sanitizeImportedPayload(d)){
+  const previous={msgs:msgs,topics:topics,cur:cur};
   suppressAutoBackup=true;
   msgs=mergeHiddenNotes(d.msgs);topics=d.topics;cur='all';hiddenUnlocked=false;replyId=null;editId=null;sel.clear();selMode=false;
   lastSnapshot=snapshot();undoStack=[];redoStack=[];
@@ -3420,13 +3496,21 @@ function applyCloudRestore(raw){
   if(d.telegramSettings)restoreTelegramSettingsFromBackup(d.telegramSettings);
   hadLocalNotesState=true;persistBackupSnapshot();render();suppressAutoBackup=false;
   syncReminders();
+  if(allowUndo!==false&&previous.msgs.length){
+   showUndoBar('Backup restored · '+msgs.length+' notes',()=>{
+    msgs=previous.msgs;topics=previous.topics;cur=previous.cur;
+    lastSnapshot=snapshot();undoStack=[];redoStack=[];
+    try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(_){}
+    persistBackupSnapshot();render();syncReminders();toast('Restore undone',2600)
+   });
+  }
   return true;
  }
  suppressAutoBackup=false;toast('Backup data format valid nahi hai');return false;
 }
 async function restoreDriveEntry(id,token,key,notify=true){
  const raw=await native('restore',{key,source:{type:'drive',token,id}});
- const ok=applyCloudRestore(raw);
+ const ok=applyCloudRestore(raw,notify);
  if(ok&&notify)toast('Automatic restore complete · '+msgs.length+' notes',4000);
  return ok;
 }
@@ -3709,7 +3793,7 @@ function handleSelectionToolbarAction(e){
  const a=btn.dataset.s,ids=[...sel].map(Number);
  if(a==='x'){selMode=false;sel.clear();chat.querySelectorAll('.b.sel').forEach(b=>b.classList.remove('sel'));renderTop();return}
  if(a==='copy'){copy(ids.map(id=>{const m=msgs.find(x=>Number(x.id)===id);return m?noteCopyText(m):''}).filter(Boolean).join('\n\n'));selMode=false;sel.clear();render();return}
- if(a==='del'){msgs=msgs.filter(m=>!ids.includes(Number(m.id)));selMode=false;sel.clear();save();render();return}
+ if(a==='del'){deleteNotesWithUndo(ids,()=>{selMode=false;sel.clear();save();render()});return}
  if(a==='reply'){if(ids.length!==1){toast('Reply ke liye ek note select karo');return}replyId=ids[0];editId=null;setCtx();selMode=false;sel.clear();render();ed.focus();return}
  if(a==='more'){openMultiSelectSheet(ids);return}
 }
@@ -3800,6 +3884,7 @@ $('#fi').onchange=async e=>{
  try{
   const photoData=await compressAttachment(f);
   if(!photoData.startsWith('data:image/'))throw new Error('Image data read nahi hui');
+  if(!storageHasRoom(photoData.length)){toast('Storage lagbhag bhar gaya hai. Kuch purane photo notes delete karke dobara try karo',4800);return}
   const rm=replyId&&msgs.find(m=>m.id===replyId);
   msgs.push({id:Date.now(),t:Date.now(),h:clean(ed),i:photoData,k:rm?(rm.k||'gen'):(cur==='all'?'gen':cur),r:replyId||undefined});
   replyId=null;editId=null;ed.innerHTML='';updateComposerControls();setCtx();save();render(true);
@@ -4006,8 +4091,15 @@ function applyFile(t,password){
  let d;try{d=JSON.parse(t)}catch(_){throw new Error('FZ Notes ki backup file chuno')}
  if(!isRestorablePayload(d,true))throw new Error('Valid FZ NOTES backup nahi hai');
  if(!sanitizeImportedPayload(d))throw new Error('Backup me koi valid note nahi mila');
+ const previous={msgs:msgs,topics:topics,cur:cur};
  msgs=mergeHiddenNotes(d.msgs);topics=d.topics;cur='all';hiddenUnlocked=false;replyId=null;editId=null;sel.clear();selMode=false;
  save();saveT();render();syncReminders();
+ if(previous.msgs.length){
+  showUndoBar('File restored · '+msgs.length+' notes',()=>{
+   msgs=previous.msgs;topics=previous.topics;cur=previous.cur;
+   save();saveT();render();syncReminders();toast('Restore undone',2600)
+  });
+ }
  if(d.telegramSettings&&typeof restoreTelegramSettingsFromBackup==='function')restoreTelegramSettingsFromBackup(d.telegramSettings);
  if(d.localBackupSettings&&typeof d.localBackupSettings.schedule==='string'){
   const schedule=d.localBackupSettings.schedule;
