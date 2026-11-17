@@ -1278,12 +1278,23 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (layout == null || text == null || text.length() == 0) return false;
             int line = layout.getLineForVertical(Math.max(0, (int) y));
             if (line < 0 || line >= layout.getLineCount()) return false;
+            int baseline = layout.getLineBaseline(line);
+            float glyphTop = baseline + layout.getLineAscent(line);
+            float glyphBottom = baseline + layout.getLineDescent(line);
+            if (y < glyphTop - dp(1) || y > glyphBottom + dp(1)) return false;
             float left = layout.getLineLeft(line);
             float right = layout.getLineRight(line);
             if (x < left || x > right) return false;
             int offset = layout.getOffsetForHorizontal(line, Math.max(left, Math.min(right, x)));
             if (offset < 0 || offset >= text.length()) return false;
-            return !Character.isWhitespace(text.charAt(offset));
+            if (Character.isWhitespace(text.charAt(offset))) return false;
+            float cellStart = layout.getPrimaryHorizontal(offset);
+            float cellEnd = offset + 1 < text.length()
+                    ? layout.getPrimaryHorizontal(offset + 1)
+                    : cellStart + layout.getPaint().measureText(String.valueOf(text.charAt(offset)));
+            float cellLow = Math.min(cellStart, cellEnd);
+            float cellHigh = Math.max(cellStart, cellEnd);
+            return x >= cellLow - dp(2) && x <= cellHigh + dp(2);
         }
 
         private boolean isTapOnInteractiveSpan(float x, float y) {
