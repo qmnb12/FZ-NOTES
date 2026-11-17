@@ -512,18 +512,27 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         final InlineCopySpan flashTarget = target;
         final int originalFixedTextColor = flashTarget == null
                 ? Color.TRANSPARENT : flashTarget.fixedTextColor;
-        // Choose a visible highlight from the actual rendered bubble brightness.
-        final boolean lightSurface = Color.luminance(themeBubble) >= 0.50f;
+        // Choose a visible highlight from the actual rendered bubble brightness. Midnight and
+        // other dark themes use a very light accent; blending that toward white produced a
+        // near-white flash that read as "no animation". Use the real accent whenever it
+        // already contrasts with the bubble, and only tint it when it does not.
+        final boolean lightSurface = relativeLuminance(themeBubble) >= 0.50;
         final int originalTextColor = originalFixedTextColor != Color.TRANSPARENT
                 ? originalFixedTextColor
                 : (lightTheme ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255));
-        final int pulseTextColor = lightSurface ? Color.WHITE : Color.rgb(8, 16, 28);
-        final int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
-        final int tintedAccent = blendColors(themeAccent, tintBase, lightSurface ? 0.20f : 0.50f);
-        final int flashColor = Color.argb(230,
-                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
+        int flashTint = themeAccent;
+        if (contrastRatio(flashTint, themeBubble) < 3.0) {
+            int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
+            flashTint = blendColors(themeAccent, tintBase, 0.55f);
+        }
+        // Pick the pulse text colour from the final flash tint, so it stays readable in
+        // every theme instead of assuming "dark bubble => dark text".
+        final int pulseTextColor = relativeLuminance(flashTint) >= 0.18
+                ? Color.rgb(8, 16, 28) : Color.WHITE;
+        final int flashColor = Color.argb(240,
+                Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
         final int clearColor = Color.argb(0,
-                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
+                Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
         final ArgbEvaluator colorEvaluator = new ArgbEvaluator();
         final CopyFlashSpan pulse = new CopyFlashSpan(clearColor, originalTextColor);
         if (flashTarget != null) flashTarget.fixedTextColor = Color.TRANSPARENT;
@@ -640,18 +649,27 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         final InlineCopySpan flashTarget = target;
         final int originalFixedTextColor = flashTarget == null
                 ? Color.TRANSPARENT : flashTarget.fixedTextColor;
-        // Choose a visible highlight from the actual rendered bubble brightness.
-        final boolean lightSurface = Color.luminance(themeBubble) >= 0.50f;
+        // Choose a visible highlight from the actual rendered bubble brightness. Midnight and
+        // other dark themes use a very light accent; blending that toward white produced a
+        // near-white flash that read as "no animation". Use the real accent whenever it
+        // already contrasts with the bubble, and only tint it when it does not.
+        final boolean lightSurface = relativeLuminance(themeBubble) >= 0.50;
         final int originalTextColor = originalFixedTextColor != Color.TRANSPARENT
                 ? originalFixedTextColor
                 : (lightTheme ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255));
-        final int pulseTextColor = lightSurface ? Color.WHITE : Color.rgb(8, 16, 28);
-        final int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
-        final int tintedAccent = blendColors(themeAccent, tintBase, lightSurface ? 0.20f : 0.50f);
-        final int flashColor = Color.argb(230,
-                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
+        int flashTint = themeAccent;
+        if (contrastRatio(flashTint, themeBubble) < 3.0) {
+            int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
+            flashTint = blendColors(themeAccent, tintBase, 0.55f);
+        }
+        // Pick the pulse text colour from the final flash tint, so it stays readable in
+        // every theme instead of assuming "dark bubble => dark text".
+        final int pulseTextColor = relativeLuminance(flashTint) >= 0.18
+                ? Color.rgb(8, 16, 28) : Color.WHITE;
+        final int flashColor = Color.argb(240,
+                Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
         final int clearColor = Color.argb(0,
-                Color.red(tintedAccent), Color.green(tintedAccent), Color.blue(tintedAccent));
+                Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
         final ArgbEvaluator colorEvaluator = new ArgbEvaluator();
         final CopyFlashSpan pulse = new CopyFlashSpan(clearColor, originalTextColor);
         if (flashTarget != null) flashTarget.fixedTextColor = Color.TRANSPARENT;
@@ -767,6 +785,27 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 Math.round(r + (Color.red(overlay) - r) * t),
                 Math.round(g + (Color.green(overlay) - g) * t),
                 Math.round(b + (Color.blue(overlay) - b) * t));
+    }
+
+    /** WCAG relative luminance; used to keep copy/selection pulses visible on every theme. */
+    private static double relativeLuminance(int color) {
+        double[] values = {Color.red(color), Color.green(color), Color.blue(color)};
+        double[] weights = {0.2126, 0.7152, 0.0722};
+        double luminance = 0;
+        for (int i = 0; i < 3; i++) {
+            double c = values[i] / 255.0;
+            double linear = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            luminance += linear * weights[i];
+        }
+        return luminance;
+    }
+
+    private static double contrastRatio(int first, int second) {
+        double a = relativeLuminance(first);
+        double b = relativeLuminance(second);
+        double lighter = Math.max(a, b);
+        double darker = Math.min(a, b);
+        return (lighter + 0.05) / (darker + 0.05);
     }
 
     @Override public long getItemId(int position) {
@@ -1015,7 +1054,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             chip.setCornerRadius(dp(14));
             dateHeader.setBackground(chip);
             dateHeader.setOnClickListener(v -> {
-                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+                if (boundId != null) toggleSelection(boundId);
             });
             LayoutParams dateLp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
             dateLp.gravity = Gravity.CENTER_HORIZONTAL;
@@ -1050,7 +1089,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             topicLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             topicLabel.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
             topicLabel.setOnClickListener(v -> {
-                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+                if (boundId != null) toggleSelection(boundId);
             });
             LinearLayout.LayoutParams topicLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             topicLp.bottomMargin = dp(3);
@@ -1089,13 +1128,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setOnClickListener(v -> {
                 if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
             });
-            // In selection mode a normal tap on message text must select/unselect the
-            // whole note, rather than being swallowed by LinkMovementMethod for spans.
-            // When selection mode is off, touches pass through unchanged so Mono copies
-            // and ordinary links keep their one-tap behaviour.
-            // Replaced after all message children have been built by
-            // installSelectionTapHandlers(), so every part of a selected message
-            // (text, timestamp, image, reply and checklist) toggles on a single tap.
+            // Long-press on message text starts native text selection. While selection mode
+            // is active the row-level gesture handler turns a single tap into a toggle for
+            // this note; outside selection mode taps on non-text areas enter selection mode.
             LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             bodyLp.bottomMargin = dp(2);
             bubble.addView(body, bodyLp);
@@ -1104,14 +1139,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             dueView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             dueView.setPadding(0, dp(2), 0, dp(2));
             dueView.setOnClickListener(v -> {
-                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+                if (boundId != null) toggleSelection(boundId);
             });
             bubble.addView(dueView, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
             checkSummary = new TextView(context);
             checkSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             checkSummary.setOnClickListener(v -> {
-                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+                if (boundId != null) toggleSelection(boundId);
             });
             LinearLayout.LayoutParams summaryLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             summaryLp.topMargin = dp(2);
@@ -1133,7 +1168,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             clock = new TextView(context);
             clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
             clock.setOnClickListener(v -> {
-                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
+                if (boundId != null) toggleSelection(boundId);
             });
             footer.addView(clock, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
 
@@ -1158,9 +1193,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 else listener.onAction(boundId, "photo", 0);
             });
             imageView.setOnLongClickListener(v -> longPress());
-            bubble.setOnClickListener(v -> {
-                if (!selectedIds.isEmpty()) toggleSelection(boundId);
-            });
+            // Telegram-like selection: a tap anywhere on the message except its text opens
+            // selection mode; the text itself stays reserved for native text selection,
+            // links and one-tap Mono copying.
+            View.OnClickListener selectTap = v -> {
+                if (boundId != null) toggleSelection(boundId);
+            };
+            bubble.setOnClickListener(selectTap);
+            row.setOnClickListener(selectTap);
+            setOnClickListener(selectTap);
         }
 
         private boolean longPress() {
