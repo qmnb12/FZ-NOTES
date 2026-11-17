@@ -1000,11 +1000,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private String boundId;
         private float bodyTapDownX;
         private float bodyTapDownY;
-         private boolean bodyTapMoved;
+        private boolean bodyTapMoved;
         private boolean bodyGestureOnGlyph;
-         private final Runnable bodyLongPress = () -> {
+        private final Runnable bodyLongPress = () -> {
             if (boundId == null) return;
-             toggleSelection(boundId);
+            toggleSelection(boundId);
         };
         // When selection mode is active, intercept the entire row gesture here.
         // Installing listeners on every nested child made taps depend on which
@@ -1018,7 +1018,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private CopyFlashSpan copyFlashSpan;
         private int bubbleFillColor = DARK_BUBBLE;
         private final int[] colors = new int[4];
-         private final ArgbEvaluator selectionColorEvaluator = new ArgbEvaluator();
+        private final ArgbEvaluator selectionColorEvaluator = new ArgbEvaluator();
 
         @Override public boolean dispatchTouchEvent(android.view.MotionEvent event) {
             final int action = event.getActionMasked();
@@ -1279,6 +1279,23 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             float cellLow = Math.min(cellStart, cellEnd);
             float cellHigh = Math.max(cellStart, cellEnd);
             return x >= cellLow - dp(2) && x <= cellHigh + dp(2);
+        }
+
+        private boolean longPress() {
+            if (boundId == null || listener == null) return true;
+            // First long-press selects the note and opens its message menu.
+            // Once selection is active, a further long-press only toggles the
+            // target note; it must not reopen the message menu.
+            if (!selectedIds.isEmpty()) {
+                toggleSelection(boundId);
+            } else {
+                selectForContextMenu(boundId);
+            }
+            return true;
+        }
+
+        private void toggleSelection(String id) {
+            toggleSelectionById(id);
         }
 
         private int indexOf(String id) {
