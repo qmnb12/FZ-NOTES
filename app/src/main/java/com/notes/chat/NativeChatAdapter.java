@@ -454,11 +454,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (index == span.index) indexCandidate = span;
         }
         if (indexCandidate != null) {
-            int candidateStart = styled.getSpanStart(indexCandidate);
-            int candidateEnd = styled.getSpanEnd(indexCandidate);
-            String candidateText = candidateStart >= 0 && candidateEnd > candidateStart
-                    ? normalizeInlineText(styled.subSequence(candidateStart, candidateEnd)) : "";
-            if (wanted.isEmpty() || wanted.equals(candidateText)) target = indexCandidate;
+            // The Mono index is unique inside a note, so it stays valid even when the
+            // clipboard text gained/lost whitespace. Rejecting it only because the text
+            // differs made the copy pulse disappear on some notes/themes entirely.
+            target = indexCandidate;
         } else if (!wanted.isEmpty()) {
             InlineCopySpan uniqueMatch = null;
             for (InlineCopySpan span : spans) {
