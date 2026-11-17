@@ -33,7 +33,9 @@ import android.util.LruCache;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
@@ -472,6 +474,17 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
             target = uniqueMatch;
         }
+        if (target == null) {
+            // Last resort: index and clipboard text can both drift after HTML parsing.
+            // A pulse on the first Mono/code span of this note is still better than a
+            // completely silent copy, which is what users read as a broken animation.
+            for (InlineCopySpan span : spans) {
+                if (!noteId.equals(span.noteId) || !kind.equals(span.action)) continue;
+                if (styled.getSpanStart(span) < 0 || styled.getSpanEnd(span) <= styled.getSpanStart(span)) continue;
+                target = span;
+                break;
+            }
+        }
         if (target == null) return;
         int start = styled.getSpanStart(target);
         int end = styled.getSpanEnd(target);
@@ -528,7 +541,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         // every theme instead of assuming "dark bubble => dark text".
         final int pulseTextColor = relativeLuminance(flashTint) >= 0.18
                 ? Color.rgb(8, 16, 28) : Color.WHITE;
-        final int flashColor = Color.argb(240,
+        final int flashColor = Color.argb(245,
                 Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
         final int clearColor = Color.argb(0,
                 Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
@@ -542,7 +555,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         android.view.animation.Interpolator easeOut =
                 new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
         ValueAnimator enter = ValueAnimator.ofObject(colorEvaluator, clearColor, flashColor);
-        enter.setDuration(75L);
+        enter.setDuration(90L);
         enter.setInterpolator(easeOut);
         enter.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
@@ -551,7 +564,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             row.body.invalidate();
         });
         ValueAnimator exit = ValueAnimator.ofObject(colorEvaluator, flashColor, clearColor);
-        exit.setDuration(165L);
+        exit.setDuration(230L);
         exit.setInterpolator(easeOut);
         exit.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
@@ -665,7 +678,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         // every theme instead of assuming "dark bubble => dark text".
         final int pulseTextColor = relativeLuminance(flashTint) >= 0.18
                 ? Color.rgb(8, 16, 28) : Color.WHITE;
-        final int flashColor = Color.argb(240,
+        final int flashColor = Color.argb(245,
                 Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
         final int clearColor = Color.argb(0,
                 Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
@@ -679,7 +692,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         android.view.animation.Interpolator easeOut =
                 new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
         ValueAnimator enter = ValueAnimator.ofObject(colorEvaluator, clearColor, flashColor);
-        enter.setDuration(75L);
+        enter.setDuration(90L);
         enter.setInterpolator(easeOut);
         enter.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
@@ -688,7 +701,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             row.body.invalidate();
         });
         ValueAnimator exit = ValueAnimator.ofObject(colorEvaluator, flashColor, clearColor);
-        exit.setDuration(165L);
+        exit.setDuration(230L);
         exit.setInterpolator(easeOut);
         exit.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
@@ -985,6 +998,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private final TextView clock;
         private final TextView menu;
         private String boundId;
+        private float bodyTapDownX;
+        private float bodyTapDownY;
+        private long bodyTapDownAt;
+        private boolean bodyTapMoved;
         // When selection mode is active, intercept the entire row gesture here.
         // Installing listeners on every nested child made taps depend on which
         // TextView/ImageView happened to receive the touch stream.
@@ -1127,6 +1144,37 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setOnClickListener(v -> {
                 if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
             });
+            // Telegram-like: a short tap on plain message text selects the whole message
+            // too, while taps on links or Mono/code chips keep their own action and
+            // long-press still starts native text selection.
+            body.setOnTouchListener((v, event) -> {
+                if (!selectedIds.isEmpty()) return false;
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        bodyTapDownX = event.getX();
+                        bodyTapDownY = event.getY();
+                        bodyTapDownAt = event.getEventTime();
+                        bodyTapMoved = false;
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        if (Math.abs(event.getX() - bodyTapDownX) > dp(9)
+                                || Math.abs(event.getY() - bodyTapDownY) > dp(9)) {
+                            bodyTapMoved = true;
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        if (!bodyTapMoved
+                                && event.getEventTime() - bodyTapDownAt < ViewConfiguration.getLongPressTimeout()
+                                && boundId != null
+                                && !isTapOnInteractiveSpan(event.getX(), event.getY())) {
+                            toggleSelection(boundId);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                return false;
+            });
             // Long-press on message text starts native text selection. While selection mode
             // is active the row-level gesture handler turns a single tap into a toggle for
             // this note; outside selection mode taps on non-text areas enter selection mode.
@@ -1201,6 +1249,27 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bubble.setOnClickListener(selectTap);
             row.setOnClickListener(selectTap);
             setOnClickListener(selectTap);
+        }
+
+        private boolean isTapOnInteractiveSpan(float x, float y) {
+            Layout layout = body.getLayout();
+            CharSequence text = body.getText();
+            if (layout == null || !(text instanceof Spanned)) return false;
+            int line = layout.getLineForVertical(Math.max(0, (int) y));
+            if (line < 0 || line >= layout.getLineCount()) return false;
+            float left = layout.getLineLeft(line);
+            float right = layout.getLineRight(line);
+            if (x < left || x > right) return false;
+            int offset = layout.getOffsetForHorizontal(line, Math.max(left, Math.min(right, x)));
+            Spanned spanned = (Spanned) text;
+            ClickableSpan[] spans = spanned.getSpans(Math.max(0, offset - 1),
+                    Math.min(spanned.length(), offset + 1), ClickableSpan.class);
+            for (ClickableSpan span : spans) {
+                int start = spanned.getSpanStart(span);
+                int end = spanned.getSpanEnd(span);
+                if (offset >= start && offset < end) return true;
+            }
+            return false;
         }
 
         private boolean longPress() {
