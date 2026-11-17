@@ -1004,7 +1004,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private boolean bodyGestureOnGlyph;
         private final Runnable bodyLongPress = () -> {
             if (boundId == null) return;
-            toggleSelection(boundId);
+            selectForContextMenu(boundId);
         };
         // When selection mode is active, intercept the entire row gesture here.
         // Installing listeners on every nested child made taps depend on which
@@ -1075,7 +1075,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             dateHeader.setBackground(chip);
             dateHeader.setOnLongClickListener(v -> {
                 if (boundId == null) return true;
-                toggleSelection(boundId);
+                selectForContextMenu(boundId);
                 return true;
             });
             LayoutParams dateLp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
@@ -1112,7 +1112,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             topicLabel.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
             topicLabel.setOnLongClickListener(v -> {
                 if (boundId == null) return true;
-                toggleSelection(boundId);
+                selectForContextMenu(boundId);
                 return true;
             });
             LinearLayout.LayoutParams topicLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
@@ -1195,7 +1195,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             dueView.setPadding(0, dp(2), 0, dp(2));
             dueView.setOnLongClickListener(v -> {
                 if (boundId == null) return true;
-                toggleSelection(boundId);
+                selectForContextMenu(boundId);
                 return true;
             });
             bubble.addView(dueView, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
@@ -1204,7 +1204,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             checkSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             checkSummary.setOnLongClickListener(v -> {
                 if (boundId == null) return true;
-                toggleSelection(boundId);
+                selectForContextMenu(boundId);
                 return true;
             });
             LinearLayout.LayoutParams summaryLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
@@ -1228,7 +1228,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
             clock.setOnLongClickListener(v -> {
                 if (boundId == null) return true;
-                toggleSelection(boundId);
+                selectForContextMenu(boundId);
                 return true;
             });
             footer.addView(clock, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
