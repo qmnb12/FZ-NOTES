@@ -1141,9 +1141,6 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setMovementMethod(LinkMovementMethod.getInstance());
             // Prevent Android's pressed-link highlight from flashing when a Mono span is crossed while scrolling.
             body.setHighlightColor(Color.TRANSPARENT);
-            body.setOnClickListener(v -> {
-                if (boundId != null && !selectedIds.isEmpty()) toggleSelection(boundId);
-            });
             // Telegram-like: a short tap on plain message text selects the whole message
             // too, while taps on links or Mono/code chips keep their own action and
             // long-press still starts native text selection.
