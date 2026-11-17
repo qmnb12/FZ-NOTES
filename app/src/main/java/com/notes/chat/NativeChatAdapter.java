@@ -1000,14 +1000,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private String boundId;
         private float bodyTapDownX;
         private float bodyTapDownY;
-        private long bodyTapDownAt;
-        private boolean bodyTapMoved;
+         private boolean bodyTapMoved;
         private boolean bodyGestureOnGlyph;
-        private boolean bodyLongPressFired;
-        private final Runnable bodyLongPress = () -> {
+         private final Runnable bodyLongPress = () -> {
             if (boundId == null) return;
-            bodyLongPressFired = true;
-            toggleSelection(boundId);
+             toggleSelection(boundId);
         };
         // When selection mode is active, intercept the entire row gesture here.
         // Installing listeners on every nested child made taps depend on which
@@ -1076,8 +1073,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             GradientDrawable chip = new GradientDrawable();
             chip.setCornerRadius(dp(14));
             dateHeader.setBackground(chip);
-            dateHeader.setOnClickListener(v -> {
-                if (boundId != null) toggleSelection(boundId);
+            dateHeader.setOnLongClickListener(v -> {
+                if (boundId == null) return true;
+                toggleSelection(boundId);
+                return true;
             });
             LayoutParams dateLp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
             dateLp.gravity = Gravity.CENTER_HORIZONTAL;
@@ -1111,8 +1110,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             topicLabel = new TextView(context);
             topicLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             topicLabel.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-            topicLabel.setOnClickListener(v -> {
-                if (boundId != null) toggleSelection(boundId);
+            topicLabel.setOnLongClickListener(v -> {
+                if (boundId == null) return true;
+                toggleSelection(boundId);
+                return true;
             });
             LinearLayout.LayoutParams topicLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             topicLp.bottomMargin = dp(3);
@@ -1150,7 +1151,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setHighlightColor(Color.TRANSPARENT);
             // Long-press on glyphs keeps native text selection. Everywhere else
             // (gaps between blocks, empty space around short lines, bubble padding)
-            // a tap or long-press selects the whole message instead.
+            // a long-press selects the whole message instead; plain taps do nothing.
             body.setOnTouchListener((v, event) -> {
                 if (!selectedIds.isEmpty()) return false;
                 final int action = event.getActionMasked();
@@ -1158,9 +1159,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                     case MotionEvent.ACTION_DOWN:
                         bodyTapDownX = event.getX();
                         bodyTapDownY = event.getY();
-                        bodyTapDownAt = event.getEventTime();
                         bodyTapMoved = false;
-                        bodyLongPressFired = false;
                         bodyGestureOnGlyph = isPointOnGlyph(event.getX(), event.getY());
                         removeCallbacks(bodyLongPress);
                         if (bodyGestureOnGlyph) return false;
@@ -1176,19 +1175,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                         return !bodyGestureOnGlyph;
                     case MotionEvent.ACTION_UP:
                         removeCallbacks(bodyLongPress);
-                        if (bodyGestureOnGlyph) {
-                            if (!bodyTapMoved
-                                    && event.getEventTime() - bodyTapDownAt < ViewConfiguration.getLongPressTimeout()
-                                    && boundId != null
-                                    && !isTapOnInteractiveSpan(event.getX(), event.getY())) {
-                                toggleSelection(boundId);
-                            }
-                            return false;
-                        }
-                        if (!bodyTapMoved && !bodyLongPressFired && boundId != null) {
-                            toggleSelection(boundId);
-                        }
-                        return true;
+                        return !bodyGestureOnGlyph;
                     case MotionEvent.ACTION_CANCEL:
                         removeCallbacks(bodyLongPress);
                         return !bodyGestureOnGlyph;
@@ -1198,7 +1185,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             });
             // Long-press on message text starts native text selection. While selection mode
             // is active the row-level gesture handler turns a single tap into a toggle for
-            // this note; outside selection mode taps on non-text areas enter selection mode.
+            // this note; elsewhere the long-press selects the note.
             LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             bodyLp.bottomMargin = dp(2);
             bubble.addView(body, bodyLp);
@@ -1206,15 +1193,19 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             dueView = new TextView(context);
             dueView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             dueView.setPadding(0, dp(2), 0, dp(2));
-            dueView.setOnClickListener(v -> {
-                if (boundId != null) toggleSelection(boundId);
+            dueView.setOnLongClickListener(v -> {
+                if (boundId == null) return true;
+                toggleSelection(boundId);
+                return true;
             });
             bubble.addView(dueView, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
             checkSummary = new TextView(context);
             checkSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-            checkSummary.setOnClickListener(v -> {
-                if (boundId != null) toggleSelection(boundId);
+            checkSummary.setOnLongClickListener(v -> {
+                if (boundId == null) return true;
+                toggleSelection(boundId);
+                return true;
             });
             LinearLayout.LayoutParams summaryLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             summaryLp.topMargin = dp(2);
@@ -1235,8 +1226,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
             clock = new TextView(context);
             clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-            clock.setOnClickListener(v -> {
-                if (boundId != null) toggleSelection(boundId);
+            clock.setOnLongClickListener(v -> {
+                if (boundId == null) return true;
+                toggleSelection(boundId);
+                return true;
             });
             footer.addView(clock, new LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
 
@@ -1261,15 +1254,6 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 else listener.onAction(boundId, "photo", 0);
             });
             imageView.setOnLongClickListener(v -> longPress());
-            // Telegram-like selection: a tap anywhere on the message except its text opens
-            // selection mode; the text itself stays reserved for native text selection,
-            // links and one-tap Mono copying.
-            View.OnClickListener selectTap = v -> {
-                if (boundId != null) toggleSelection(boundId);
-            };
-            bubble.setOnClickListener(selectTap);
-            row.setOnClickListener(selectTap);
-            setOnClickListener(selectTap);
         }
 
         private boolean isPointOnGlyph(float x, float y) {
@@ -1295,44 +1279,6 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             float cellLow = Math.min(cellStart, cellEnd);
             float cellHigh = Math.max(cellStart, cellEnd);
             return x >= cellLow - dp(2) && x <= cellHigh + dp(2);
-        }
-
-        private boolean isTapOnInteractiveSpan(float x, float y) {
-            Layout layout = body.getLayout();
-            CharSequence text = body.getText();
-            if (layout == null || !(text instanceof Spanned)) return false;
-            int line = layout.getLineForVertical(Math.max(0, (int) y));
-            if (line < 0 || line >= layout.getLineCount()) return false;
-            float left = layout.getLineLeft(line);
-            float right = layout.getLineRight(line);
-            if (x < left || x > right) return false;
-            int offset = layout.getOffsetForHorizontal(line, Math.max(left, Math.min(right, x)));
-            Spanned spanned = (Spanned) text;
-            ClickableSpan[] spans = spanned.getSpans(Math.max(0, offset - 1),
-                    Math.min(spanned.length(), offset + 1), ClickableSpan.class);
-            for (ClickableSpan span : spans) {
-                int start = spanned.getSpanStart(span);
-                int end = spanned.getSpanEnd(span);
-                if (offset >= start && offset < end) return true;
-            }
-            return false;
-        }
-
-        private boolean longPress() {
-            if (boundId == null || listener == null) return true;
-            // First long-press selects the note and opens its message menu.
-            // Once selection is active, a further long-press only toggles the
-            // target note; it must not reopen the message menu.
-            if (!selectedIds.isEmpty()) {
-                toggleSelection(boundId);
-            } else {
-                selectForContextMenu(boundId);
-            }
-            return true;
-        }
-
-        private void toggleSelection(String id) {
-            toggleSelectionById(id);
         }
 
         private int indexOf(String id) {
