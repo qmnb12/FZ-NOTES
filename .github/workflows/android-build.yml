@@ -1,4 +1,4 @@
-name: Android debug build
+name: Android build
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  assemble-debug:
+  assemble:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,58 +25,47 @@ jobs:
         uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
-      - name: Require stable Google OAuth signing key
+      - name: Decode signing key
         env:
-          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+          SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY_BASE64 }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          if [ -z "${ANDROID_DEBUG_KEYSTORE_BASE64:-}" ]; then
-            echo "::error::Missing ANDROID_DEBUG_KEYSTORE_BASE64. Add the supplied debug.keystore as a Base64 GitHub Actions repository secret before building an installable APK. Random runner keys change SHA-1 and cause UNREGISTERED_ON_API_CONSOLE."
+          if [ -z "${SIGNING_KEY_BASE64:-}" ]; then
+            echo "::error::Missing SIGNING_KEY_BASE64. Add the app signing keystore as a Base64 GitHub Actions repository secret before building an installable APK."
+            exit 1
+          fi
+          if [ -z "${SIGNING_KEY_ALIAS:-}" ] || [ -z "${SIGNING_STORE_PASSWORD:-}" ] || [ -z "${SIGNING_KEY_PASSWORD:-}" ]; then
+            echo "::error::Missing SIGNING_KEY_ALIAS / SIGNING_STORE_PASSWORD / SIGNING_KEY_PASSWORD secrets."
             exit 1
           fi
 
-          mkdir -p "$HOME/.android"
-          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
-          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey >/dev/null
+          printf '%s' "$SIGNING_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/signing.jks"
+          keytool -list -keystore "$RUNNER_TEMP/signing.jks" -storepass "$SIGNING_STORE_PASSWORD" -alias "$SIGNING_KEY_ALIAS" >/dev/null
 
-          EXPECTED_SHA1="F6:C8:CF:0C:C8:0E:46:CA:4A:22:E5:83:8B:09:91:9F:97:1F:CC:01"
-          ACTUAL_SHA1="$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey 2>/dev/null | awk -F': ' '/SHA1:/{print $2; exit}')"
-          if [ "$ACTUAL_SHA1" != "$EXPECTED_SHA1" ]; then
-            echo "::error::Wrong signing key. Expected SHA-1 $EXPECTED_SHA1 but got $ACTUAL_SHA1. Use the provided debug.keystore and add its SHA-1 as the Android OAuth client."
-            exit 1
-          fi
-
+          SHA1="$(keytool -list -v -keystore "$RUNNER_TEMP/signing.jks" -storepass "$SIGNING_STORE_PASSWORD" -alias "$SIGNING_KEY_ALIAS" 2>/dev/null | awk -F': ' '/SHA1:/{print $2; exit}')"
+          SHA256="$(keytool -list -v -keystore "$RUNNER_TEMP/signing.jks" -storepass "$SIGNING_STORE_PASSWORD" -alias "$SIGNING_KEY_ALIAS" 2>/dev/null | awk -F': ' '/SHA256:/{print $2; exit}')"
           {
-            echo "### Stable Google OAuth signing key"
+            echo "### APK signing certificate"
             echo "- Android package: com.fz.notes.chat"
-            echo "- SHA-1: $ACTUAL_SHA1"
-            echo "- The same signing key is required for all subsequent builds."
+            echo "- Alias: $SIGNING_KEY_ALIAS"
+            echo "- SHA-1: $SHA1"
+            echo "- SHA-256: $SHA256"
+            echo "- Installed apps signed with a different certificate must be uninstalled first; Google OAuth (Drive backup) needs this SHA-1 in the Android OAuth client."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Install Gradle 9.6.1
         run: |
           curl -fsSL https://services.gradle.org/distributions/gradle-9.6.1-bin.zip -o "$RUNNER_TEMP/gradle.zip"
           unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
-      - name: Build debug APK
+      - name: Build signed APK
+        env:
+          SIGNING_KEY_PATH: ${{ runner.temp }}/signing.jks
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: $RUNNER_TEMP/gradle-9.6.1/bin/gradle --no-daemon --stacktrace :app:assembleDebug
-      - name: Report Google OAuth SHA-1
-        if: always()
-        run: |
-          KEYSTORE="$HOME/.android/debug.keystore"
-          if [ -f "$KEYSTORE" ]; then
-            SHA1="$(keytool -list -v -keystore "$KEYSTORE" -storepass android -alias androiddebugkey 2>/dev/null | awk -F': ' '/SHA1:/{print $2; exit}')"
-            if [ -n "$SHA1" ]; then
-              {
-                echo "### Google OAuth Android signing fingerprint"
-                echo "- Android package: com.fz.notes.chat"
-                echo "- SHA-1: $SHA1"
-                echo "- This is the signing certificate used by this build; register it in the Android OAuth client if Google returns DEVELOPER_ERROR (10)."
-              } >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "Could not read the debug certificate SHA-1." >> "$GITHUB_STEP_SUMMARY"
-            fi
-          else
-            echo "No debug.keystore was created; signing SHA-1 is unavailable." >> "$GITHUB_STEP_SUMMARY"
-          fi
-      - name: Upload debug APK
+      - name: Upload APK
         if: success() && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:

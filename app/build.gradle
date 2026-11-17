@@ -20,9 +20,24 @@ android {
         }
     }
 
+    signingConfigs {
+        ci {
+            if (System.getenv("SIGNING_KEY_PATH")) {
+                storeFile file(System.getenv("SIGNING_KEY_PATH"))
+                storePassword System.getenv("SIGNING_STORE_PASSWORD") ?: ""
+                keyAlias System.getenv("SIGNING_KEY_ALIAS") ?: ""
+                keyPassword System.getenv("SIGNING_KEY_PASSWORD") ?: ""
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            if (System.getenv("SIGNING_KEY_PATH")) signingConfig signingConfigs.ci
+        }
         release {
             minifyEnabled false
+            if (System.getenv("SIGNING_KEY_PATH")) signingConfig signingConfigs.ci
         }
     }
 
