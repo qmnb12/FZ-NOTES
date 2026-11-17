@@ -1002,6 +1002,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private float bodyTapDownY;
         private long bodyTapDownAt;
         private boolean bodyTapMoved;
+        private boolean bodyGestureOnGlyph;
+        private boolean bodyLongPressFired;
+        private final Runnable bodyLongPress = () -> {
+            if (boundId == null) return;
+            bodyLongPressFired = true;
+            toggleSelection(boundId);
+        };
         // When selection mode is active, intercept the entire row gesture here.
         // Installing listeners on every nested child made taps depend on which
         // TextView/ImageView happened to receive the touch stream.
@@ -1141,36 +1148,53 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body.setMovementMethod(LinkMovementMethod.getInstance());
             // Prevent Android's pressed-link highlight from flashing when a Mono span is crossed while scrolling.
             body.setHighlightColor(Color.TRANSPARENT);
-            // Telegram-like: a short tap on plain message text selects the whole message
-            // too, while taps on links or Mono/code chips keep their own action and
-            // long-press still starts native text selection.
+            // Long-press on glyphs keeps native text selection. Everywhere else
+            // (gaps between blocks, empty space around short lines, bubble padding)
+            // a tap or long-press selects the whole message instead.
             body.setOnTouchListener((v, event) -> {
                 if (!selectedIds.isEmpty()) return false;
-                switch (event.getActionMasked()) {
+                final int action = event.getActionMasked();
+                switch (action) {
                     case MotionEvent.ACTION_DOWN:
                         bodyTapDownX = event.getX();
                         bodyTapDownY = event.getY();
                         bodyTapDownAt = event.getEventTime();
                         bodyTapMoved = false;
-                        break;
+                        bodyLongPressFired = false;
+                        bodyGestureOnGlyph = isPointOnGlyph(event.getX(), event.getY());
+                        removeCallbacks(bodyLongPress);
+                        if (bodyGestureOnGlyph) return false;
+                        postDelayed(bodyLongPress, ViewConfiguration.getLongPressTimeout());
+                        return true;
                     case MotionEvent.ACTION_MOVE:
-                        if (Math.abs(event.getX() - bodyTapDownX) > dp(9)
-                                || Math.abs(event.getY() - bodyTapDownY) > dp(9)) {
-                            bodyTapMoved = true;
-                        }
-                        break;
-                    case MotionEvent.ACTION_UP:
                         if (!bodyTapMoved
-                                && event.getEventTime() - bodyTapDownAt < ViewConfiguration.getLongPressTimeout()
-                                && boundId != null
-                                && !isTapOnInteractiveSpan(event.getX(), event.getY())) {
+                                && (Math.abs(event.getX() - bodyTapDownX) > dp(9)
+                                || Math.abs(event.getY() - bodyTapDownY) > dp(9))) {
+                            bodyTapMoved = true;
+                            if (!bodyGestureOnGlyph) removeCallbacks(bodyLongPress);
+                        }
+                        return !bodyGestureOnGlyph;
+                    case MotionEvent.ACTION_UP:
+                        removeCallbacks(bodyLongPress);
+                        if (bodyGestureOnGlyph) {
+                            if (!bodyTapMoved
+                                    && event.getEventTime() - bodyTapDownAt < ViewConfiguration.getLongPressTimeout()
+                                    && boundId != null
+                                    && !isTapOnInteractiveSpan(event.getX(), event.getY())) {
+                                toggleSelection(boundId);
+                            }
+                            return false;
+                        }
+                        if (!bodyTapMoved && !bodyLongPressFired && boundId != null) {
                             toggleSelection(boundId);
                         }
-                        break;
+                        return true;
+                    case MotionEvent.ACTION_CANCEL:
+                        removeCallbacks(bodyLongPress);
+                        return !bodyGestureOnGlyph;
                     default:
-                        break;
+                        return !bodyGestureOnGlyph;
                 }
-                return false;
             });
             // Long-press on message text starts native text selection. While selection mode
             // is active the row-level gesture handler turns a single tap into a toggle for
@@ -1246,6 +1270,20 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             bubble.setOnClickListener(selectTap);
             row.setOnClickListener(selectTap);
             setOnClickListener(selectTap);
+        }
+
+        private boolean isPointOnGlyph(float x, float y) {
+            Layout layout = body.getLayout();
+            CharSequence text = body.getText();
+            if (layout == null || text == null || text.length() == 0) return false;
+            int line = layout.getLineForVertical(Math.max(0, (int) y));
+            if (line < 0 || line >= layout.getLineCount()) return false;
+            float left = layout.getLineLeft(line);
+            float right = layout.getLineRight(line);
+            if (x < left || x > right) return false;
+            int offset = layout.getOffsetForHorizontal(line, Math.max(left, Math.min(right, x)));
+            if (offset < 0 || offset >= text.length()) return false;
+            return !Character.isWhitespace(text.charAt(offset));
         }
 
         private boolean isTapOnInteractiveSpan(float x, float y) {
