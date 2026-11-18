@@ -509,6 +509,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         int end = styled.getSpanEnd(target);
         if (start < 0 || end <= start) return;
 
+        // The tap starts the pulse immediately; the JS clipboard confirmation arrives
+        // a moment later and must not restart (or cancel) the same pulse.
+        if (row.copyFlashAnimator != null && row.copyFlashAnimator.isRunning()
+                && row.copyFlashText == styled && row.copyFlashSpan != null
+                && styled.getSpanStart(row.copyFlashSpan) == start
+                && styled.getSpanEnd(row.copyFlashSpan) == end) {
+            return;
+        }
         if (row.copyFlashAnimator != null) {
             row.copyFlashAnimator.cancel();
             row.copyFlashAnimator = null;
@@ -558,10 +566,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             flashTint = blue;
             pulseTextColor = Color.WHITE;
         } else {
-            flashTint = Color.WHITE;
-            pulseTextColor = Color.rgb(10, 18, 30);
+            flashTint = Color.rgb(245, 250, 255);
+            pulseTextColor = Color.rgb(8, 16, 28);
         }
-        final int flashColor = Color.argb(lightSurface ? 232 : 220,
+        final int flashColor = Color.argb(lightSurface ? 245 : 255,
                 Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
         final int clearColor = Color.argb(0,
                 Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
@@ -575,7 +583,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         android.view.animation.Interpolator easeOut =
                 new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
         ValueAnimator enter = ValueAnimator.ofObject(colorEvaluator, clearColor, flashColor);
-        enter.setDuration(90L);
+        enter.setDuration(110L);
         enter.setInterpolator(easeOut);
         enter.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
@@ -584,7 +592,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             row.body.invalidate();
         });
         ValueAnimator exit = ValueAnimator.ofObject(colorEvaluator, flashColor, clearColor);
-        exit.setDuration(230L);
+        exit.setDuration(300L);
         exit.setInterpolator(easeOut);
         exit.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
@@ -623,141 +631,12 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         animator.start();
     }
 
-    /** Animate the exact span object that LinkMovementMethod just clicked. */
+    /** Tap feedback: reuse the main pulse so both paths share one implementation. */
     void flashInlineCode(TextView targetView, InlineCopySpan target) {
         if (targetView == null || target == null) return;
         NoteRow row = findVisibleRow(target.noteId);
         if (row == null || row.body != targetView) return;
-
-        CharSequence current = targetView.getText();
-        android.text.Spannable styled;
-        if (current instanceof android.text.Spannable) {
-            styled = (android.text.Spannable) current;
-        } else if (current instanceof Spanned) {
-            targetView.setText(new SpannableStringBuilder(current), TextView.BufferType.SPANNABLE);
-            CharSequence converted = targetView.getText();
-            if (!(converted instanceof android.text.Spannable)) return;
-            styled = (android.text.Spannable) converted;
-        } else {
-            return;
-        }
-
-        // Use the exact ClickableSpan instance, not a parsed index or text search.
-        int start = styled.getSpanStart(target);
-        int end = styled.getSpanEnd(target);
-        if (start < 0 || end <= start) return;
-
-        if (row.copyFlashAnimator != null) {
-            row.copyFlashAnimator.cancel();
-            row.copyFlashAnimator = null;
-        }
-        if (row.copyFlashText != null && row.copyFlashSpan != null
-                && row.copyFlashText.getSpanStart(row.copyFlashSpan) >= 0) {
-            row.copyFlashText.removeSpan(row.copyFlashSpan);
-        }
-        // Remove the existing Mono background/foreground spans while the pulse runs.
-        // Otherwise Android's overlapping BackgroundColorSpan can paint over the animation.
-        final ArrayList<BackgroundColorSpan> removedBackgrounds = new ArrayList<>();
-        final ArrayList<Integer> backgroundFlags = new ArrayList<>();
-        BackgroundColorSpan[] backgrounds = styled.getSpans(start, end, BackgroundColorSpan.class);
-        for (BackgroundColorSpan span : backgrounds) {
-            if (styled.getSpanStart(span) == start && styled.getSpanEnd(span) == end) {
-                removedBackgrounds.add(span);
-                backgroundFlags.add(styled.getSpanFlags(span));
-                styled.removeSpan(span);
-            }
-        }
-        final ArrayList<ForegroundColorSpan> removedForegrounds = new ArrayList<>();
-        final ArrayList<Integer> foregroundFlags = new ArrayList<>();
-        ForegroundColorSpan[] foregrounds = styled.getSpans(start, end, ForegroundColorSpan.class);
-        for (ForegroundColorSpan span : foregrounds) {
-            if (styled.getSpanStart(span) == start && styled.getSpanEnd(span) == end) {
-                removedForegrounds.add(span);
-                foregroundFlags.add(styled.getSpanFlags(span));
-                styled.removeSpan(span);
-            }
-        }
-
-        final InlineCopySpan flashTarget = target;
-        final int originalFixedTextColor = flashTarget == null
-                ? Color.TRANSPARENT : flashTarget.fixedTextColor;
-        // Choose a visible highlight from the actual rendered bubble brightness. Midnight and
-        // other dark themes use a very light accent; blending that toward white produced a
-        // near-white flash that read as "no animation". Use the real accent whenever it
-        // already contrasts with the bubble, and only tint it when it does not.
-        final boolean lightSurface = relativeLuminance(themeBubble) >= 0.50;
-        final int originalTextColor = originalFixedTextColor != Color.TRANSPARENT
-                ? originalFixedTextColor
-                : (lightTheme ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255));
-        int flashTint = themeAccent;
-        if (contrastRatio(flashTint, themeBubble) < 3.0) {
-            int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
-            flashTint = blendColors(themeAccent, tintBase, 0.55f);
-        }
-        // Pick the pulse text colour from the final flash tint, so it stays readable in
-        // every theme instead of assuming "dark bubble => dark text".
-        final int pulseTextColor = relativeLuminance(flashTint) >= 0.18
-                ? Color.rgb(8, 16, 28) : Color.WHITE;
-        final int flashColor = Color.argb(245,
-                Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
-        final int clearColor = Color.argb(0,
-                Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
-        final ArgbEvaluator colorEvaluator = new ArgbEvaluator();
-        final CopyFlashSpan pulse = new CopyFlashSpan(clearColor, originalTextColor);
-        if (flashTarget != null) flashTarget.fixedTextColor = Color.TRANSPARENT;
-        styled.setSpan(pulse, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        row.copyFlashText = styled;
-        row.copyFlashSpan = pulse;
-
-        android.view.animation.Interpolator easeOut =
-                new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
-        ValueAnimator enter = ValueAnimator.ofObject(colorEvaluator, clearColor, flashColor);
-        enter.setDuration(90L);
-        enter.setInterpolator(easeOut);
-        enter.addUpdateListener(animation -> {
-            pulse.setColor((Integer) animation.getAnimatedValue());
-            pulse.setTextColor((Integer) colorEvaluator.evaluate(
-                    animation.getAnimatedFraction(), originalTextColor, pulseTextColor));
-            row.body.invalidate();
-        });
-        ValueAnimator exit = ValueAnimator.ofObject(colorEvaluator, flashColor, clearColor);
-        exit.setDuration(230L);
-        exit.setInterpolator(easeOut);
-        exit.addUpdateListener(animation -> {
-            pulse.setColor((Integer) animation.getAnimatedValue());
-            pulse.setTextColor((Integer) colorEvaluator.evaluate(
-                    1f - animation.getAnimatedFraction(), originalTextColor, pulseTextColor));
-            row.body.invalidate();
-        });
-
-        // Capture final references for Java 8 anonymous-listener rules.
-        final android.text.Spannable flashText = styled;
-        final int flashStart = start;
-        final int flashEnd = end;
-        AnimatorSet animator = new AnimatorSet();
-        animator.playSequentially(enter, exit);
-        animator.addListener(new android.animation.AnimatorListenerAdapter() {
-            @Override public void onAnimationEnd(android.animation.Animator animation) {
-                if (flashText.getSpanStart(pulse) >= 0) flashText.removeSpan(pulse);
-                for (int i = 0; i < removedBackgrounds.size(); i++) {
-                    BackgroundColorSpan span = removedBackgrounds.get(i);
-                    if (flashText.getSpanStart(span) < 0) flashText.setSpan(span, flashStart, flashEnd, backgroundFlags.get(i));
-                }
-                for (int i = 0; i < removedForegrounds.size(); i++) {
-                    ForegroundColorSpan span = removedForegrounds.get(i);
-                    if (flashText.getSpanStart(span) < 0) flashText.setSpan(span, flashStart, flashEnd, foregroundFlags.get(i));
-                }
-                if (flashTarget != null) flashTarget.fixedTextColor = originalFixedTextColor;
-                row.body.invalidate();
-                if (row.copyFlashAnimator == animation) {
-                    row.copyFlashAnimator = null;
-                    row.copyFlashText = null;
-                    row.copyFlashSpan = null;
-                }
-            }
-        });
-        row.copyFlashAnimator = animator;
-        animator.start();
+        flashInlineCode(target.noteId, target.action, target.index, "");
     }
 
     private static String normalizeInlineText(CharSequence value) {
@@ -1846,7 +1725,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (!adapter.selectedIds.isEmpty()) {
                 adapter.toggleSelectionById(noteId);
             } else if (adapter.listener != null) {
-                // JS confirms clipboard success before the exact span pulse is requested.
+                // Start the wash on the tap itself so it never depends on the JS
+                // clipboard round-trip; the later confirmation is deduped above.
+                if (widget instanceof TextView) {
+                    adapter.flashInlineCode((TextView) widget, this);
+                }
                 adapter.listener.onAction(noteId, action, index);
             }
         }

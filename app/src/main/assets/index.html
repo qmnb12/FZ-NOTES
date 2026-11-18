@@ -1296,7 +1296,7 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
  color:#0a1220!important;
  box-shadow:0 0 0 2px #f7fbff!important;
  border-radius:4px!important;
- transition:background 120ms ease-out,color 120ms ease-out,box-shadow 160ms ease-out!important;
+ transition:background 90ms ease-out,color 90ms ease-out,box-shadow 140ms ease-out!important;
 }
 :root[data-theme="light"] #chat .b .mono.copy-flash,
 :root[data-theme="light"] #chat .b .code.copy-flash,
@@ -2022,7 +2022,7 @@ function flashCopiedElement(target){
  target.classList.remove('copy-flash');
  void target.offsetWidth;
  target.classList.add('copy-flash');
- target._copyFeedbackTimer=setTimeout(()=>{target.classList.remove('copy-flash');target._copyFeedbackTimer=0},120);
+ target._copyFeedbackTimer=setTimeout(()=>{target.classList.remove('copy-flash');target._copyFeedbackTimer=0},260);
 }
 async function copy(t,feedback='Copied',flashTarget=null,nativeTarget=null){
  const value=String(t==null?'':t);
