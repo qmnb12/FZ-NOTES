@@ -858,6 +858,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     }
 
     int getThemeMutedColor() { return themeMuted; }
+    int getThemeBarColor() { return themeBar; }
+    int getThemeTextColor() { return themeText; }
+    int getThemeAccentColor() { return themeAccent; }
 
     @Override public int getItemCount() { return items.size(); }
 
@@ -1087,10 +1090,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
             dateHeader = new TextView(context);
             dateHeader.setGravity(Gravity.CENTER);
-            dateHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            dateHeader.setPadding(dp(10), dp(3), dp(10), dp(3));
+            dateHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            dateHeader.setPadding(dp(12), dp(4), dp(12), dp(4));
+            dateHeader.setLetterSpacing(0.03f);
             GradientDrawable chip = new GradientDrawable();
-            chip.setCornerRadius(dp(14));
+            chip.setCornerRadius(dp(15));
             dateHeader.setBackground(chip);
             dateHeader.setOnLongClickListener(v -> {
                 if (boundId == null) return true;
@@ -1110,7 +1114,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
             bubble = new MaxWidthBubble(context);
             bubble.setOrientation(VERTICAL);
-            bubble.setPadding(dp(10), dp(8), dp(9), dp(5));
+            bubble.setPadding(dp(11), dp(8), dp(10), dp(6));
             bubble.setClipToPadding(false);
             bubble.setClipChildren(false);
             bubble.setElevation(dp(1.5f));
@@ -1159,7 +1163,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             body = new TextView(context);
             body.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
             body.setIncludeFontPadding(false);
-            body.setLineSpacing(dp(1), 1.02f);
+            body.setLineSpacing(dp(1), 1.05f);
             // Allow selecting/copying text inside a note. Long-press on the text
             // should use Android's text-selection toolbar; the separate ⋮ button
             // and long-press on other message areas still open message actions.
@@ -1357,8 +1361,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             int accent = themeAccent;
             colors[0] = bg; colors[1] = fg; colors[2] = muted; colors[3] = accent;
 
-            GradientDrawable bubbleBg = new GradientDrawable();
-            bubbleBg.setColor(bg);
+            int bubbleTop = lightTheme
+                    ? blendColors(bg, Color.BLACK, 0.015f)
+                    : blendColors(bg, Color.WHITE, 0.035f);
+            int bubbleBottom = lightTheme
+                    ? blendColors(bg, Color.BLACK, 0.035f)
+                    : blendColors(bg, Color.BLACK, 0.05f);
+            GradientDrawable bubbleBg = new GradientDrawable(
+                    GradientDrawable.Orientation.TOP_BOTTOM, new int[]{bubbleTop, bubbleBottom});
             bubbleBg.setCornerRadii(new float[]{dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp),dp(5),dp(5),dp(messageCornerRadiusDp),dp(messageCornerRadiusDp)});
             // Matching border width keeps the drawable's inner content geometry identical when selected.
             bubbleBg.setStroke(dp(1), themeBorder);

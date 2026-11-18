@@ -19,6 +19,7 @@ import android.view.Gravity;
 import android.view.inputmethod.InputMethodManager;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
+import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -88,7 +89,10 @@ public class MainActivity extends Activity {
     private FrameLayout rootLayout;
     private FrameLayout nativeChatLayer;
     private RecyclerView nativeChatView;
-    private TextView nativeEmptyView;
+    private LinearLayout nativeEmptyView;
+    private TextView nativeEmptyTitle;
+    private TextView nativeEmptySubtitle;
+    private ImageView nativeEmptyIcon;
     private NativeChatAdapter nativeChatAdapter;
     private boolean nativeChatRequestedVisible;
     private boolean nativeChatBoundsReady;
@@ -286,12 +290,38 @@ public class MainActivity extends Activity {
         nativeChatLayer.addView(nativeChatView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        nativeEmptyView = new TextView(this);
-        nativeEmptyView.setText("Apna pehla note likho. Ye chat ki tarah send hoga.");
-        nativeEmptyView.setTextSize(14);
-        nativeEmptyView.setGravity(android.view.Gravity.CENTER);
-        nativeEmptyView.setPadding(dp(28), dp(24), dp(28), dp(24));
-        nativeEmptyView.setVisibility(View.GONE);
+        LinearLayout emptyState = new LinearLayout(this);
+        emptyState.setOrientation(LinearLayout.VERTICAL);
+        emptyState.setGravity(Gravity.CENTER);
+        emptyState.setPadding(dp(36), dp(20), dp(36), dp(20));
+        emptyState.setVisibility(View.GONE);
+
+        nativeEmptyIcon = new ImageView(this);
+        nativeEmptyIcon.setImageResource(R.drawable.ic_empty_note);
+        LinearLayout.LayoutParams emptyIconLp = new LinearLayout.LayoutParams(dp(66), dp(66));
+        emptyIconLp.gravity = Gravity.CENTER_HORIZONTAL;
+        emptyIconLp.bottomMargin = dp(18);
+        emptyState.addView(nativeEmptyIcon, emptyIconLp);
+
+        nativeEmptyTitle = new TextView(this);
+        nativeEmptyTitle.setText("Apna pehla note likho");
+        nativeEmptyTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        nativeEmptyTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        nativeEmptyTitle.setGravity(Gravity.CENTER);
+        emptyState.addView(nativeEmptyTitle, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        nativeEmptySubtitle = new TextView(this);
+        nativeEmptySubtitle.setText("Chat ki tarah likho — turant save ho jayega");
+        nativeEmptySubtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        nativeEmptySubtitle.setGravity(Gravity.CENTER);
+        nativeEmptySubtitle.setLineSpacing(dp(2), 1f);
+        LinearLayout.LayoutParams emptySubLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        emptySubLp.topMargin = dp(9);
+        emptyState.addView(nativeEmptySubtitle, emptySubLp);
+
+        nativeEmptyView = emptyState;
         nativeChatLayer.addView(nativeEmptyView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -927,9 +957,9 @@ public class MainActivity extends Activity {
                 if (nativeChatAdapter == null || nativeChatView == null) return;
                 nativeChatAdapter.submitJson(json == null ? "{}" : json);
                 boolean empty = nativeChatAdapter.getItemCount() == 0;
-                nativeEmptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
-                // submitJson() has already parsed this large payload; reuse its resolved theme color.
-                nativeEmptyView.setTextColor(nativeChatAdapter.getThemeMutedColor());
+                setEmptyStateVisible(empty);
+                // submitJson() has already parsed this large payload; reuse its resolved theme colors.
+                applyEmptyStateTheme();
             });
         }
 
@@ -1240,6 +1270,37 @@ public class MainActivity extends Activity {
             if (!value.isEmpty()) return Color.parseColor(value);
         } catch (Exception ignored) { }
         return fallback;
+    }
+
+    private void setEmptyStateVisible(boolean visible) {
+        if (nativeEmptyView == null) return;
+        if (visible) {
+            if (nativeEmptyView.getVisibility() != View.VISIBLE) {
+                nativeEmptyView.animate().cancel();
+                nativeEmptyView.setAlpha(0f);
+                nativeEmptyView.setVisibility(View.VISIBLE);
+                nativeEmptyView.animate().alpha(1f).setDuration(190).start();
+            }
+        } else if (nativeEmptyView.getVisibility() == View.VISIBLE) {
+            nativeEmptyView.animate().cancel();
+            nativeEmptyView.setAlpha(1f);
+            nativeEmptyView.setVisibility(View.GONE);
+        }
+    }
+
+    private void applyEmptyStateTheme() {
+        if (nativeChatAdapter == null || nativeEmptyTitle == null) return;
+        int bar = nativeChatAdapter.getThemeBarColor();
+        int accent = nativeChatAdapter.getThemeAccentColor();
+        nativeEmptyTitle.setTextColor(nativeChatAdapter.getThemeTextColor());
+        nativeEmptySubtitle.setTextColor(nativeChatAdapter.getThemeMutedColor());
+        GradientDrawable tile = new GradientDrawable();
+        tile.setCornerRadius(dp(20));
+        tile.setColor(blendColors(bar, accent, 0.16f));
+        tile.setStroke(dp(1), blendColors(bar, accent, 0.34f));
+        nativeEmptyIcon.setBackground(tile);
+        nativeEmptyIcon.setPadding(dp(17), dp(17), dp(17), dp(17));
+        nativeEmptyIcon.setColorFilter(accent);
     }
 
     private static int blendColors(int base, int overlay, float amount) {

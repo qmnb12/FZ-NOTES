@@ -1697,6 +1697,36 @@ header>.topic-title-block.title-overflow #ttl{
 :root[data-theme="light"] #sh[data-type="localbackup"] .local-backup-panel .lb-actions .lb-action-back{background:transparent!important;border-color:transparent!important;color:#687891!important}
 #sh[data-type="cloud"]{max-height:min(78dvh,720px);overflow-y:auto}
 #sh[data-type="cloud"] .cloud-sheet-head h3{font-size:22px!important;line-height:1.2}
+
+
+/* ── polish pass: depth and focus cues ─────────────────────────── */
+#ed{
+ box-shadow:0 0 0 1px rgba(150,178,210,.10),0 2px 10px rgba(2,7,15,.18);
+ transition:box-shadow .18s ease,background .18s ease;
+}
+#ed:focus{
+ box-shadow:0 0 0 1.5px rgba(117,170,255,.46),0 0 0 5px rgba(117,170,255,.09),0 6px 18px rgba(2,7,15,.22);
+}
+#send{
+ box-shadow:0 8px 20px rgba(64,137,245,.30);
+ transition:transform .13s ease,filter .16s ease,box-shadow .16s ease;
+}
+#send:active{
+ box-shadow:0 3px 10px rgba(64,137,245,.24);
+}
+#att{
+ opacity:.88;
+ transition:opacity .16s ease,transform .13s ease;
+}
+#att:active{opacity:1;transform:scale(.92)}
+#sh{
+ border-radius:26px 26px 0 0;
+ box-shadow:0 -16px 46px rgba(0,0,0,.42);
+}
+:root[data-theme="light"] #sh{box-shadow:0 -14px 40px rgba(18,44,80,.16)}
+@media (prefers-reduced-motion:reduce){
+ #ed,#send,#att,#sh{transition:none!important}
+}
 </style>
 </head>
 <body>
