@@ -15,6 +15,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.text.Editable;
 import android.text.Html;
+import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -555,9 +556,6 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         final int originalTextColor = originalFixedTextColor != Color.TRANSPARENT
                 ? originalFixedTextColor
                 : (lightTheme ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255));
-        // Telegram-style copy wash: white on dark bubbles (the accent flash looked like a
-        // colour change, not a flash), and the theme blue on light bubbles where a white
-        // flash is invisible. Pale accents get darkened so white text stays readable.
         int flashTint;
         final int pulseTextColor;
         if (lightSurface) {
@@ -566,7 +564,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             flashTint = blue;
             pulseTextColor = Color.WHITE;
         } else {
-            flashTint = Color.rgb(245, 250, 255);
+            flashTint = Color.WHITE;
             pulseTextColor = Color.rgb(8, 16, 28);
         }
         final int flashColor = Color.argb(lightSurface ? 245 : 255,
@@ -574,52 +572,71 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         final int clearColor = Color.argb(0,
                 Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
         final ArgbEvaluator colorEvaluator = new ArgbEvaluator();
-        final CopyFlashSpan pulse = new CopyFlashSpan(clearColor, originalTextColor);
         if (flashTarget != null) flashTarget.fixedTextColor = Color.TRANSPARENT;
-        styled.setSpan(pulse, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        row.copyFlashText = styled;
-        row.copyFlashSpan = pulse;
+
+        // Paint the wash with standard BackgroundColorSpan/ForegroundColorSpan pairs:
+        // Android draws those exactly like the Mono pill itself, while a custom
+        // CharacterStyle bgColor silently failed to render on some devices (Midnight).
+        final Spannable flashText = styled;
+        final int flashStart = start;
+        final int flashEnd = end;
+        final Object[] bgHolder = new Object[1];
+        final Object[] fgHolder = new Object[1];
+        final int[] curBg = {clearColor};
+        final int[] curFg = {originalTextColor};
+        final Runnable paint = () -> {
+            try {
+                if (bgHolder[0] != null && flashText.getSpanStart(bgHolder[0]) >= 0) flashText.removeSpan(bgHolder[0]);
+                if (fgHolder[0] != null && flashText.getSpanStart(fgHolder[0]) >= 0) flashText.removeSpan(fgHolder[0]);
+                BackgroundColorSpan bg = new BackgroundColorSpan(curBg[0]);
+                ForegroundColorSpan fg = new ForegroundColorSpan(curFg[0]);
+                bgHolder[0] = bg;
+                fgHolder[0] = fg;
+                flashText.setSpan(bg, flashStart, flashEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                flashText.setSpan(fg, flashStart, flashEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                row.copyFlashSpan = bg;
+                row.body.invalidate();
+            } catch (RuntimeException ignored) {
+                // The row can rebind mid-animation; never crash the chat for a pulse.
+            }
+        };
+        row.copyFlashText = flashText;
+        paint.run();
 
         android.view.animation.Interpolator easeOut =
                 new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
-        ValueAnimator enter = ValueAnimator.ofObject(colorEvaluator, clearColor, flashColor);
-        enter.setDuration(60L);
+        ValueAnimator enter = ValueAnimator.ofFloat(0f, 1f);
+        enter.setDuration(70L);
         enter.setInterpolator(easeOut);
         enter.addUpdateListener(animation -> {
-            pulse.setColor((Integer) animation.getAnimatedValue());
-            pulse.setTextColor((Integer) colorEvaluator.evaluate(
-                    animation.getAnimatedFraction(), originalTextColor, pulseTextColor));
-            row.body.invalidate();
+            float f = animation.getAnimatedFraction();
+            curBg[0] = (Integer) colorEvaluator.evaluate(f, clearColor, flashColor);
+            curFg[0] = (Integer) colorEvaluator.evaluate(f, originalTextColor, pulseTextColor);
+            paint.run();
         });
-        ValueAnimator exit = ValueAnimator.ofObject(colorEvaluator, flashColor, clearColor);
+        ValueAnimator hold = ValueAnimator.ofFloat(0f, 1f);
+        hold.setDuration(460L);
+        hold.addUpdateListener(animation -> {
+            curBg[0] = flashColor;
+            curFg[0] = pulseTextColor;
+            paint.run();
+        });
+        ValueAnimator exit = ValueAnimator.ofFloat(0f, 1f);
         exit.setDuration(240L);
         exit.setInterpolator(easeOut);
         exit.addUpdateListener(animation -> {
-            pulse.setColor((Integer) animation.getAnimatedValue());
-            pulse.setTextColor((Integer) colorEvaluator.evaluate(
-                    1f - animation.getAnimatedFraction(), originalTextColor, pulseTextColor));
-            row.body.invalidate();
+            float f = animation.getAnimatedFraction();
+            curBg[0] = (Integer) colorEvaluator.evaluate(f, flashColor, clearColor);
+            curFg[0] = (Integer) colorEvaluator.evaluate(f, pulseTextColor, originalTextColor);
+            paint.run();
         });
 
-        // Hold the solid wash long enough to read as a deliberate flash instead of a
-        // one-frame blink, then release it quickly.
-        ValueAnimator hold = ValueAnimator.ofFloat(0f, 1f);
-        hold.setDuration(480L);
-        hold.addUpdateListener(animation -> {
-            pulse.setColor(flashColor);
-            pulse.setTextColor(pulseTextColor);
-            row.body.invalidate();
-        });
-
-        // Capture final references for Java 8 anonymous-listener rules.
-        final android.text.Spannable flashText = styled;
-        final int flashStart = start;
-        final int flashEnd = end;
         AnimatorSet animator = new AnimatorSet();
         animator.playSequentially(enter, hold, exit);
         animator.addListener(new android.animation.AnimatorListenerAdapter() {
             @Override public void onAnimationEnd(android.animation.Animator animation) {
-                if (flashText.getSpanStart(pulse) >= 0) flashText.removeSpan(pulse);
+                if (bgHolder[0] != null && flashText.getSpanStart(bgHolder[0]) >= 0) flashText.removeSpan(bgHolder[0]);
+                if (fgHolder[0] != null && flashText.getSpanStart(fgHolder[0]) >= 0) flashText.removeSpan(fgHolder[0]);
                 for (int i = 0; i < removedBackgrounds.size(); i++) {
                     BackgroundColorSpan span = removedBackgrounds.get(i);
                     if (flashText.getSpanStart(span) < 0) flashText.setSpan(span, flashStart, flashEnd, backgroundFlags.get(i));
@@ -929,7 +946,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private ValueAnimator selectionAnimator;
         private Animator copyFlashAnimator;
         private android.text.Spannable copyFlashText;
-        private CopyFlashSpan copyFlashSpan;
+        private Object copyFlashSpan;
         private int bubbleFillColor = DARK_BUBBLE;
         private final int[] colors = new int[4];
         private final ArgbEvaluator selectionColorEvaluator = new ArgbEvaluator();
@@ -1730,20 +1747,6 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 }
             }
             return null;
-        }
-    }
-
-    private static final class CopyFlashSpan extends android.text.style.CharacterStyle
-            implements android.text.style.UpdateAppearance {
-        private int color;
-        private int textColor;
-        CopyFlashSpan(int color, int textColor) { this.color = color; this.textColor = textColor; }
-        int getColor() { return color; }
-        void setColor(int color) { this.color = color; }
-        void setTextColor(int color) { this.textColor = color; }
-        @Override public void updateDrawState(TextPaint textPaint) {
-            textPaint.bgColor = color;
-            textPaint.setColor(textColor);
         }
     }
 
