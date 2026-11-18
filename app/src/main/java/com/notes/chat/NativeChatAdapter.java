@@ -1189,7 +1189,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (spans == null) return;
             for (InlineCopySpan span : spans) {
                 if (offset >= spanned.getSpanStart(span) && offset <= spanned.getSpanEnd(span)) {
-                    adapter.flashInlineCode(view, span);
+                    NativeChatAdapter.this.flashInlineCode(view, span);
                     return;
                 }
             }
