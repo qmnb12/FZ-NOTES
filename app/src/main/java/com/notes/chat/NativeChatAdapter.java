@@ -606,7 +606,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         android.view.animation.Interpolator easeOut =
                 new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
         ValueAnimator enter = ValueAnimator.ofFloat(0f, 1f);
-        enter.setDuration(70L);
+        enter.setDuration(30L);
         enter.setInterpolator(easeOut);
         enter.addUpdateListener(animation -> {
             float f = animation.getAnimatedFraction();
@@ -615,14 +615,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             paint.run();
         });
         ValueAnimator hold = ValueAnimator.ofFloat(0f, 1f);
-        hold.setDuration(460L);
+        hold.setDuration(240L);
         hold.addUpdateListener(animation -> {
             curBg[0] = flashColor;
             curFg[0] = pulseTextColor;
             paint.run();
         });
         ValueAnimator exit = ValueAnimator.ofFloat(0f, 1f);
-        exit.setDuration(240L);
+        exit.setDuration(150L);
         exit.setInterpolator(easeOut);
         exit.addUpdateListener(animation -> {
             float f = animation.getAnimatedFraction();
