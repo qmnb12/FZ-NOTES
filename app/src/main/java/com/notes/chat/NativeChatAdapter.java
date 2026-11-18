@@ -914,8 +914,10 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private float bodyTapDownY;
         private boolean bodyTapMoved;
         private boolean bodyGestureOnGlyph;
+        private boolean bodyLongPressFired;
         private final Runnable bodyLongPress = () -> {
             if (boundId == null) return;
+            bodyLongPressFired = true;
             selectForContextMenu(boundId);
         };
         // When selection mode is active, intercept the entire row gesture here.
@@ -1073,6 +1075,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                         bodyTapDownX = event.getX();
                         bodyTapDownY = event.getY();
                         bodyTapMoved = false;
+                        bodyLongPressFired = false;
                         bodyGestureOnGlyph = isPointOnGlyph(event.getX(), event.getY());
                         removeCallbacks(bodyLongPress);
                         if (bodyGestureOnGlyph) return false;
@@ -1088,6 +1091,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                         return !bodyGestureOnGlyph;
                     case MotionEvent.ACTION_UP:
                         removeCallbacks(bodyLongPress);
+                        // Flash from the touch itself: ClickableSpan dispatch is not
+                        // reliable while the TextView is selectable, and a silent tap
+                        // reads as a broken animation.
+                        if (bodyGestureOnGlyph && !bodyTapMoved && !bodyLongPressFired
+                                && v instanceof TextView) {
+                            flashInlineCodeAt((TextView) v, event.getX(), event.getY());
+                        }
                         return !bodyGestureOnGlyph;
                     case MotionEvent.ACTION_CANCEL:
                         removeCallbacks(bodyLongPress);
@@ -1167,6 +1177,22 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 else listener.onAction(boundId, "photo", 0);
             });
             imageView.setOnLongClickListener(v -> longPress());
+        }
+
+        private void flashInlineCodeAt(TextView view, float x, float y) {
+            CharSequence text = view.getText();
+            if (!(text instanceof Spanned)) return;
+            int offset = view.getOffsetForPosition(x, y);
+            if (offset < 0) return;
+            Spanned spanned = (Spanned) text;
+            InlineCopySpan[] spans = spanned.getSpans(offset, offset, InlineCopySpan.class);
+            if (spans == null) return;
+            for (InlineCopySpan span : spans) {
+                if (offset >= spanned.getSpanStart(span) && offset <= spanned.getSpanEnd(span)) {
+                    adapter.flashInlineCode(view, span);
+                    return;
+                }
+            }
         }
 
         private boolean isPointOnGlyph(float x, float y) {
