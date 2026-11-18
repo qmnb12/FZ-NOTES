@@ -91,6 +91,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
     private static final int LIGHT_ACCENT = Color.rgb(40, 111, 219);
 
     private final Context context;
+    private long lastInlineCopyAt;
+    private String lastInlineCopyText;
     private final Listener listener;
     private final List<Note> items = new ArrayList<>();
     private final Set<String> selectedIds = new HashSet<>();
@@ -681,6 +683,27 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         flashInlineCode(target.noteId, target.action, target.index, "", true);
     }
 
+    /** Copy Mono/code text straight from native: no JS round-trip, no lost rapid taps. */
+    void copyInlineText(CharSequence value) {
+        if (value == null) return;
+        String text = value.toString();
+        if (text.isEmpty()) return;
+        long now = android.os.SystemClock.uptimeMillis();
+        if (text.equals(lastInlineCopyText) && now - lastInlineCopyAt < 400L) return;
+        lastInlineCopyAt = now;
+        lastInlineCopyText = text;
+        try {
+            android.content.ClipboardManager clipboard =
+                    (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("FZ NOTES", text));
+            }
+            android.widget.Toast.makeText(context, "Copied", android.widget.Toast.LENGTH_SHORT).show();
+        } catch (RuntimeException ignored) {
+            android.widget.Toast.makeText(context, "Copy nahi ho paya", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private static String normalizeInlineText(CharSequence value) {
         if (value == null) return "";
         return value.toString().replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
@@ -1252,6 +1275,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                     int start = spanned.getSpanStart(span);
                     int spanEnd = spanned.getSpanEnd(span);
                     if (probe >= start && probe <= spanEnd) {
+                        NativeChatAdapter.this.copyInlineText(spanned.subSequence(start, spanEnd));
                         NativeChatAdapter.this.flashInlineCode(view, span);
                         return true;
                     }
@@ -1819,13 +1843,18 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (adapter == null || noteId == null) return;
             if (!adapter.selectedIds.isEmpty()) {
                 adapter.toggleSelectionById(noteId);
-            } else if (adapter.listener != null) {
-                // Start the wash on the tap itself so it never depends on the JS
-                // clipboard round-trip; the later confirmation is deduped above.
+            } else {
+                CharSequence value = "";
                 if (widget instanceof TextView) {
+                    CharSequence text = ((TextView) widget).getText();
+                    if (text instanceof Spanned) {
+                        int start = ((Spanned) text).getSpanStart(this);
+                        int end = ((Spanned) text).getSpanEnd(this);
+                        if (start >= 0 && end > start) value = text.subSequence(start, end);
+                    }
                     adapter.flashInlineCode(noteId, action, index, "");
                 }
-                adapter.listener.onAction(noteId, action, index);
+                adapter.copyInlineText(value);
             }
         }
         @Override public void updateDrawState(TextPaint ds) {
