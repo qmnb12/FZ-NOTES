@@ -265,15 +265,21 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
     }
 
+    private int positionOfId(String id) {
+        if (id == null || id.isEmpty()) return -1;
+        for (int i = 0; i < items.size(); i++) if (items.get(i).id.equals(id)) return i;
+        return -1;
+    }
+
     private String lastHighlightId = "";
     private void notifyHighlightIfNeeded() {
         String next = searchHighlightId == null ? "" : searchHighlightId;
         if (next.equals(lastHighlightId)) return;
         String previous = lastHighlightId;
         lastHighlightId = next;
-        int oldPosition = indexOf(previous);
+        int oldPosition = positionOfId(previous);
         if (oldPosition >= 0) notifyItemChanged(oldPosition);
-        int newPosition = indexOf(next);
+        int newPosition = positionOfId(next);
         if (newPosition >= 0) notifyItemChanged(newPosition);
     }
 
