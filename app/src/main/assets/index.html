@@ -1292,11 +1292,19 @@ body.selection-mode #selbar,body.selection-mode-out #selbar{
 
 /* Brief, low-friction copy feedback: the exact Mono/code value flashes only after clipboard success. */
 #chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{
- background:var(--acc)!important;
- color:var(--bg)!important;
- box-shadow:0 0 0 2px var(--acc)!important;
+ background:#f7fbff!important;
+ color:#0a1220!important;
+ box-shadow:0 0 0 2px #f7fbff!important;
  border-radius:4px!important;
  transition:background 120ms ease-out,color 120ms ease-out,box-shadow 160ms ease-out!important;
+}
+:root[data-theme="light"] #chat .b .mono.copy-flash,
+:root[data-theme="light"] #chat .b .code.copy-flash,
+:root[data-theme="light"] #chat .msgtext .mono.copy-flash,
+:root[data-theme="light"] #chat .msgtext .code.copy-flash{
+ background:var(--acc)!important;
+ color:#fff!important;
+ box-shadow:0 0 0 2px var(--acc)!important;
 }
 @media(prefers-reduced-motion:reduce){#chat .b .mono.copy-flash,#chat .b .code.copy-flash,#chat .msgtext .mono.copy-flash,#chat .msgtext .code.copy-flash{transition:none!important}}
 

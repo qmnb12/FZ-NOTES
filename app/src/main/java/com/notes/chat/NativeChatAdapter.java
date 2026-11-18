@@ -543,24 +543,25 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         final InlineCopySpan flashTarget = target;
         final int originalFixedTextColor = flashTarget == null
                 ? Color.TRANSPARENT : flashTarget.fixedTextColor;
-        // Choose a visible highlight from the actual rendered bubble brightness. Midnight and
-        // other dark themes use a very light accent; blending that toward white produced a
-        // near-white flash that read as "no animation". Use the real accent whenever it
-        // already contrasts with the bubble, and only tint it when it does not.
         final boolean lightSurface = relativeLuminance(themeBubble) >= 0.50;
         final int originalTextColor = originalFixedTextColor != Color.TRANSPARENT
                 ? originalFixedTextColor
                 : (lightTheme ? Color.rgb(31, 83, 155) : Color.rgb(160, 202, 255));
-        int flashTint = themeAccent;
-        if (contrastRatio(flashTint, themeBubble) < 3.0) {
-            int tintBase = lightSurface ? Color.rgb(12, 24, 48) : Color.WHITE;
-            flashTint = blendColors(themeAccent, tintBase, 0.55f);
+        // Telegram-style copy wash: white on dark bubbles (the accent flash looked like a
+        // colour change, not a flash), and the theme blue on light bubbles where a white
+        // flash is invisible. Pale accents get darkened so white text stays readable.
+        int flashTint;
+        final int pulseTextColor;
+        if (lightSurface) {
+            int blue = themeAccent;
+            if (relativeLuminance(blue) > 0.60f) blue = blendColors(blue, Color.BLACK, 0.30f);
+            flashTint = blue;
+            pulseTextColor = Color.WHITE;
+        } else {
+            flashTint = Color.WHITE;
+            pulseTextColor = Color.rgb(10, 18, 30);
         }
-        // Pick the pulse text colour from the final flash tint, so it stays readable in
-        // every theme instead of assuming "dark bubble => dark text".
-        final int pulseTextColor = relativeLuminance(flashTint) >= 0.18
-                ? Color.rgb(8, 16, 28) : Color.WHITE;
-        final int flashColor = Color.argb(245,
+        final int flashColor = Color.argb(lightSurface ? 232 : 220,
                 Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
         final int clearColor = Color.argb(0,
                 Color.red(flashTint), Color.green(flashTint), Color.blue(flashTint));
