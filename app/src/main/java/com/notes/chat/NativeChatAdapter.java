@@ -443,13 +443,21 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
     /** Flash the copied Mono/code text. Text matching is the fallback when HTML parsing changes span indexes. */
     void flashInlineCode(String noteId, String kind, int index) {
-        flashInlineCode(noteId, kind, index, "");
+        flashInlineCode(noteId, kind, index, "", false);
     }
 
     void flashInlineCode(String noteId, String kind, int index, String requestedText) {
+        flashInlineCode(noteId, kind, index, requestedText, false);
+    }
+
+    private void flashInlineCode(String noteId, String kind, int index, String requestedText, boolean force) {
         if (!"mono".equals(kind) && !"code".equals(kind)) return;
         NoteRow row = findVisibleRow(noteId);
         if (row == null || row.body == null) return;
+        // A clipboard confirmation that arrives after a touch-initiated pulse finished
+        // must not replay it as a second, mysteriously late flash.
+        if (!force && row.copyFlashAnimator == null && row.lastFlashAt != 0L
+                && android.os.SystemClock.uptimeMillis() - row.lastFlashAt < 600L) return;
 
         CharSequence current = row.body.getText();
         android.text.Spannable styled;
@@ -510,7 +518,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
 
         // The tap starts the pulse immediately; the JS clipboard confirmation arrives
         // a moment later and must not restart (or cancel) the same pulse.
-        if (row.copyFlashAnimator != null && row.copyFlashAnimator.isRunning()
+        if (!force && row.copyFlashAnimator != null && row.copyFlashAnimator.isRunning()
                 && row.copyFlashText == styled && row.copyFlashSpan != null
                 && styled.getSpanStart(row.copyFlashSpan) == start
                 && styled.getSpanEnd(row.copyFlashSpan) == end) {
@@ -519,6 +527,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         if (row.copyFlashAnimator != null) {
             row.copyFlashAnimator.cancel();
             row.copyFlashAnimator = null;
+            row.lastFlashAt = 0L;
         }
         if (row.copyFlashText != null && row.copyFlashSpan != null
                 && row.copyFlashText.getSpanStart(row.copyFlashSpan) >= 0) {
@@ -653,6 +662,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
         });
         row.copyFlashAnimator = animator;
+        row.lastFlashAt = android.os.SystemClock.uptimeMillis();
         animator.start();
     }
 
@@ -661,7 +671,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         if (targetView == null || target == null) return;
         NoteRow row = findVisibleRow(target.noteId);
         if (row == null || row.body != targetView) return;
-        flashInlineCode(target.noteId, target.action, target.index, "");
+        // Every fresh tap restarts the wash, even when the previous pulse for the
+        // same span is still running (fast repeated taps used to look dead).
+        if (row.copyFlashAnimator != null) {
+            row.copyFlashAnimator.cancel();
+            row.copyFlashAnimator = null;
+            row.lastFlashAt = 0L;
+        }
+        flashInlineCode(target.noteId, target.action, target.index, "", true);
     }
 
     private static String normalizeInlineText(CharSequence value) {
@@ -931,6 +948,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private boolean bodyGestureOnGlyph;
         private boolean bodyLongPressFired;
         private boolean bodyFlashStarted;
+        private long lastFlashAt;
         private final Runnable bodyLongPress = () -> {
             if (boundId == null) return;
             bodyLongPressFired = true;
@@ -1133,9 +1151,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                         return !bodyGestureOnGlyph;
                     case MotionEvent.ACTION_CANCEL:
                         removeCallbacks(bodyLongPress);
+                        // Down-started pulses survive a harmless cancel; only a real
+                        // scroll/selection should take them down.
                         if (bodyFlashStarted) {
+                            if (bodyTapMoved || bodyLongPressFired) cancelCopyFlash();
                             bodyFlashStarted = false;
-                            cancelCopyFlash();
                         }
                         return !bodyGestureOnGlyph;
                     default:
@@ -1245,6 +1265,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 copyFlashAnimator.cancel();
                 copyFlashAnimator = null;
             }
+            lastFlashAt = 0L;
         }
 
         private boolean isPointOnGlyph(float x, float y) {
@@ -1802,7 +1823,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                 // Start the wash on the tap itself so it never depends on the JS
                 // clipboard round-trip; the later confirmation is deduped above.
                 if (widget instanceof TextView) {
-                    adapter.flashInlineCode((TextView) widget, this);
+                    adapter.flashInlineCode(noteId, action, index, "");
                 }
                 adapter.listener.onAction(noteId, action, index);
             }
