@@ -606,7 +606,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         android.view.animation.Interpolator easeOut =
                 new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
         ValueAnimator enter = ValueAnimator.ofFloat(0f, 1f);
-        enter.setDuration(16L);
+        enter.setDuration(8L);
         enter.setInterpolator(easeOut);
         enter.addUpdateListener(animation -> {
             float f = animation.getAnimatedFraction();
@@ -615,14 +615,14 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             paint.run();
         });
         ValueAnimator hold = ValueAnimator.ofFloat(0f, 1f);
-        hold.setDuration(170L);
+        hold.setDuration(120L);
         hold.addUpdateListener(animation -> {
             curBg[0] = flashColor;
             curFg[0] = pulseTextColor;
             paint.run();
         });
         ValueAnimator exit = ValueAnimator.ofFloat(0f, 1f);
-        exit.setDuration(110L);
+        exit.setDuration(80L);
         exit.setInterpolator(easeOut);
         exit.addUpdateListener(animation -> {
             float f = animation.getAnimatedFraction();
@@ -932,9 +932,11 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         private boolean bodyTapMoved;
         private boolean bodyGestureOnGlyph;
         private boolean bodyLongPressFired;
+        private boolean bodyFlashStarted;
         private final Runnable bodyLongPress = () -> {
             if (boundId == null) return;
             bodyLongPressFired = true;
+            cancelCopyFlash();
             selectForContextMenu(boundId);
         };
         // When selection mode is active, intercept the entire row gesture here.
@@ -1094,8 +1096,17 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                         bodyTapMoved = false;
                         bodyLongPressFired = false;
                         bodyGestureOnGlyph = isPointOnGlyph(event.getX(), event.getY());
+                        bodyFlashStarted = false;
                         removeCallbacks(bodyLongPress);
-                        if (bodyGestureOnGlyph) return false;
+                        if (bodyGestureOnGlyph) {
+                            // Flash on touch-down so the tap feels immediate; the
+                            // animation is cancelled if this turns into a scroll
+                            // or long-press selection.
+                            if (v instanceof TextView) {
+                                bodyFlashStarted = flashInlineCodeAt((TextView) v, event.getX(), event.getY());
+                            }
+                            return false;
+                        }
                         postDelayed(bodyLongPress, ViewConfiguration.getLongPressTimeout());
                         return true;
                     case MotionEvent.ACTION_MOVE:
@@ -1104,20 +1115,30 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                                 || Math.abs(event.getY() - bodyTapDownY) > dp(9))) {
                             bodyTapMoved = true;
                             if (!bodyGestureOnGlyph) removeCallbacks(bodyLongPress);
+                            if (bodyFlashStarted) {
+                                bodyFlashStarted = false;
+                                cancelCopyFlash();
+                            }
                         }
                         return !bodyGestureOnGlyph;
                     case MotionEvent.ACTION_UP:
                         removeCallbacks(bodyLongPress);
                         // Flash from the touch itself: ClickableSpan dispatch is not
                         // reliable while the TextView is selectable, and a silent tap
-                        // reads as a broken animation.
-                        if (bodyGestureOnGlyph && !bodyTapMoved && !bodyLongPressFired
-                                && v instanceof TextView) {
+                        // reads as a broken animation. The down event normally already
+                        // started it, so this is just a fallback.
+                        if (!bodyFlashStarted && bodyGestureOnGlyph && !bodyTapMoved
+                                && !bodyLongPressFired && v instanceof TextView) {
                             flashInlineCodeAt((TextView) v, event.getX(), event.getY());
                         }
+                        bodyFlashStarted = false;
                         return !bodyGestureOnGlyph;
                     case MotionEvent.ACTION_CANCEL:
                         removeCallbacks(bodyLongPress);
+                        if (bodyFlashStarted) {
+                            bodyFlashStarted = false;
+                            cancelCopyFlash();
+                        }
                         return !bodyGestureOnGlyph;
                     default:
                         return !bodyGestureOnGlyph;
@@ -1196,19 +1217,27 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             imageView.setOnLongClickListener(v -> longPress());
         }
 
-        private void flashInlineCodeAt(TextView view, float x, float y) {
+        private boolean flashInlineCodeAt(TextView view, float x, float y) {
             CharSequence text = view.getText();
-            if (!(text instanceof Spanned)) return;
+            if (!(text instanceof Spanned)) return false;
             int offset = view.getOffsetForPosition(x, y);
-            if (offset < 0) return;
+            if (offset < 0) return false;
             Spanned spanned = (Spanned) text;
             InlineCopySpan[] spans = spanned.getSpans(offset, offset, InlineCopySpan.class);
-            if (spans == null) return;
+            if (spans == null) return false;
             for (InlineCopySpan span : spans) {
                 if (offset >= spanned.getSpanStart(span) && offset <= spanned.getSpanEnd(span)) {
                     NativeChatAdapter.this.flashInlineCode(view, span);
-                    return;
+                    return true;
                 }
+            }
+            return false;
+        }
+
+        private void cancelCopyFlash() {
+            if (copyFlashAnimator != null) {
+                copyFlashAnimator.cancel();
+                copyFlashAnimator = null;
             }
         }
 
