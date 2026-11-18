@@ -583,7 +583,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         android.view.animation.Interpolator easeOut =
                 new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
         ValueAnimator enter = ValueAnimator.ofObject(colorEvaluator, clearColor, flashColor);
-        enter.setDuration(110L);
+        enter.setDuration(60L);
         enter.setInterpolator(easeOut);
         enter.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
@@ -592,7 +592,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             row.body.invalidate();
         });
         ValueAnimator exit = ValueAnimator.ofObject(colorEvaluator, flashColor, clearColor);
-        exit.setDuration(300L);
+        exit.setDuration(240L);
         exit.setInterpolator(easeOut);
         exit.addUpdateListener(animation -> {
             pulse.setColor((Integer) animation.getAnimatedValue());
@@ -601,12 +601,22 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             row.body.invalidate();
         });
 
+        // Hold the solid wash long enough to read as a deliberate flash instead of a
+        // one-frame blink, then release it quickly.
+        ValueAnimator hold = ValueAnimator.ofFloat(0f, 1f);
+        hold.setDuration(480L);
+        hold.addUpdateListener(animation -> {
+            pulse.setColor(flashColor);
+            pulse.setTextColor(pulseTextColor);
+            row.body.invalidate();
+        });
+
         // Capture final references for Java 8 anonymous-listener rules.
         final android.text.Spannable flashText = styled;
         final int flashStart = start;
         final int flashEnd = end;
         AnimatorSet animator = new AnimatorSet();
-        animator.playSequentially(enter, exit);
+        animator.playSequentially(enter, hold, exit);
         animator.addListener(new android.animation.AnimatorListenerAdapter() {
             @Override public void onAnimationEnd(android.animation.Animator animation) {
                 if (flashText.getSpanStart(pulse) >= 0) flashText.removeSpan(pulse);

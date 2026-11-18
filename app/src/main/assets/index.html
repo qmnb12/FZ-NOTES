@@ -2004,14 +2004,15 @@ function flashCopiedElement(target){
  const contrast=light?[12,24,48]:[255,255,255];
  const tinted=accent.map((channel,i)=>Math.round(channel*(light?.80:.50)+contrast[i]*(light?.20:.50)));
  const rgba=a=>'rgba('+tinted.join(',')+','+a+')';
- const tint=rgba(.62),ring=rgba(.75),clear=rgba(0);
+ const tint=rgba(.92),ring=rgba(.9),clear=rgba(0);
  if(typeof target.animate==='function'){
   try{
    const pulse=target.animate([
     {backgroundColor:clear,boxShadow:'0 0 0 0 '+clear,easing:'cubic-bezier(0.23, 1, 0.32, 1)'},
-    {offset:.22,backgroundColor:tint,boxShadow:'0 0 0 2px '+ring,easing:'cubic-bezier(0.23, 1, 0.32, 1)'},
+    {offset:.12,backgroundColor:tint,boxShadow:'0 0 0 2px '+ring,easing:'cubic-bezier(0.23, 1, 0.32, 1)'},
+    {offset:.82,backgroundColor:tint,boxShadow:'0 0 0 2px '+ring,easing:'linear'},
     {backgroundColor:clear,boxShadow:'0 0 0 0 '+clear}
-   ],{duration:240,easing:'linear',fill:'none'});
+   ],{duration:620,easing:'linear',fill:'none'});
    target._copyFeedbackAnimation=pulse;
    pulse.onfinish=()=>{if(target._copyFeedbackAnimation===pulse)target._copyFeedbackAnimation=null};
    pulse.oncancel=()=>{if(target._copyFeedbackAnimation===pulse)target._copyFeedbackAnimation=null};
@@ -2022,7 +2023,7 @@ function flashCopiedElement(target){
  target.classList.remove('copy-flash');
  void target.offsetWidth;
  target.classList.add('copy-flash');
- target._copyFeedbackTimer=setTimeout(()=>{target.classList.remove('copy-flash');target._copyFeedbackTimer=0},260);
+ target._copyFeedbackTimer=setTimeout(()=>{target.classList.remove('copy-flash');target._copyFeedbackTimer=0},520);
 }
 async function copy(t,feedback='Copied',flashTarget=null,nativeTarget=null){
  const value=String(t==null?'':t);

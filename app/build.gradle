@@ -10,8 +10,8 @@ android {
         applicationId "com.fz.notes.chat"
         minSdk 29
         targetSdk 34
-        versionCode 144
-        versionName "1.5.3"
+        versionCode 145
+        versionName "1.5.4"
     }
 
     applicationVariants.all { variant ->
