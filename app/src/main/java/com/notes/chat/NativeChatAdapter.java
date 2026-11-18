@@ -475,10 +475,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (spanStart < 0 || spanEnd <= spanStart) continue;
             if (index == span.index) indexCandidate = span;
         }
-        if (indexCandidate != null) {
-            // The Mono index is unique inside a note, so it stays valid even when the
-            // clipboard text gained/lost whitespace. Rejecting it only because the text
-            // differs made the copy pulse disappear on some notes/themes entirely.
+        if (indexCandidate != null && wanted.isEmpty()) {
             target = indexCandidate;
         } else if (!wanted.isEmpty()) {
             InlineCopySpan uniqueMatch = null;
@@ -494,6 +491,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             }
             target = uniqueMatch;
         }
+        if (target == null && indexCandidate != null) target = indexCandidate;
         if (target == null) {
             // Last resort: index and clipboard text can both drift after HTML parsing.
             // A pulse on the first Mono/code span of this note is still better than a
@@ -1111,8 +1109,8 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         if (!bodyTapMoved
-                                && (Math.abs(event.getX() - bodyTapDownX) > dp(9)
-                                || Math.abs(event.getY() - bodyTapDownY) > dp(9))) {
+                                && (Math.abs(event.getX() - bodyTapDownX) > dp(16)
+                                || Math.abs(event.getY() - bodyTapDownY) > dp(16))) {
                             bodyTapMoved = true;
                             if (!bodyGestureOnGlyph) removeCallbacks(bodyLongPress);
                             if (bodyFlashStarted) {
@@ -1127,7 +1125,7 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                         // reliable while the TextView is selectable, and a silent tap
                         // reads as a broken animation. The down event normally already
                         // started it, so this is just a fallback.
-                        if (!bodyFlashStarted && bodyGestureOnGlyph && !bodyTapMoved
+                        if (!bodyFlashStarted && !bodyTapMoved
                                 && !bodyLongPressFired && v instanceof TextView) {
                             flashInlineCodeAt((TextView) v, event.getX(), event.getY());
                         }
@@ -1223,12 +1221,20 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             int offset = view.getOffsetForPosition(x, y);
             if (offset < 0) return false;
             Spanned spanned = (Spanned) text;
-            InlineCopySpan[] spans = spanned.getSpans(offset, offset, InlineCopySpan.class);
-            if (spans == null) return false;
-            for (InlineCopySpan span : spans) {
-                if (offset >= spanned.getSpanStart(span) && offset <= spanned.getSpanEnd(span)) {
-                    NativeChatAdapter.this.flashInlineCode(view, span);
-                    return true;
+            int length = spanned.length();
+            int[] probes = {offset, offset - 1, offset + 1};
+            for (int probe : probes) {
+                if (probe < 0 || probe > length) continue;
+                int end = Math.min(probe + 1, length);
+                InlineCopySpan[] spans = spanned.getSpans(probe, end, InlineCopySpan.class);
+                if (spans == null) continue;
+                for (InlineCopySpan span : spans) {
+                    int start = spanned.getSpanStart(span);
+                    int spanEnd = spanned.getSpanEnd(span);
+                    if (probe >= start && probe <= spanEnd) {
+                        NativeChatAdapter.this.flashInlineCode(view, span);
+                        return true;
+                    }
                 }
             }
             return false;
