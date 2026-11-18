@@ -355,7 +355,7 @@ body{min-height:100dvh}
 #sh button.cloud-row .mt strong{display:block;font-size:14px;font-weight:650;line-height:1.25}
 #sh button.cloud-row .ms{font-size:11px;line-height:1.25;margin-top:3px}
 #sh .cloud-divider{height:1px;background:var(--ln);margin:7px 15px}
-#cfg{z-index:30;backdrop-filter:blur(7px);background:rgba(3,8,17,.62)}
+#cfg{z-index:30;background:rgba(3,8,17,.70)}
 #cfg .cfgb{max-height:91dvh;border-radius:25px 25px 0 0;padding:17px 16px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(160deg,#142135 0%,var(--bar) 45%,#0e1725 100%);border:1px solid rgba(153,183,224,.15);box-shadow:0 -20px 55px rgba(0,0,0,.38)}
 #cfg .cfg-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
 #cfg .cfg-brand{display:flex;align-items:center;gap:11px;min-width:0}
@@ -394,7 +394,7 @@ body{min-height:100dvh}
 @media(max-width:420px){#cfg .cfg-card{padding:12px}#cfg .cfgb{padding-left:12px;padding-right:12px}#sh button.cloud-row{padding-left:10px;padding-right:10px}}
 
 /* Separate Google Drive settings from Telegram archive settings */
-#tgcfg{position:fixed;inset:0;display:none;background:rgba(3,8,17,.62);backdrop-filter:blur(7px);z-index:31;align-items:flex-end}
+#tgcfg{position:fixed;inset:0;display:none;background:rgba(3,8,17,.70);z-index:31;align-items:flex-end}
 #tgcfg.on{display:flex}
 #tgcfg .cfgb{max-height:91dvh;border-radius:25px 25px 0 0;padding:17px 16px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(160deg,#142135 0%,var(--bar) 45%,#0e1725 100%);border:1px solid rgba(153,183,224,.15);box-shadow:0 -20px 55px rgba(0,0,0,.38)}
 #tgcfg .cfg-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
@@ -1770,7 +1770,7 @@ shBackdrop.addEventListener('click',()=>{shStack=[];sh.classList.remove('on');ch
 function pushSheetState(){if(!sh.classList.contains('on'))return;shStack.push({html:sh.innerHTML,dataset:Object.assign({},sh.dataset)});}
 let sheetRestoreTimer=0;function restoreSheetState(){if(shStack.length){const state=shStack.pop();sh.innerHTML=state.html;Array.from(sh.attributes).forEach(a=>{if(a.name.indexOf('data-')===0)sh.removeAttribute(a.name)});Object.keys(state.dataset).forEach(k=>sh.dataset[k]=state.dataset[k]);sh.classList.add('on');sh.classList.remove('sheet-restoring');requestAnimationFrame(()=>sh.classList.add('sheet-restoring'));if(sheetRestoreTimer)clearTimeout(sheetRestoreTimer);sheetRestoreTimer=setTimeout(()=>{sh.classList.remove('sheet-restoring');sheetRestoreTimer=0},260);return true;}sh.classList.remove('on');return true;}
 let nativeSelectionMenuOpen=false,lastAnySelectionRange=null,nativeSelectionSession=false;
-function updateComposerControls(){const raw=ed.innerText||ed.textContent||'';const hasText=!!raw.replace(/[\u200B\uFEFF]/g,'').trim();$('#cmp').classList.toggle('has-text',hasText);document.body.classList.toggle('composer-has-text',hasText)}
+function updateComposerControls(){const raw=ed.textContent||'';const hasText=!!raw.replace(/[\u200B\uFEFF]/g,'').trim();$('#cmp').classList.toggle('has-text',hasText);document.body.classList.toggle('composer-has-text',hasText)}
 window.setNativeSelectionMenuOpen=function(open){
  nativeSelectionMenuOpen=!!open;const toolbar=$('#tb');
  if(nativeSelectionMenuOpen){nativeSelectionSession=true;toolbar.classList.add('native-selection-hidden');toolbar.classList.remove('on');return}
@@ -1785,17 +1785,31 @@ try{msgs=JSON.parse(localStorage.getItem('notes-chat')||'[]')}catch(e){}
 try{const t=JSON.parse(localStorage.getItem('notes-topics')||'null');if(t&&t.length)topics=t}catch(e){}
 try{const last=localStorage.getItem('notes-last-topic');if(last&&(last==='all'||last==='quick'||topics.some(t=>t.id===last)))cur=last}catch(e){}
 let undoStack=[],redoStack=[],lastSnapshot='';
-const snapshot=()=>JSON.stringify({msgs,topics});
-function rememberChange(){const now=snapshot();if(lastSnapshot&&now!==lastSnapshot){undoStack.push(lastSnapshot);if(undoStack.length>60)undoStack.shift();redoStack=[]}lastSnapshot=now}
+const snapshotJson=msgsJson=>'{"msgs":'+(msgsJson||JSON.stringify(msgs))+',"topics":'+JSON.stringify(topics)+'}';
+const snapshot=()=>snapshotJson();
+function trimHistory(list){
+ let total=0;
+ for(let i=0;i<list.length;i++)total+=list[i].length;
+ while(list.length>30||(list.length>2&&total>8*1024*1024))total-=list.shift().length;
+}
+function rememberChange(msgsJson){
+ const now=snapshotJson(msgsJson);
+ if(lastSnapshot&&now!==lastSnapshot){
+  undoStack.push(lastSnapshot);
+  trimHistory(undoStack);
+  redoStack=[];
+ }
+ lastSnapshot=now;
+}
 function storageHasRoom(extraBytes){
  try{return JSON.stringify(msgs).length+Number(extraBytes||0)<4*1024*1024}
  catch(_){return false}
 }
 function persistSnapshot(){try{localStorage.setItem('notes-chat',JSON.stringify(msgs));localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){toast('Storage full')}persistBackupSnapshot();scheduleAutoBackup();syncReminders()}
 const saveT=()=>{rememberChange();try{localStorage.setItem('notes-topics',JSON.stringify(topics))}catch(e){}persistBackupSnapshot();scheduleAutoBackup()};
-const save=()=>{rememberChange();try{localStorage.setItem('notes-chat',JSON.stringify(msgs))}catch(e){toast('Storage full')}persistBackupSnapshot();scheduleAutoBackup()};
+const save=()=>{const json=JSON.stringify(msgs);rememberChange(json);try{localStorage.setItem('notes-chat',json)}catch(e){toast('Storage full')}persistBackupSnapshot();scheduleAutoBackup()};
 function restoreHistoryState(raw){try{const d=JSON.parse(raw);if(!isRestorablePayload(d,false))return false;if(!sanitizeImportedPayload(d))return false;msgs=d.msgs;topics=d.topics;lastSnapshot=snapshot();persistSnapshot();cur='all';hiddenUnlocked=false;render();return true}catch(e){return false}}
-function undoChange(){if(!undoStack.length){toast('Undo ke liye kuch nahi hai');return}redoStack.push(snapshot());const prev=undoStack.pop();if(!restoreHistoryState(prev))toast('Undo nahi ho saka');else toast('Undo ho gaya')}
+function undoChange(){if(!undoStack.length){toast('Undo ke liye kuch nahi hai');return}redoStack.push(snapshot());trimHistory(redoStack);const prev=undoStack.pop();if(!restoreHistoryState(prev))toast('Undo nahi ho saka');else toast('Undo ho gaya')}
 function redoChange(){if(!redoStack.length){toast('Redo ke liye kuch nahi hai');return}undoStack.push(snapshot());const next=redoStack.pop();if(!restoreHistoryState(next))toast('Redo nahi ho saka');else toast('Redo ho gaya')}
 
 const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -2096,6 +2110,7 @@ sanitizeStoredMessages(msgs);
 const nativeImagePayloadCache=new Map();
 function hasNativeChat(){return !!(window.Android&&typeof window.Android.setNativeChatData==='function')}
 function syncNativeSelection(){try{if(hasNativeChat()&&typeof window.Android.setNativeSelectionIds==='function')window.Android.setNativeSelectionIds(JSON.stringify([...sel].map(String)))}catch(_){}}
+let lastNativeCoreJson='';
 function syncNativeChatOverlay(){
  if(!hasNativeChat()||!window.Android.setNativeChatBounds||!window.Android.setNativeChatVisible)return;
  try{
@@ -2153,15 +2168,23 @@ function render(forceScrollToLatest=false){syncHiddenCredentialLifecycle();if(cu
   while(chat.firstChild)chat.removeChild(chat.firstChild);
   const visibleIds=new Set(list.map(m=>String(m.id)));
   [...nativeImagePayloadCache.keys()].forEach(id=>{if(!visibleIds.has(id))nativeImagePayloadCache.delete(id)});
+  const byId=new Map(msgs.map(x=>[Number(x.id),x]));
   const items=list.map(m=>{
    const id=String(m.id),image=typeof m.i==='string'&&m.i.length>0;
-   const reply=m.r?msgs.find(x=>Number(x.id)===Number(m.r)):null;
+   const reply=m.r?byId.get(Number(m.r)):null;
    const item={id,time:Number(m.t)||Date.now(),html:m.h||'',imagePresent:image,topic:tn(m.k),edited:!!m.e,pinned:!!m.p,due:Number(m.due)||0,reply:reply?(plain(reply.h)||'Photo').slice(0,100):'',checks:Array.isArray(m.c)?m.c.map(c=>({text:String(c.x||''),state:Number(c.s)||0})):[]};
    if(image&&nativeImagePayloadCache.get(id)!==m.i){item.image=m.i;nativeImagePayloadCache.set(id,m.i)}
    if(!image)nativeImagePayloadCache.delete(id);
    return item;
   });
-  try{window.Android.setNativeChatData(JSON.stringify({forceFollowLatest:!!forceScrollToLatest,theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,messageCornerRadius:messageCornerRadius,searchHighlightId:searchHighlightedId,showTopics:cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'),selectedIds:[...sel].map(String),items}))}catch(_){}
+  const core={forceFollowLatest:!!forceScrollToLatest,theme:document.documentElement.dataset.theme||'dark',palette:getThemePalette(),messageTextSize:messageTextSize,messageCornerRadius:messageCornerRadius,searchHighlightId:searchHighlightedId,showTopics:cur==='all'||cur==='hidden'||(q.trim()&&searchScope==='all'&&cur!=='hidden'),items};
+  const coreJson=JSON.stringify(core);
+  if(!forceScrollToLatest&&coreJson===lastNativeCoreJson){
+   syncNativeChatOverlay();
+   return;
+  }
+  lastNativeCoreJson=coreJson;
+  try{window.Android.setNativeChatData(coreJson.slice(0,-1)+',"selectedIds":'+JSON.stringify([...sel].map(String))+'}')}catch(_){}
   syncNativeChatOverlay();
   return
  }
@@ -2175,7 +2198,7 @@ function render(forceScrollToLatest=false){syncHiddenCredentialLifecycle();if(cu
   const photo=b.querySelector('.im');if(photo)photo.addEventListener('error',()=>{photo.onerror=null;photo.classList.add('image-error');photo.alt='Photo preview could not be loaded';photo.removeAttribute('src')});
   fragment.appendChild(b)});
  chat.appendChild(fragment);chat.scrollTop=chat.scrollHeight}
-function saveDraft(){try{const value={text:ed.innerHTML,plain:ed.innerText,listMode,listTitle,due:$('#taskdue').value,topic:cur,replyId,editId,updatedAt:Date.now()};if(value.plain.trim()||listMode||value.due)localStorage.setItem('notes-chat-draft',JSON.stringify(value));else localStorage.removeItem('notes-chat-draft')}catch(e){}}
+function saveDraft(){try{const value={text:ed.innerHTML,plain:ed.textContent,listMode,listTitle,due:$('#taskdue').value,topic:cur,replyId,editId,updatedAt:Date.now()};if(value.plain.trim()||listMode||value.due)localStorage.setItem('notes-chat-draft',JSON.stringify(value));else localStorage.removeItem('notes-chat-draft')}catch(e){}}
 function clearDraft(){try{localStorage.removeItem('notes-chat-draft')}catch(e){}}
 ed.addEventListener('input',()=>{updateComposerControls();clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,180);});$('#taskdue').addEventListener('change',saveDraft);
 function restoreDraft(){try{const d=JSON.parse(localStorage.getItem('notes-chat-draft')||'null');if(!d){updateComposerControls();return;}if(d.text)ed.innerHTML=sanitizeEditorHtml(d.text);if(d.listMode){listMode=true;listTitle=d.listTitle||'';$('#listfab').classList.add('on');$('#taskmeta').classList.add('on');ed.dataset.ph='Add list items, one per line'}if(d.due)$('#taskdue').value=d.due;if(d.topic==='hidden'){cur='all';hiddenUnlocked=false}else if(d.topic&&((d.topic==='all')||d.topic==='quick'||topics.some(t=>t.id===d.topic)))cur=d.topic;replyId=d.replyId||null;editId=d.editId||null;if(replyId||editId)setCtx();if(d.plain&&d.plain.trim())toast('Draft restored',1800)}catch(e){}finally{updateComposerControls()}}
@@ -3126,7 +3149,20 @@ function renderSide(){
 function openTopicSheet(t){sh.innerHTML='<button data-k="ren">Rename topic</button><button data-k="up">Move up</button><button data-k="dn">Move down</button>'+(t.id==='gen'?'':'<button data-k="tdel" class="del">Delete topic and its notes</button>')+'<button data-k="x">Cancel</button>';
  sh.dataset.id=t.id;sh.dataset.type='topic';sh.classList.add('on')}
 $('#side').addEventListener('contextmenu',e=>e.preventDefault());
-const plain=h=>{const d=document.createElement('div');d.innerHTML=h.replace(/<br>/g,' ');return d.textContent};
+const plainCache=new Map();
+const plain=h=>{
+ const key=String(h==null?'':h);
+ if(!key)return '';
+ if(key.indexOf('<')<0&&key.indexOf('&')<0)return key;
+ const cached=plainCache.get(key);
+ if(cached!==undefined)return cached;
+ const d=document.createElement('div');
+ d.innerHTML=key.replace(/<br\s*\/?>/gi,' ');
+ const text=d.textContent||'';
+ if(plainCache.size>=240)plainCache.delete(plainCache.keys().next().value);
+ plainCache.set(key,text);
+ return text;
+};
 const rq=m=>{if(!m.r)return '';const o=msgs.find(x=>x.id===m.r);return '<span class="rp" data-r="'+esc(String(m.r))+'"><b>Note</b><span>'+(o?(esc(plain(o.h).slice(0,80))||'Photo'):'Deleted note')+'</span></span>'};
 function jump(id){if(hasNativeChat()){const found=msgs.some(m=>Number(m.id)===Number(id));if(!found){toast('Note nahi mila');return}try{window.Android.scrollNativeChatToId(String(id))}catch(_){}return}const b=chat.querySelector('.b[data-id="'+id+'"]');if(!b){toast('Note nahi mila');return}b.scrollIntoView({block:'center',behavior:'smooth'});b.classList.add('hl');setTimeout(()=>b.classList.remove('hl'),1200)}
 function setCtx(){const c=$('#ctx'),id=editId||replyId,m=id&&msgs.find(m=>m.id===id);
@@ -4078,12 +4114,15 @@ function persistBackupSnapshot(){
  // triggers two synchronous SharedPreferences commits on the Java side.
  if(snapshotBusy){snapshotPending=true;return}
  clearTimeout(snapshotTimer);
- snapshotTimer=setTimeout(async()=>{
-  snapshotBusy=true;
-  try{await native('tgsnapshot',{data:backupPayload()})}
-  catch(e){try{localStorage.setItem('notes-local-backup-snapshot-error',e.message||'Snapshot update failed')}catch(_){}}
-  finally{snapshotBusy=false;if(snapshotPending){snapshotPending=false;persistBackupSnapshot()}}
- },1200);
+ snapshotTimer=setTimeout(()=>{
+  const run=async()=>{
+   snapshotBusy=true;
+   try{await native('tgsnapshot',{data:backupPayload()})}
+   catch(e){try{localStorage.setItem('notes-local-backup-snapshot-error',e.message||'Snapshot update failed')}catch(_){}}
+   finally{snapshotBusy=false;if(snapshotPending){snapshotPending=false;persistBackupSnapshot()}}
+  };
+  if(window.requestIdleCallback)requestIdleCallback(run,{timeout:2500});else run();
+ },700);
 }
 const LOCAL_BACKUP_HEADER='FZ-NOTES-ENCRYPTED-BACKUP-V1\n';
 let pendingLocalBackupPassword='',pendingLocalEncryptedBackup='',pendingLocalBackupInterval='off';

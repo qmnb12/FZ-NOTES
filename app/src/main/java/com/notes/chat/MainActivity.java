@@ -173,6 +173,7 @@ public class MainActivity extends Activity {
         nativeChatView.setClipToPadding(false);
         nativeChatView.setPadding(0, dp(7), 0, dp(8));
         nativeChatView.setItemViewCacheSize(12);
+        nativeChatView.setHasFixedSize(true);
         nativeChatView.setNestedScrollingEnabled(false);
         LinearLayoutManager chatLayoutManager = new LinearLayoutManager(this, RecyclerView.VERTICAL, false);
         // Keep a short conversation anchored just above the floating action buttons,

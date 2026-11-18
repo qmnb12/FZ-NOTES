@@ -240,12 +240,13 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             @Override public boolean areContentsTheSame(int oldPosition, int newPosition) {
                 return items.get(oldPosition).signature.equals(next.get(newPosition).signature);
             }
-        }, true);
+        }, false);
         items.clear();
         items.addAll(next);
         diff.dispatchUpdatesTo(this);
         setSelectedIds(newSelected, true);
         notifyDataSetChangedThemeIfNeeded();
+        notifyHighlightIfNeeded();
         final String newLastId = next.isEmpty() ? null : next.get(next.size() - 1).id;
         final boolean appendedLatestMessage = next.size() > oldItemCount
                 && newLastId != null && !newLastId.equals(oldLastId);
@@ -264,11 +265,23 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
         }
     }
 
+    private String lastHighlightId = "";
+    private void notifyHighlightIfNeeded() {
+        String next = searchHighlightId == null ? "" : searchHighlightId;
+        if (next.equals(lastHighlightId)) return;
+        String previous = lastHighlightId;
+        lastHighlightId = next;
+        int oldPosition = indexOf(previous);
+        if (oldPosition >= 0) notifyItemChanged(oldPosition);
+        int newPosition = indexOf(next);
+        if (newPosition >= 0) notifyItemChanged(newPosition);
+    }
+
     private String lastBoundAppearance = "";
     private void notifyDataSetChangedThemeIfNeeded() {
         String appearance = themeName + "|" + themeBg + "|" + themeBar + "|" + themeBubble
                 + "|" + themeText + "|" + themeMuted + "|" + themeAccent + "|"
-                + messageTextSizeDp + "|" + messageCornerRadiusDp + "|" + showTopics + "|" + searchHighlightId;
+                + messageTextSizeDp + "|" + messageCornerRadiusDp + "|" + showTopics;
         if (!lastBoundAppearance.equals(appearance)) {
             lastBoundAppearance = appearance;
             notifyItemRangeChanged(0, getItemCount());
