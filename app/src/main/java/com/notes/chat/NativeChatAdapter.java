@@ -78,6 +78,7 @@ final class NativeChatAdapter extends RecyclerView.Adapter<NativeChatAdapter.Hol
     interface Listener {
         void onSelectionChanged(List<String> selectedIds);
         void onAction(String id, String action, int index);
+        void onToast(String message, String type);
     }
 
     private static final int TYPE_MESSAGE = 0;
@@ -698,9 +699,9 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             if (clipboard != null) {
                 clipboard.setPrimaryClip(android.content.ClipData.newPlainText("FZ NOTES", text));
             }
-            android.widget.Toast.makeText(context, "Copied", android.widget.Toast.LENGTH_SHORT).show();
+            if (listener != null) listener.onToast("Copied", "success");
         } catch (RuntimeException ignored) {
-            android.widget.Toast.makeText(context, "Copy nahi ho paya", android.widget.Toast.LENGTH_SHORT).show();
+            if (listener != null) listener.onToast("Copy nahi ho paya", "error");
         }
     }
 
@@ -1162,13 +1163,15 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                         return !bodyGestureOnGlyph;
                     case MotionEvent.ACTION_UP:
                         removeCallbacks(bodyLongPress);
-                        // Flash from the touch itself: ClickableSpan dispatch is not
-                        // reliable while the TextView is selectable, and a silent tap
-                        // reads as a broken animation. The down event normally already
-                        // started it, so this is just a fallback.
-                        if (!bodyFlashStarted && !bodyTapMoved
-                                && !bodyLongPressFired && v instanceof TextView) {
-                            flashInlineCodeAt((TextView) v, event.getX(), event.getY());
+                        // Copy only for a real tap: down already showed the flash, but
+                        // copying there made ordinary scrolls start with a clipboard
+                        // write. The down event normally already started the wash, so
+                        // the flash call here is just a fallback.
+                        if (!bodyTapMoved && !bodyLongPressFired && v instanceof TextView) {
+                            copyInlineTextAt((TextView) v, event.getX(), event.getY());
+                            if (!bodyFlashStarted) {
+                                flashInlineCodeAt((TextView) v, event.getX(), event.getY());
+                            }
                         }
                         bodyFlashStarted = false;
                         return !bodyGestureOnGlyph;
@@ -1258,6 +1261,30 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
             imageView.setOnLongClickListener(v -> longPress());
         }
 
+        private void copyInlineTextAt(TextView view, float x, float y) {
+            CharSequence text = view.getText();
+            if (!(text instanceof Spanned)) return;
+            Spanned spanned = (Spanned) text;
+            int offset = view.getOffsetForPosition(x, y);
+            if (offset < 0) return;
+            int length = spanned.length();
+            int[] probes = {offset, offset - 1, offset + 1};
+            for (int probe : probes) {
+                if (probe < 0 || probe > length) continue;
+                int end = Math.min(probe + 1, length);
+                InlineCopySpan[] spans = spanned.getSpans(probe, end, InlineCopySpan.class);
+                if (spans == null) continue;
+                for (InlineCopySpan span : spans) {
+                    int start = spanned.getSpanStart(span);
+                    int spanEnd = spanned.getSpanEnd(span);
+                    if (probe >= start && probe <= spanEnd) {
+                        NativeChatAdapter.this.copyInlineText(spanned.subSequence(start, spanEnd));
+                        return;
+                    }
+                }
+            }
+        }
+
         private boolean flashInlineCodeAt(TextView view, float x, float y) {
             CharSequence text = view.getText();
             if (!(text instanceof Spanned)) return false;
@@ -1275,7 +1302,6 @@ private static final int DARK_BUBBLE = Color.rgb(27, 43, 64);
                     int start = spanned.getSpanStart(span);
                     int spanEnd = spanned.getSpanEnd(span);
                     if (probe >= start && probe <= spanEnd) {
-                        NativeChatAdapter.this.copyInlineText(spanned.subSequence(start, spanEnd));
                         NativeChatAdapter.this.flashInlineCode(view, span);
                         return true;
                     }

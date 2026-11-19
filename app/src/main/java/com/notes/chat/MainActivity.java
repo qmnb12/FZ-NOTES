@@ -223,6 +223,10 @@ public class MainActivity extends Activity {
                     if (web != null) web.evaluateJavascript(js, null);
                 });
             }
+
+            @Override public void onToast(String message, String type) {
+                runOnUiThread(() -> showAppToastInternal(message, type == null ? "success" : type, true, 1400));
+            }
         });
         nativeChatAdapter.attachRecyclerView(nativeChatView);
         nativeChatView.setAdapter(nativeChatAdapter);
